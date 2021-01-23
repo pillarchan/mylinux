@@ -92,12 +92,13 @@ Pod,Label,Label Selector
       2.配置 /lib/systemd/system/docker.service 
       Environment="HTTPS_PROXY=http://www.ik8s.io:10080" 
       Environment="NO_PROXY=127.0.0.0/8,192.168.52.0/24"
+      ExecStartPorts=/usr/sbin/iptables -P FORWORD ACCEPT
       3.安装相关的程序包 
       # yum install docker-ce kubelet kubeadm kubectl
-     ```
-
-  2. 官网文档安装
-
+   ```
+  
+2. 官网文档安装
+  
      ```
      1.修改SElinux配置
      # 将 SELinux 设置为 permissive 模式（相当于将其禁用）
@@ -252,25 +253,26 @@ Pod,Label,Label Selector
      
      6.使用yum命令安装
      yum install -y kubelet kubeadm kubectl
-     ```
-
-  3. 初始化主节点
-
+   ```
+  
+3. 初始化主节点
+  
      ```
      1.配置 /etc/sysconfig/kubelet
      KUBELET_EXTRA_ARGS="--fail-swap-on=false"
      2.配置kubelet自启动
      systemctl enable kubelet
      3.初始化master节点：
-      # kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=Swap
-     遇到的坑:runtime is not runing 
+      # kubeadm config print --init-defaults
+      # kubeadm init --version=当前版本号 --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=Swap
+     遇到的坑:runtime is not runing
      解决 mkdir -p /etc/containerd && containerd config default > /etc/containerd/config.toml
      	systemctl restart containerd.service
       注意：请记录最后的kubeadm join命令的全部内容。要保存下来
      kubeadm join 192.168.52.129:6443 --token 6lg3ya.qmbpzkbmhkgsy3n7 \
          --discovery-token-ca-cert-hash sha256:79ae1ef7976bb25e2a00ffb008bd2f2e197aadd966e541a1e119f12d43a73bc3
      4.初始化kubectl
-      mkdir -p $HOME/.kube 
+      mkdir -p $HOME/.kube
       cp /etc/kubernetes/admin.conf $HOME/.kube/
       测试：
       kubectl get componentstatus
@@ -283,15 +285,17 @@ Pod,Label,Label Selector
      修改 /etc/kubernetes/manifests/kube-controller-manager.yaml
      	/etc/kubernetes/manifests/kube-scheduler.yaml
      中的port=0 这一行删除或注释
+     sed -i '/^\s*-\s--port=0$/ d' /etc/kubernetes/manifests/kube-scheduler.yaml
+     sed -i '/^\s*-\s--port=0$/ d' /etc/kubernetes/manifests/kube-controller-manager.yaml
      5.添加flannel
      kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-     #查看是否添加成功
+   #查看是否添加成功
      kubectl get pods -n kube-system
-      
+    
      ```
-
+  
   4. 加入其它节点
-
+  
      ```
      1.配置 /etc/sysconfig/kubelet
      KUBELET_EXTRA_ARGS="--fail-swap-on=false"
@@ -305,9 +309,134 @@ Pod,Label,Label Selector
 
 ## 4.kubernets应用管理命令
 
-- kubectl cluster-info 查看集群信息
-- kubectl version 查看版本
-- kubectl run nginx-deploy --image=nginx:1.18.0-alpine --replicas=1 --port=80 --dry-run=true
-- kubectl get pods 查看pods -o wide查看更多信息
-- kubectl get nodes 查看nodes
-- kubectl get deployment 查看当前系统上已经被创建的deployment
+1. 查
+
+   1. kubectl cluster-info 查看集群信息
+   2. kubectl version 查看版本
+   3. kubectl get pods 查看pods -o wide查看更多信息
+   4. kubectl get nodes 查看nodes
+   5. kubectl get deployment 查看当前系统上已经被创建的deployment
+   6. kubectl get componentstatus 查看组件
+   7. kubectl get pods -n kube-system -o wide 查看coredns
+   8. kubectl get svc -n kube-system 查看kube-system名称空间服务
+   9. kubectl describe ns/default 查看描述信息
+   10. kubectl get ns 查看名称空间
+       1. kubectl get ns/default 查看单个名称空间
+       2. kubectl get ns/default -o yaml 查看某个名称空间并输出为yaml格式
+       3. kubectl get ns/default -o json 查看某个名称空间并输出为json格式
+   11. kubectl api-resources 查看当前主机上所支持的资源类型
+   12. kubectl get all 查看已创建的所有资源类型
+
+2. 增
+
+   1. kubectl create deployment NAME --image=image -- [COMMAND] [args...] [options] 创建一个deployment控制器,并让其自动创建pod资源
+
+      ```
+      kubectl create deploy ngx-dep --image=nginx:1.18.0-alpine -r 2
+      ```
+
+   2. kubectl create service clusterip NAME [--tcp=<port>:<targetPort>] [--dry-run=server|client|none] [options] 创建一个service cluster控制器
+
+      ```
+      kubectl create service clusterip nginx-svc --tcp=80:80
+      ```
+
+   3. kubectl create service nodeport NAME [--tcp=port:targetPort] [--dry-run=server|client|none] [options] 创建一个service nodeport 可以暴露一个对访问的端口
+
+      ```
+      kubectl create service nodeport myapp --tcp=80:80 --node-port=32323  //对外的端口范围是30000-32767
+      ```
+
+   4. kubectl create namespace name 创建一个名称空间
+
+3. 改
+
+   1. kubectl scale [--resource-version=version] [--current-replicas=count] --replicas=COUNT (-f FILENAME | TYPE NAME) [options] 对某个控制器中的pods扩缩容
+
+      ```
+      kubectl scale --replicas=2 deployments myapp
+      ```
+
+4. 删
+
+   1. kubectl delete pods nginx-deploy 删除一个 pod
+   2. kubectl delete deployment client  删除一个deployment 
+   3. kubectl delete svc/myapp 删除一个service
+   4. kubectl delete namespace develop 删除一个名称空间 或者 kubectl delete ns/test ns/produce
+
+![](D:\我的坚果云\linux pics\K8S_API_resouces_type.png)
+
+![image-20210122212427534](D:\我的坚果云\linux pics\k8s_components.png)
+
+## 5.资源配置清单
+
+1. 大部分资源的配置清单:
+
+   1. apiVersion:group/version
+
+      $ kubectl api-versions //查看api
+
+   2. kind 资源类别
+
+      1. Deployment
+      2. Service
+      3. Pod
+      4. ReplicaSet
+      5. StatefulSet
+      6. DaemonSet
+      7. Job
+      8. CronJob
+
+   3. metadata 元数据
+
+      1. name
+
+      2. namespace
+
+      3. labels
+
+      4. annotatiions
+
+         每个资源的引用PATH
+
+         /api/GROUP/VERSIOIN/namespaces/NAMESPACE/TYPE/NAME
+
+   4. spec 期望状态,disired state
+
+      kubectl explain 查看如何定义
+
+   5. status 当前状态,current state,本字段由kubernetes集群维护
+
+      namespace示例
+
+      ```
+      apiVersion: v1
+      kind: Namespace
+      metadata: 
+      	name: mytest
+      ```
+
+      自主式pod示例:
+
+      ```
+      apiVersion: v1
+      kind: Pod
+      metadata:
+      	name: mytestpod
+      	namespace: mytest
+      	labels: 
+      		app: mypod
+      		teir: frontend
+      spec:
+      	containers:
+      		- name: myapp
+      		  image: nginx:1.18.0-alpine
+      		- name: busybox
+      		  image: busybox:1.32.1
+      		  command: 
+      		  	- "/bin/sh"
+      		  	- "-c"
+      		  	- "sleep 3600"
+      ```
+
+      
