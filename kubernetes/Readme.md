@@ -403,6 +403,42 @@ Pod,Label,Label Selector
 
    4. spec 期望状态,disired state
 
+      1. Pod中的spec
+
+         1. containers	<[]Object> -required-
+
+            1. name	<string> -required-
+
+            2. image
+
+            3. imagePullPolicy   Always Never IfNotPresent
+
+            4. ports <[]Object>
+
+               1. name
+               2. containerPort	<integer> -required-
+               3. hostIP
+               4. hostPort
+
+            5. args <[]string>
+
+            6. command <[]string>
+
+               Here are some examples:
+
+               | Image Entrypoint | Image Cmd   | Container command | Container args | Command run      |
+               | ---------------- | ----------- | ----------------- | -------------- | ---------------- |
+               | `[/ep-1]`        | `[foo bar]` | <not set>         | <not set>      | `[ep-1 foo bar]` |
+               | `[/ep-1]`        | `[foo bar]` | `[/ep-2]`         | <not set>      | `[ep-2]`         |
+               | `[/ep-1]`        | `[foo bar]` | <not set>         | `[zoo boo]`    | `[ep-1 zoo boo]` |
+               | `[/ep-1]`        | `[foo bar]` | `[/ep-2]`         | `[zoo boo]`    | `[ep-2 zoo boo]` |
+
+         2. nodeSelector <map[string]string> 节点标签选择器，
+
+         3. nodeName <string> 指定运行的节点
+
+         4. 与label不同的地方在于，它不能用于挑选资源对象，仅用于为对象提供“元数据”。
+
       kubectl explain 查看如何定义
 
    5. status 当前状态,current state,本字段由kubernetes集群维护
@@ -431,12 +467,45 @@ Pod,Label,Label Selector
       	containers:
       		- name: myapp
       		  image: nginx:1.18.0-alpine
+      		  ports: 
+      		  - name: http
+      		  	containerPort: 80
+      		  - name: https
+      		  	containerPort: 443
       		- name: busybox
       		  image: busybox:1.32.1
+      		  args: ["$(hostname)","$(date)"]
       		  command: 
       		  	- "/bin/sh"
       		  	- "-c"
-      		  	- "sleep 3600"
+      		  	- "echo"
+      	nodeSelector:
+      		app: mypod
       ```
 
-      
+   6. kubectl 清单命令
+
+      1. kubectl apply -f name.yaml 依据一个yaml文件创建或修改pod
+      2. kubectl delete -f name.yaml -n namespace 删除一个以yaml文件创建的pod
+      3. kubectl label [--overwrite] (-f FILENAME | TYPE NAME) KEY_1=VAL_1 ... KEY_N=VAL_N [--resource-version=version]
+      4. kubectl get pods -l <conditions>
+         1. =,==,!=
+         2. KEY in (VALUE1,VALUE2......)
+         3. KEY notin (VALUE1,VALUE2......)
+      5. kubectl get pods --show-labels
+
+      许多资源支持内嵌字段定义其使用的标签选择器：
+
+       matchLabels：直接给定键值
+
+       matchExpressions：基于给定的表达式来定义使用标签选择器，{key:"KEY", operator:"OPERATOR",
+
+      values:[VAL1,VAL2,...]}
+
+       操作符：
+
+       In, NotIn：values字段的值必须为非空列表；
+
+       Exists, NotExists：values字段的值必须为空列表；
+
+   7. pod的生命周期
