@@ -422,9 +422,7 @@ Pod,Label,Label Selector
 
             5. args <[]string>
 
-            6. command <[]string>
-
-               Here are some examples:
+            6. command <[]string>  Here are some examples:
 
                | Image Entrypoint | Image Cmd   | Container command | Container args | Command run      |
                | ---------------- | ----------- | ----------------- | -------------- | ---------------- |
@@ -433,11 +431,22 @@ Pod,Label,Label Selector
                | `[/ep-1]`        | `[foo bar]` | <not set>         | `[zoo boo]`    | `[ep-1 zoo boo]` |
                | `[/ep-1]`        | `[foo bar]` | `[/ep-2]`         | `[zoo boo]`    | `[ep-2 zoo boo]` |
 
+            7. livenessProbe	< Object >
+
+               1. exec  < Object >
+               2. httpGet	< Object>
+               3. initialDelaySeconds	< integer>
+               4. periodSeconds	< integer>
+               5. tcpSocket	< Object>
+
+            8. readinessProbe	< Object>
+               与livenessProbe中的内容相同
+
          2. nodeSelector <map[string]string> 节点标签选择器，
 
-         3. nodeName <string> 指定运行的节点
+         3. nodeName < string > 指定运行的节点
 
-         4. 与label不同的地方在于，它不能用于挑选资源对象，仅用于为对象提供“元数据”。
+         4. 与label不同的地方在于，它不能用于挑选资源对象，仅用于为对象提供“元数据” 
 
       kubectl explain 查看如何定义
 
@@ -509,3 +518,22 @@ Pod,Label,Label Selector
        Exists, NotExists：values字段的值必须为空列表；
 
    7. pod的生命周期
+
+      1. 流程
+         1. 初始化
+         2. 主容器启动
+            1. post start 启动前钩子
+            2. 运行中探测
+               1. liveness probe
+               2. readiness probe
+            3. pre stop 结束前钩子
+      2. 状态
+         1. Pending 挂起
+         2. Running 运行
+         3. Failed
+         4. Successed
+         5. Unknow 未知
+      3. restartPolicy 容器重启规则
+         1. Always
+         2. Never
+         3. OnFailure
