@@ -93,4 +93,4 @@
 
 1. 系统管理->系统配置
    1. 系统管理员邮件地址
-   2. 邮件通知  注意:SMTP中的密码指是SMTP的授权码并非登录密码![image-20210130174639751](D:\mylinux\jenkins\pics\image-20210130174639751.png)
+   2. 邮件通知  注意:SMTP中的密码指是SMTP的授权码并非登录密码![image-20210130174639751](https://i.loli.net/2021/01/30/yagUvlEdhTFOeC7.png)
