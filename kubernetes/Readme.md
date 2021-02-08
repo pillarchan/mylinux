@@ -95,8 +95,7 @@ Pod,Label,Label Selector
       ExecStartPorts=/usr/sbin/iptables -P FORWORD ACCEPT
       3.安装相关的程序包 
       # yum install docker-ce kubelet kubeadm kubectl
-   ```
-  
+     ```
 2. 官网文档安装
   
      ```
@@ -292,7 +291,7 @@ Pod,Label,Label Selector
    #查看是否添加成功
      kubectl get pods -n kube-system
     
-     ```
+   ```
   
   4. 加入其它节点
   
