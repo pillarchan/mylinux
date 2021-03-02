@@ -10,8 +10,8 @@ sudo setenforce 0
 sudo sed -i 's@^\(SELINUX=\)\w*$@\1permissive@g' /etc/selinux/config 
 sudo yum update -y
 sudo yum install -y yum-utils device-mapper-persistent-data lvm2
-sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-sudo yum install -y containerd.io docker-ce-19.03.11 docker-ce-cli-19.03.11 
+sudo yum-config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y containerd.io docker-ce-19.03.11 docker-ce-cli-19.03.11
 ## 创建 /etc/docker 目录
 sudo mkdir /etc/docker
 # 设置 Docker daemon
@@ -37,6 +37,14 @@ containerd config default | sudo tee /etc/containerd/config.toml
 # 配置cgroupdriver
 sudo sed -i '/options/ a \\t\t\t\t SystemdCgroup = true' /etc/containerd/config.toml
 
+# 配置ip_forward bridge-nf-call-iptables
+cat <<EOF | sudo tee /etc/sysctl.d/docker.conf
+net.ipv4.ip_forward=1
+net.bridge.bridge-nf-call-iptables=1
+net.bridge.bridge-nf-call-ip6tables=1
+EOF
+sudo sysctl -p /etc/sysctl.d/docker.conf
+systcl --system
 # 重启docker服务
 sudo systemctl daemon-reload
 sudo systemctl restart docker

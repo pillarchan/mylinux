@@ -264,6 +264,7 @@ Pod,Label,Label Selector
      3.初始化master节点：
       # kubeadm config print --init-defaults
       # kubeadm init --version=当前版本号 --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=Swap
+      kubeadm init --kubernetes-version="v1.20.0" --pod-network-cidr="10.244.0.0/16" --ignore-preflight-errors="Swap"
      遇到的坑:runtime is not runing
      解决 mkdir -p /etc/containerd && containerd config default > /etc/containerd/config.toml
      	systemctl restart containerd.service
@@ -273,6 +274,11 @@ Pod,Label,Label Selector
      4.初始化kubectl
       mkdir -p $HOME/.kube
       cp /etc/kubernetes/admin.conf $HOME/.kube/
+      添加flannel
+     kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+     #查看是否添加成功
+       kubectl get pods -n kube-system
+      
       测试：
       kubectl get componentstatus
       kubectl get nodes    
@@ -282,16 +288,12 @@ Pod,Label,Label Selector
      scheduler            Unhealthy   Get "http://127.0.0.1:10251/healthz": dial tcp 127.0.0.1:10251: connect: connection refused   
      
      修改 /etc/kubernetes/manifests/kube-controller-manager.yaml
-     	/etc/kubernetes/manifests/kube-scheduler.yaml
-     中的port=0 这一行删除或注释
-     sed -i '/^\s*-\s--port=0$/ d' /etc/kubernetes/manifests/kube-scheduler.yaml
-     sed -i '/^\s*-\s--port=0$/ d' /etc/kubernetes/manifests/kube-controller-manager.yaml
-     5.添加flannel
-     kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-   #查看是否添加成功
-     kubectl get pods -n kube-system
-    
-   ```
+   	/etc/kubernetes/manifests/kube-scheduler.yaml
+   中的port=0 这一行删除或注释
+   sed -i '/^\s*-\s--port=0$/ d' /etc/kubernetes/manifests/kube-scheduler.yaml
+   sed -i '/^\s*-\s--port=0$/ d' /etc/kubernetes/manifests/kube-controller-manager.yaml
+   
+  ```
   
   4. 加入其它节点
   
@@ -334,7 +336,7 @@ Pod,Label,Label Selector
       kubectl create deploy ngx-dep --image=nginx:1.18.0-alpine -r 2
       ```
 
-   2. kubectl create service clusterip NAME [--tcp=<port>:<targetPort>] [--dry-run=server|client|none] [options] 创建一个service cluster控制器
+   2. kubectl create service clusterip NAME [--tcp=<port>:<targetPort>] [--dry-run=server|client|none] [options] 创建一个service cluster控制器,使用此方式创建需要与所创建的deploy或pods的名相同
 
       ```
       kubectl create service clusterip nginx-svc --tcp=80:80
@@ -394,29 +396,53 @@ Pod,Label,Label Selector
 
       3. labels
 
+         1. kubectl label [--overwrite] (-f FILENAME | TYPE NAME) KEY_1=VAL_1 ... KEY_N=VAL_N [--resource-version=version]
+      2. kubectl get pods -l <conditions>
+            1. =,==,!=
+         2. KEY in (VALUE1,VALUE2......)
+            3. KEY notin (VALUE1,VALUE2......)
+      3. kubectl get pods --show-labels
+   
+      许多资源支持内嵌字段定义其使用的标签选择器：
+   
+       matchLabels：直接给定键值
+   
+       matchExpressions：基于给定的表达式来定义使用标签选择器，{key:"KEY", operator:"OPERATOR",
+   
+      values:[VAL1,VAL2,...]}
+   
+       操作符：
+   
+       In, NotIn：values字段的值必须为非空列表；
+   
+       Exists, NotExists：values字段的值必须为空列表；
+   
       4. annotatiions
-
+   
          每个资源的引用PATH
 
          /api/GROUP/VERSIOIN/namespaces/NAMESPACE/TYPE/NAME
 
+         kubectl annotate [--overwrite] (-f FILENAME | TYPE NAME) KEY_1=VAL_1 ... KEY_N=VAL_N
+      [--resource-version=version] [options]
+   
    4. spec 期望状态,disired state
-
+   
       1. Pod中的spec
-
+   
          1. containers	<[]Object> -required-
 
             1. name	<string> -required-
 
             2. image
-
+   
             3. imagePullPolicy   Always Never IfNotPresent
-
+   
             4. ports <[]Object>
 
                1. name
                2. containerPort	<integer> -required-
-               3. hostIP
+            3. hostIP
                4. hostPort
 
             5. args <[]string>
@@ -424,51 +450,51 @@ Pod,Label,Label Selector
             6. command <[]string>  Here are some examples:
 
                | Image Entrypoint | Image Cmd   | Container command | Container args | Command run      |
-               | ---------------- | ----------- | ----------------- | -------------- | ---------------- |
+            | ---------------- | ----------- | ----------------- | -------------- | ---------------- |
                | `[/ep-1]`        | `[foo bar]` | <not set>         | <not set>      | `[ep-1 foo bar]` |
-               | `[/ep-1]`        | `[foo bar]` | `[/ep-2]`         | <not set>      | `[ep-2]`         |
+            | `[/ep-1]`        | `[foo bar]` | `[/ep-2]`         | <not set>      | `[ep-2]`         |
                | `[/ep-1]`        | `[foo bar]` | <not set>         | `[zoo boo]`    | `[ep-1 zoo boo]` |
-               | `[/ep-1]`        | `[foo bar]` | `[/ep-2]`         | `[zoo boo]`    | `[ep-2 zoo boo]` |
-
+            | `[/ep-1]`        | `[foo bar]` | `[/ep-2]`         | `[zoo boo]`    | `[ep-2 zoo boo]` |
+   
             7. livenessProbe	< Object >
-
+   
                1. exec  < Object >
                2. httpGet	< Object>
                3. initialDelaySeconds	< integer>
-               4. periodSeconds	< integer>
+            4. periodSeconds	< integer>
                5. tcpSocket	< Object>
 
             8. readinessProbe	< Object>
                与livenessProbe中的内容相同
-
+   
          2. nodeSelector <map[string]string> 节点标签选择器，
-
+   
          3. nodeName < string > 指定运行的节点
-
+   
          4. 与label不同的地方在于，它不能用于挑选资源对象，仅用于为对象提供“元数据” 
-
+   
       kubectl explain 查看如何定义
-
+   
    5. status 当前状态,current state,本字段由kubernetes集群维护
-
+   
       namespace示例
-
+   
       ```
       apiVersion: v1
       kind: Namespace
       metadata: 
       	name: mytest
       ```
-
+   
       自主式pod示例:
-
+   
       ```
       apiVersion: v1
       kind: Pod
       metadata:
-      	name: mytestpod
+   	name: mytestpod
       	namespace: mytest
-      	labels: 
+   	labels: 
       		app: mypod
       		teir: frontend
       spec:
@@ -477,53 +503,53 @@ Pod,Label,Label Selector
       		  image: nginx:1.18.0-alpine
       		  ports: 
       		  - name: http
-      		  	containerPort: 80
+   		  	containerPort: 80
       		  - name: https
-      		  	containerPort: 443
+   		  	containerPort: 443
       		- name: busybox
-      		  image: busybox:1.32.1
+   		  image: busybox:1.32.1
       		  args: ["$(hostname)","$(date)"]
-      		  command: 
+   		  command: 
       		  	- "/bin/sh"
-      		  	- "-c"
+   		  	- "-c"
       		  	- "echo"
-      	nodeSelector:
+   	nodeSelector:
       		app: mypod
-      ```
-
-   6. kubectl 清单命令
-
-      1. kubectl apply -f name.yaml 依据一个yaml文件创建或修改pod
+   ```
+   
+6. kubectl 清单命令
+   
+   1. kubectl apply -f name.yaml 依据一个yaml文件创建或修改pod
       2. kubectl delete -f name.yaml -n namespace 删除一个以yaml文件创建的pod
-      3. kubectl label [--overwrite] (-f FILENAME | TYPE NAME) KEY_1=VAL_1 ... KEY_N=VAL_N [--resource-version=version]
-      4. kubectl get pods -l <conditions>
-         1. =,==,!=
-         2. KEY in (VALUE1,VALUE2......)
-         3. KEY notin (VALUE1,VALUE2......)
-      5. kubectl get pods --show-labels
-
-      许多资源支持内嵌字段定义其使用的标签选择器：
-
-       matchLabels：直接给定键值
-
-       matchExpressions：基于给定的表达式来定义使用标签选择器，{key:"KEY", operator:"OPERATOR",
-
-      values:[VAL1,VAL2,...]}
-
-       操作符：
-
-       In, NotIn：values字段的值必须为非空列表；
-
-       Exists, NotExists：values字段的值必须为空列表；
-
+      
    7. pod的生命周期
-
+   
       1. 流程
          1. 初始化
          2. 主容器启动
             1. post start 启动前钩子
             2. 运行中探测
                1. liveness probe
+               
+                  ```
+                  apiVersion: v1
+                  kind: Pod 
+                  metadata:
+                    name: test-liveness-demo
+                    labels:
+                      name: liveness-exec
+                      purpose: test-liveness-exec
+                  spec:
+                    containers:
+                      - name: liveness-test
+                        image: busybox:1.32.1
+                        imagePullPolicy: IfNotPresent
+                        args: ["/bin/sh","-c","touch /tmp/healthy;sleep 30;rm -rf /tmp/healthy;sleep 300"]
+                        livenessProbe:
+                          exec: 
+                            command: ["test","-e","touch /tmp/healthy;"]
+                  ```
+               
                2. readiness probe
             3. pre stop 结束前钩子
       2. 状态
