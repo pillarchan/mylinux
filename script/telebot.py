@@ -42,7 +42,8 @@ def handle(msg):
         else:
             bot.sendMessage(chat_id, msg['text']+'格式不对，需要输入如：addip 1.1.1.1')
     else:
-        bot.sendMessage(chat_id, '没有加白你')
+        err_msg = 'ID未加白不能使用,请通知管理员加白ID:%s'%chat_id
+        bot.sendMessage(chat_id, err_msg)
 
 TOKEN = '5201507400:AAG1LNkhDYSKmwPHcxattXf7QdA5GudPdiU'
 
