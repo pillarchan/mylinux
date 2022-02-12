@@ -50,3 +50,41 @@ case $workspace in
     --exclude amqp.php \
     -zcvf diff_online.tar.gz
 esac
+
+
+
+
+
+#jenkins
+#!/bin/bash
+path=$JENKINS_HOME/workspace/$JOB_NAME
+echo $BUILD_ID
+echo $path
+/home/online.sh  $BUILD_ID  $path
+
+
+declare -A dict
+dict=(
+    [FILES]="$(tar tf diff_online.tar.gz |xargs)"
+    [P_NAME]="ww28game_inner"
+    [I_NAME]="card"
+    [I_PATH]="/data/28game/card"
+    [B_PATH]="/opt/backup/"
+)
+
+ansible ${dict['P_NAME']} -m shell \
+-a "cd ${dict['I_PATH']} && tar czf ${dict['B_PATH']}/${dict['I_NAME']}-$BUILD_NUMBER.tar.gz ${dict['FILES']} 2> /dev/null; echo backup codes"
+
+
+#bots
+CHANGE_FILES=$(tar tf diff_online.tar.gz)
+description=$(git log --pretty=%s $endid -1)
+MSG="<b>项目：$JOB_NAME</b><pre>构建者：$BUILD_USER
+构建编号：$BUILD_ID
+构建分支：$git
+开始节点：$startid
+结束节点：$endid
+描述：$description
+更新文件：
+$CHANGE_FILES</pre>"
+curl -X POST --data chat_id="${GROUP_ID}" --data-urlencode "text=${MSG}" "https://api.telegram.org/bot${TOKEN_ID}/sendMessage?parse_mode=HTML"
