@@ -1,0 +1,307 @@
+ELK yum源配置
+YUM源配置：
+rpm --import https://packages.elastic.co/GPG-KEY-elasticsearch
+
+cat > /etc/yum.repos.d/elk.repo << EOF
+[elastic-7.x]
+name=Elastic repository for 7.x packages
+baseurl=https://artifacts.elastic.co/packages/7.x/yum
+gpgcheck=1
+gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+enabled=1
+autorefresh=1
+type=rpm-md
+EOF
+========================================
+安装方式：
+yum安装，指定版本
+yum install -y elasticsearch-7.4.2-1.x86_64  kibana-7.4.2-1.x86_64 logstash-7.4.2-1.noarch filebeat-7.4.2-1.x86_64
+
+
+
+logstash
+
+# ------------  Node identity ------------
+node.name: node-1
+
+# ------------ Data path ------------------
+path.data: /data/logstash/data
+path.logs: /data/logstash/logs
+
+
+# ------------ Metrics Settings --------------
+http.host: 127.0.0.1
+http.port: 9600
+
+# ------------ Pipeline Settings --------------
+pipeline.workers: 16
+pipeline.batch.size: 250
+
+# ------------ X-Pack Settings (not applicable for OSS build)--------------
+##X-Pack Monitoring
+xpack.monitoring.enabled: true
+xpack.monitoring.elasticsearch.hosts: ["http://172.21.168.204:9200"]
+#xpack.monitoring.collection.pipeline.details.enabled: true
+#xpack.monitoring.elasticsearch.username: "logstash_system"  
+#xpack.monitoring.elasticsearch.password: "123456"
+
+
+logstash.conf
+input {
+  beats {
+      port => 5044
+  }
+}
+filter {
+  #----BEGIN-----从日志文件中提取时间保存到@timestamp字段-----
+  if [fields][logtype] == "json" {
+    date {
+      match => ["timestamp", "yyyy-MM-dd HH:mm:ss.SSS"]
+      target => "@timestamp"
+    }
+  }
+  if [fields][logtype] == "json-api" {
+    date {
+      match => ["createdAt", "UNIX_MS"]
+      target => "@timestamp"
+    }
+  }
+  if [fields][logtype] == "json-net" {
+    date {
+      match => ["ctime", "yyyy-MM-dd HH:mm:ss"]
+      target => "@timestamp"
+    }
+  }
+  if [fields][logtype] == "log4j" {
+    grok {
+      match => { "message" => "%{TIMESTAMP_ISO8601:logtime}" }
+    }
+    date {
+      match => ["logtime", "yyyy-MM-dd HH:mm:ss.SSS"]
+      target => "@timestamp"
+    }
+  }
+  if [fields][logtype] == "nginx_access" {
+    date {
+      match => ["timestamp", "yyyy-MM-dd'T'HH:mm:ssZZ"]
+      target => "@timestamp"
+    }
+  }
+  if [fields][svcname] == "syslog" {
+    grok {
+      match => { "message" => "%{TIMESTAMP_ISO8601:syslogtime}" }
+    }
+    date {
+      match => ["syslogtime", "yyyy-MM-dd HH:mm:ss"]
+      target => "@timestamp"
+    }
+  }
+  #----END-----从日志文件中提取时间保存到@timestamp字段-----
+  
+  #----BEGIN--为rpc server进行部分字段转换，用于统计-------
+  if [fields][logtype] == "json" {
+    mutate{  
+      convert => { "server.pool.wait.time" => "integer" }  
+      convert => { "resp.size" => "integer" }  
+    }
+  }
+  #----END----为rpc server进行部分字段转换，用于统计-------
+
+  #----BEGIN--从log-api中提取ip,域名，状态码，访问url-------
+
+   
+
+  #----END  --从log-api中提取ip,域名，状态码，访问url-------
+
+  # 添加字段用于标识filebeat ip
+  mutate {
+    add_field => { "beats_ip" => "%{[@metadata][ip_address]}" }
+  }
+
+  #----- BEGIN ----获取日志时间，并转换为中国时间，定义日志索引名称时使用------------
+  ruby {
+    code => "event.set('myindex_date', event.get('@timestamp').time.localtime + 8*60*60)"
+  }
+  mutate {
+    convert => ["myindex_date", "string"]
+    gsub => ["myindex_date", "T([\S\s]*?)Z", ""]
+    gsub => ["myindex_date", "-", "."]
+  }
+  #----- END  ----获取日志时间，并转换为中国时间，定义日志索引名称时使用------------
+  #------BEGIN ---获取traceid-------------------------------------------------------
+  mutate {
+      add_field =>   {
+          "tmp" => "%{[message]}"
+      }
+  }
+  mutate {
+      split => ["tmp", "TID:"]
+      add_field => {
+          "trace_id" => "%{[tmp][1]}"
+      }
+  }
+  mutate {
+      split => ["trace_id","]"]
+  }
+  mutate {                
+      update =>   {
+          "trace_id" => "%{[trace_id][0]}"
+      }
+      remove_field => ["tmp"] 
+  }
+  #------END   ---获取traceid-------------------------------------------------------
+
+
+  
+  
+}
+
+output {
+  if [fields][logtype] == "json" {
+    elasticsearch {
+      hosts => ["172.21.168.204:9200"]
+      index => "%{[fields][svcname]}-rpc-server-%{myindex_date}"
+      #user => "elastic"
+      #password => "123456"
+
+    }
+  }
+  if [fields][logtype] == "json-api" {
+    elasticsearch {
+      hosts => ["172.21.168.204:9200"]
+      index => "%{[fields][svcname]}-api-%{myindex_date}"
+      #user => "elastic"
+      #password => "123456"
+    }
+  }
+  if [fields][logtype] == "access" {
+    elasticsearch {
+      hosts => ["172.21.168.204:9200"]
+      index => "%{[fields][svcname]}-access-%{myindex_date}"
+      #user => "elastic"
+      #password => "123456"
+    }
+  }
+  if [fields][logtype] == "log4j" {
+    elasticsearch {
+      hosts => ["172.21.168.204:9200"]
+      index => "%{[fields][svcname]}-%{myindex_date}"
+      #user => "elastic"
+      #password => "123456"
+    }
+  }  
+  if [fields][logtype] == "log-haproxy" {
+    elasticsearch {
+      hosts => ["172.21.168.204:9200"]
+      index => "%{[fields][svcname]}-%{myindex_date}"
+      #user => "elastic"
+      #password => "123456"
+    }
+  }
+  if [fields][logtype] == "json-net" {
+    elasticsearch {
+      hosts => ["172.21.168.204:9200"]
+      index => "%{[fields][svcname]}-%{myindex_date}"
+      #user => "elastic"
+      #password => "123456"
+    }
+  }  
+}
+
+
+es
+vim /usr/lib/systemd/system/elasticsearch.service
+```
+```ini
+[Service]
+LimitMEMLOCK=infinity
+
+
+cluster.name: elk
+node.name: 172-21-168-204
+node.master: true
+node.data: true
+path.data: /data/es/data
+path.logs: /data/es/logs
+bootstrap.memory_lock: true
+network.host: 0.0.0.0
+http.port: 9200
+discovery.seed_hosts: ["172.21.168.204"]
+cluster.initial_master_nodes: ["172-21-168-204"]
+gateway.recover_after_nodes: 1
+action.destructive_requires_name: true
+# 支持跨域访问
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+# xpack.security.enabled: true
+# xpack.license.self_generated.type: basic
+# xpack.security.transport.ssl.enabled: true
+
+
+kibana:
+server.port: 5601
+server.host: 0.0.0.0
+elasticsearch.hosts: ["http://172.21.168.204:9200"]
+kibana.index: ".kibana"
+#elasticsearch.username: "kibana"
+#elasticsearch.password: "pass"
+elasticsearch.requestTimeout: 30000
+i18n.locale: "zh-CN"
+
+filebeat
+#=========================== Filebeat inputs =============================
+##
+filebeat.config.inputs:
+  enabled: true
+  path: inputs.d/*.yml
+
+#==================== Elasticsearch template setting ==========================
+setup.template.settings:
+  index.number_of_shards: 1
+
+#================================ Outputs =====================================
+##
+output.logstash:
+  hosts: [172.21.168.204:5044]
+
+
+#================================ Processors =====================================
+##
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+  - drop_fields:
+      fields: ["ecs","log","agent","host","@metadata"]
+
+#============================== Kibana =====================================
+##
+#setup.kibana:
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat.log
+  keepfiles: 7
+  permissions: 0644
+  interval: 24h
+
+
+#============================== cpu mem =====================================
+##
+max_procs: 3
+queue.mem:
+  events: 4096
+  flush.min_events: 2048
+  flush.timeout: 5s
+#============================== Xpack Monitoring ===============================
+ 
+xpack.monitoring.enabled: true
+xpack.monitoring.elasticsearch:
+  hosts: [172.21.168.204:9200]
+#  username: ""
+#  password: ""
+#============================== node name ===============================
+name: 172-21-168-204
+
+
