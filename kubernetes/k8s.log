@@ -1,0 +1,435 @@
+yum -y install java-1.8.0-openjdk-devel
+yum -y install epel*
+yum -y install telenet telnet htopntpdata ntpdate
+echo "it.com,./123" | passwd --stdin root
+echo "ZONE=Asia/Shanghai" > /etc/timezone
+setenforce 0
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+sed -i 's/SELINUX=permissive/SELINUX=disabled/g' /etc/selinux/config
+yum install -y epel-release vim screen bash-completion mtr lrzsz  wget telnet zip unzip sysstat  ntpdate libcurl openssl bridge-utils nethogs dos2unix iptables-services git net-tools
+service firewalld stop
+systemctl disable firewalld.service
+service iptables stop
+systemctl disable iptables.service
+service postfix stop
+systemctl disable postfix.service
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+note='#Ansible: nptdate-time'
+task='*/10 * * * * /usr/sbin/ntpdate -u ntp.sjtu.edu.cn &> /dev/null'
+echo "$(crontab -l)" | grep "^${note}$" &>/dev/null || echo -e "$(crontab -l)\n${note}" | crontab -
+echo "$(crontab -l)" | grep "^${task}$" &>/dev/null || echo -e "$(crontab -l)\n${task}" | crontab -
+echo '/etc/security/limits.conf 参数调优，需重启系统后生效'
+cp -rf /etc/security/limits.conf /etc/security/limits.conf.back
+cat > /etc/security/limits.conf << EOF
+* soft nofile 655350
+* hard nofile 655350
+* soft nproc unlimited
+* hard nproc unlimited
+* soft core unlimited
+* hard core unlimited
+root soft nofile 655350
+root hard nofile 655350
+root soft nproc unlimited
+root hard nproc unlimited
+root soft core unlimited
+root hard core unlimited
+EOF
+echo '/etc/sysctl.conf 文件调优'
+cp -rf /etc/sysctl.conf /etc/sysctl.conf.back
+cat > /etc/sysctl.conf << EOF
+ 
+vm.swappiness = 0
+net.ipv4.neigh.default.gc_stale_time = 120
+ 
+net.ipv4.conf.all.rp_filter = 0
+net.ipv4.conf.default.rp_filter = 0
+net.ipv4.conf.default.arp_announce = 2
+net.ipv4.conf.lo.arp_announce = 2
+net.ipv4.conf.all.arp_announce = 2
+ 
+net.ipv4.tcp_max_tw_buckets = 5000
+net.ipv4.tcp_syncookies = 1
+net.ipv4.tcp_max_syn_backlog = 1024
+net.ipv4.tcp_synack_retries = 2
+ 
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1
+ 
+kernel.sysrq = 1
+kernel.pid_max=1000000
+EOF
+sysctl -p
+hostnamectl set-hostname master-1
+
+cat <<EOF > /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_nonlocal_bind = 1
+net.ipv4.ip_forward = 1
+vm.swappiness=0
+EOF
+
+sed -ri 's/.*swap.*/#&/' /etc/fstab
+swapoff -a
+
+sysctl --system
+wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
+
+cat >>/etc/yum.repos.d/kubernetes.repo <<EOF
+[kubernetes]
+name=Kubernetes
+baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+EOF
+
+cat > /etc/sysconfig/modules/ipvs.modules <<EOF
+#!/bin/bash
+modprobe -- ip_vs
+modprobe -- ip_vs_rr
+modprobe -- ip_vs_wrr
+modprobe -- ip_vs_sh
+modprobe -- nf_conntrack_ipv4
+EOF
+
+chmod 755 /etc/sysconfig/modules/ipvs.modules
+bash /etc/sysconfig/modules/ipvs.modules
+lsmod | grep -e ip_vs -e nf_conntrack_ipv4
+yum install -y yum-utils device-mapper-persistent-data lvm2
+yum makecache fast
+yum install -y --setopt=obsoletes=0 docker-ce-19.03.5-3.el7
+systemctl start docker && systemctl enable docker && systemctl status docker
+docker info | grep Cgroup
+cat <<EOF >/etc/docker/daemon.json
+{
+"exec-opts": ["native.cgroupdriver=systemd"],
+"log-driver": "json-file",
+"log-opts": {
+"max-size": "5g",
+"max-file": "2"
+}
+}
+EOF
+###6台
+hostnamectl set-hostname k8s-master-1
+cat > /etc/hosts <<EOF
+172.21.168.201 k8s-master-1
+172.21.168.202 k8s-master-2
+172.21.168.203 k8s-master-3
+172.21.168.204 k8s-node-1
+172.21.168.205 k8s-node-2
+172.21.168.206 k8s-node-3
+EOF
+
+ssh-keygen -t rsa
+ll .ssh/
+ssh-copy-id root@k8s-master-2
+ssh-copy-id root@k8s-master-3
+ssh-copy-id root@k8s-node-1
+ssh-copy-id root@k8s-node-2
+ssh-copy-id root@k8s-node-3
+
+cat /usr/lib/systemd/system/docker.service
+systemctl restart docker && docker info | grep Cgroup
+systemctl status docker
+
+###三台master
+yum localinstall -y nginx-1.16.1-1.el7.ngx.x86_64.rpm 
+yum install -y keepalived  
+systemctl start keepalived && systemctl enable keepalived && systemctl status keepalived
+systemctl start nginx && systemctl enable nginx && systemctl status nginx
+cd /etc/nginx/conf.d/
+rm -f default.conf 
+vim /etc/nginx/nginx.conf 
+
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+stream {
+log_format proxy '$remote_addr $remote_port - [$time_local] $status $protocol '
+'"$upstream_addr" "$upstream_bytes_sent" "$upstream_connect_time"' ;
+access_log /var/log/nginx/nginx-proxy.log proxy;
+upstream kubernetes_lb{
+server 172.21.168.201:6443 weight=5 max_fails=3 fail_timeout=30s;
+server 172.21.168.202:6443 weight=5 max_fails=3 fail_timeout=30s;
+server 172.21.168.203:6443 weight=5 max_fails=3 fail_timeout=30s;
+}
+server {
+listen 7443;
+proxy_connect_timeout 30s;
+proxy_timeout 30s;
+proxy_pass kubernetes_lb;
+}
+}
+
+
+
+cd /etc/keepalived/
+vim /etc/keepalived/keepalived.conf 
+
+bal_defs {
+notification_email {
+test@gmail.com
+}
+notification_email_from Alexandre.Cassen@firewall.loc
+smtp_server 127.0.0.1
+smtp_connect_timeout 30
+router_id LVS_1
+}
+vrrp_instance VI_1 {
+state MASTER
+interface ens192
+lvs_sync_daemon_inteface ens192
+virtual_router_id 88
+advert_int 1
+priority 110
+authentication {
+auth_type PASS
+auth_pass 1111
+}
+virtual_ipaddress {
+172.21.168.11/24   #虚拟ip
+}
+}
+ 
+systemctl restart nginx
+systemctl restart keepalived.service 
+netstat -nltp
+
+##6台
+yum makecache fast && yum clean all && yum install -y --setopt=obsoletes=0 kubernetes-cni-0.7.5-0 kubelet-1.17.2-0 kubectl-1.17.2-0 kubeadm-1.17.2-0
+systemctl start kubelet.service && systemctl status kubelet.service && systemctl enable kubelet.service && systemctl status docker
+
+##master-1上面执行
+kubeadm config print init-defaults > kubeadm-init.yaml
+vim kubeadm-init.yaml
+
+advertiseAddress: 172.21.168.201  #master的ip
+name: k8s-master-1
+controlPlaneEndpoint: "172.21.168.201:7443"  ##在controllerManager: {}下面加
+kubernetesVersion: v1.17.2
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+mode: "ipvs"
+
+
+kubeadm config images pull --config kubeadm-init.yaml
+kubeadm init --config kubeadm-init.yaml 
+
+vim master-conf.sh
+
+USER=root
+CONTROL_PLANE_IPS="k8s-master-2 k8s-master-3"
+for host in ${CONTROL_PLANE_IPS}; do
+ssh "${USER}"@$host "mkdir -p /etc/kubernetes/pki/etcd"
+scp /etc/kubernetes/pki/ca.* "${USER}"@$host:/etc/kubernetes/pki/
+scp /etc/kubernetes/pki/sa.* "${USER}"@$host:/etc/kubernetes/pki/
+scp /etc/kubernetes/pki/front-proxy-ca.* "${USER}"@$host:/etc/kubernetes/pki/
+scp /etc/kubernetes/pki/etcd/ca.* "${USER}"@$host:/etc/kubernetes/pki/etcd/
+scp /etc/kubernetes/admin.conf "${USER}"@$host:/etc/kubernetes/
+done
+
+chmod +x master-conf.sh
+sh master-conf.sh
+ping 172.18.178.26
+telnet 172.18.178.26 7443
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+vim /etc/kubernetes/manifests/kube-controller-manager.yaml
+- --allocate-node-cidrs=true
+- --cluster-cidr=10.244.0.0/16
+
+cd /root
+wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+kubectl apply -f kube-flannel.yml
+kubeadm token list
+kubeadm token create
+
+##node加入集群
+kubeadm token create --print-join-command
+netstat -nltp
+kubectl  get nodes
+  
+
+加入master
+kubeadm join 172.21.168.201:7443 --token abcdef.0123456789abcdef \
+    --discovery-token-ca-cert-hash sha256:6d6ba978a4c962296b61ead5175c5a129c9f0a3555fcea781540d67922640a4c \
+    --control-plane 
+
+
+加入node
+kubeadm join 172.21.168.201:7443 --token abcdef.0123456789abcdef \
+    --discovery-token-ca-cert-hash sha256:6d6ba978a4c962296b61ead5175c5a129c9f0a3555fcea781540d67922640a4c 
+
+==================================
+#节点重置：
+kubeadm reset
+#服务停止和数据清理
+systemctl stop kubelet
+
+vim master-conf.sh
+
+USER=root
+CONTROL_PLANE_IPS="k8s-master-3"
+for host in ${CONTROL_PLANE_IPS}; do
+ssh "${USER}"@$host "mkdir -p /etc/kubernetes/pki/etcd"
+scp /etc/kubernetes/pki/ca.* "${USER}"@$host:/etc/kubernetes/pki/
+scp /etc/kubernetes/pki/sa.* "${USER}"@$host:/etc/kubernetes/pki/
+scp /etc/kubernetes/pki/front-proxy-ca.* "${USER}"@$host:/etc/kubernetes/pki/
+scp /etc/kubernetes/pki/etcd/ca.* "${USER}"@$host:/etc/kubernetes/pki/etcd/
+scp /etc/kubernetes/admin.conf "${USER}"@$host:/etc/kubernetes/
+done
+
+在运行加入节点或者master
+
+假如加不了节点，etcd报错
+https://blog.csdn.net/xgw1010/article/details/115086051
+kubectl get pods -n kube-system | grep etcd
+
+kubectl exec -it etcd-k8s-master-1  sh -n kube-system
+
+etcdctl  --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/peer.crt --key=/etc/kubernetes/pki/etcd/peer.key member list
+
+etcdctl  --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/peer.crt --key=/etc/kubernetes/pki/etcd/peer.key member remove 3a562c9669a6ed7b
+
+
+
+==================
+单台master
+
+vim /etc/hosts 
+172.21.168.207 master
+172.21.168.208 node-1
+172.21.168.209 node-2
+
+
+ssh-keygen -t rsa
+ll .ssh/
+ssh-copy-id root@node-1
+ssh-copy-id root@node-2
+
+hostnamectl set-hostname master
+
+cat <<EOF > /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_nonlocal_bind = 1
+net.ipv4.ip_forward = 1
+vm.swappiness=0
+EOF
+
+sed -ri 's/.*swap.*/#&/' /etc/fstab
+swapoff -a
+
+sysctl --system
+wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
+
+cat >>/etc/yum.repos.d/kubernetes.repo <<EOF
+[kubernetes]
+name=Kubernetes
+baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+EOF
+
+cat > /etc/sysconfig/modules/ipvs.modules <<EOF
+#!/bin/bash
+modprobe -- ip_vs
+modprobe -- ip_vs_rr
+modprobe -- ip_vs_wrr
+modprobe -- ip_vs_sh
+modprobe -- nf_conntrack_ipv4
+EOF
+
+chmod 755 /etc/sysconfig/modules/ipvs.modules
+bash /etc/sysconfig/modules/ipvs.modules
+lsmod | grep -e ip_vs -e nf_conntrack_ipv4
+yum install -y yum-utils device-mapper-persistent-data lvm2
+yum makecache fast
+yum install -y --setopt=obsoletes=0 docker-ce-19.03.5-3.el7
+systemctl start docker && systemctl enable docker
+docker info | grep Cgroup
+cat <<EOF >/etc/docker/daemon.json
+{
+"exec-opts": ["native.cgroupdriver=systemd"],
+"log-driver": "json-file",
+"log-opts": {
+"max-size": "5g",
+"max-file": "2"
+}
+}
+EOF
+
+yum makecache fast && yum clean all && yum install -y --setopt=obsoletes=0 kubernetes-cni-0.7.5-0 kubelet-1.17.2-0 kubectl-1.17.2-0 kubeadm-1.17.2-0
+systemctl start kubelet.service && systemctl status kubelet.service && systemctl enable kubelet.service && systemctl status docker
+
+##在master上面操作
+kubeadm config print init-defaults > kubeadm-init.yaml
+vim kubeadm-init.yaml
+
+advertiseAddress: 172.21.168.201  #master的ip
+name: k8s-master-1
+kubernetesVersion: v1.17.2
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+mode: "ipvs"
+
+
+kubeadm config images pull --config kubeadm-init.yaml
+kubeadm init --config kubeadm-init.yaml 
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+vim /etc/kubernetes/manifests/kube-controller-manager.yaml
+- --allocate-node-cidrs=true
+- --cluster-cidr=10.244.0.0/16
+
+cd /root
+wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+kubectl apply -f kube-flannel.yml
+
+
+kubectl  get node
+
+kubeadm token list
+kubeadm token create
+
+分别在2台master上 执行，执行完了node的kubelet.service 才能启动
+kubeadm join 172.21.168.207:6443 --token abcdef.0123456789abcdef \
+    --discovery-token-ca-cert-hash sha256:66315ea458500f7832cd434e62bb4ab10ef7106e625daebf0dcde9b31a082e57
+	
+
+=======================
+master删除节点，在节点上删除文件
+rm /run/flannel/subnet.env  -fr 
+rm /etc/kubernetes/* -fr
+hostnamectl set-hostname pro-k8s-panda-node-114
+
+#重启
+init 6
+
+docker rm `docker ps -aq`
+rm /var/lib/kubelet/* -fr
+ll /etc/kubernetes/
+rm /run/flannel/subnet.env  -fr 
+rm /etc/kubernetes/* -fr
+
+kubeadm join 10.5.17.99:7443 --token vnwddp.b6kk2pw6qnkgaz7t    --discovery-token-ca-cert-hash sha256:3d464823ac4e1d0c61dc0cc7b91033097ca8afb66bb01d79fa68724f078c23d7
