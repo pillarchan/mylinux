@@ -101,3 +101,51 @@ filebeat,logstash,elasticsearth,kibana版本需一致
            regexp:
               message:"^aaa"
 
+## Logstash
+
+logstash 是免费且开放的服务器端数据处理管道，能够从多个来源采集数据，转换数据，然后将数据发送到您最喜欢的“存储库”中。
+
+1. 安装
+
+   ```
+   wget https://artifacts.elastic.co/downloads/logstash/logstash-7.13.2-x86_64.rpm
+   yum install ./logstash-7.13.2-x86_64.rpm -y
+   ```
+
+2. 配置
+
+   1. 必需元素
+
+      1. input
+      2. output
+
+   2. 可选元素
+
+      1. filter
+
+   3. 测试配置
+
+      1. 命令行
+
+         ```
+         logstash -e ''
+         等同于
+         logstash -e input { stdin { type => stdin } } output { stdout { codec => rubydebug } }
+         
+         input { stdin { type => stdin } }表示要处理数据来源为标准设备
+         output { stdout { codec => rubydebug } } 表示输出处理好的数据到标准设备
+         ```
+
+      2. 配置文件
+
+         ```
+         需要手动创建，如XXXX.conf
+         input{
+         	stdin { }
+         }
+         output{
+         	stdout { }
+         }
+         ```
+
+         
