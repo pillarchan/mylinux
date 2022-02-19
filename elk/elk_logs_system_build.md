@@ -136,7 +136,7 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
          output { stdout { codec => rubydebug } } 表示输出处理好的数据到标准设备
          ```
 
-      2. 配置文件
+      2. 配置文件 执行logstash 需要使用参数 -f  配置文件路径
 
          ```
          需要手动创建，如XXXX.conf
@@ -148,4 +148,168 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
          }
          ```
 
-         
+      3. grok插件 是web日志信息过滤插件
+
+         ```
+         input {
+         	file: path => ["/home/log/api.log"]
+         	start_posting => "beginning"
+         }
+         filter {
+         	grok {
+         		match => { "message" => "%{COMBINEDAPACHELOG}" }
+         	}
+         }
+         output{
+         	{
+         		stdout {}
+         	}
+         }
+         ```
+
+      4. mutate 在filter配置中，添加mutate对象，可以对字段名进行修改和删除
+
+         ```
+         input {
+         	file: path => ["/home/log/api.log"]
+         	start_posting => "beginning"
+         }
+         filter {
+         	grok {
+         		match => { "message" => "%{COMBINEDAPACHELOG}" }
+         	}
+         	mutate { # 重命名字段名
+         		rename => { "clientip" => "cip" }
+         	}
+         	mutate { #去掉不想要的字段
+         		remove_field => ["xx","xx","xx","xx"]
+         	}
+         }
+         output{
+         	{
+         		stdout {}
+         	}
+         }
+         ```
+
+      5. geoip插件 用于显示ip的国家参数
+
+         ```
+         input {
+         	file: path => ["/home/log/api.log"]
+         	start_posting => "beginning"
+         }
+         filter {
+         	grok {
+         		match => { "message" => "%{COMBINEDAPACHELOG}" }
+         	}
+         	geoip { source => "clientip" }
+         	mutate { # 重命名字段名
+         		rename => { "clientip" => "cip" }
+         	}
+         	mutate { # 去掉不想要的字段
+         		remove_field => ["xx","xx","xx","xx"]
+         	}
+         }
+         output{
+         	{
+         		stdout {}
+         	}
+         }
+         ```
+
+      6. beats 收集filebeat所发出的日志
+
+         ```
+         input {
+         	beats {
+         		port =>5044
+         	}
+         }
+         filter {
+         	grok {
+         		match => { "message" => "%{COMBINEDAPACHELOG}" }
+         	}
+         	#geoip { source => "clientip" }
+         	#mutate { # 重命名字段名
+         	#	rename => { "clientip" => "cip" }
+         	#}
+         	#mutate { # 去掉不想要的字段
+         	#	remove_field => #["xx","xx","xx","xx"]
+         #	}
+         }
+         output{
+         	{
+         		stdout {}
+         	}
+         }
+         ```
+
+         filebeat配置中需要配置output.logstash
+
+         ```
+         output.logstash:
+           hosts: ["127.0.0.1:5044"]
+         ```
+
+## Elasticsearch
+
+1. 安装
+
+   1. 引入gpg-key
+
+      ```
+      rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+      ```
+
+   2. 添加yum 配置文件
+
+      ```
+      [elasticsearch]
+      name=Elasticsearch repository for 7.x packages
+      baseurl=https://artifacts.elastic.co/packages/7.x/yum
+      gpgcheck=1
+      gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+      enabled=0
+      autorefresh=1
+      type=rpm-md
+      ```
+
+   3. 添加可用repo
+
+      ```
+      sudo yum install --enablerepo=elasticsearch elasticsearch
+      ```
+
+2. 配置 elasticsearch.yml
+
+   ```
+   cluster.name:  集群名
+   node.name: 节点名   注意需要在hosts中配置对应的解析
+   node.data: true
+   path.data: 数据路径
+   path.logs: 日志路径
+   network.host: 0.0.0.0 #对外服务的IP
+   http.port: 9200  #对外服务的端口
+   discovery.seed_hosts: ["ip:port","ip","domain"]
+   cluster.initial_master_nodes: ["node1", "node2"] #需要初始集群的节点
+   http.cors.enabled: true #支持跨域
+   http.cors.allow-origin: "*"
+   ```
+
+3. 启动服务 systemctl start elasticsearch
+
+4. 查看集群健康状态 curl -X GET "http://127.0.0.1:9200/_cat/health?v"
+
+5. 111
+
+6. 111
+
+7. 111
+
+8. 111
+
+9. 111
+
+   
+
