@@ -280,6 +280,13 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
       ```
       sudo yum install --enablerepo=elasticsearch elasticsearch
       ```
+      
+   3. 使用yum安装
+
+      ```
+      yum list --showduplicates elasticsearch #查看版本
+      yum install elasticsearch-版本号 -y
+      ```
 
 2. 配置 elasticsearch.yml
 
@@ -297,19 +304,170 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
    http.cors.allow-origin: "*"
    ```
 
+3. 系统配置
+
+   ```
+   vim /etc/security/limits.conf
+   * hard nofile 65536
+   * soft nofile 65536
+   * soft nproc  65536
+   * hard nproc  65536
+   
+   ulimit -n 65535
+   
+   vim /etc/sysctl.conf
+   vm.max_map_count = 262144
+   net.core.somaxconn=65535
+   net.ipv4.ip_forward = 1
+   
+   sysctl -p
+   
+   swapoff -a
+   ```
+
 3. 启动服务 systemctl start elasticsearch
 
 4. 查看集群健康状态 curl -X GET "http://127.0.0.1:9200/_cat/health?v"
 
-5. 111
+6. 测试集群
 
-6. 111
+   logstash 中配置 output
 
-7. 111
+   ```
+   output {
+   	stdout{
+   		codec => rubydebug
+   	}
+   	elasticsearch {
+   		hosts => ["ip:port","",""]
+   	}
+   }
+   ```
 
-8. 111
+7. 验证索引
 
-9. 111
+   ```
+   curl -X GET http://127.0.0.1:9200/_cat/indicies
+   ```
 
-   
+8. 增加索引
 
+   ```
+   output {
+   	stdout {
+   		codec => rubydebug
+   	}
+   	#这只一个示例，还有其它变量如：fields logtype等需查询手册
+   	if [log][file][path] == "/home/log/app.log" {
+   		elasticsearch {
+    			hosts => ["ip:port","ip:port"]
+   			index => "%{[host][hostname]}-nginx-access-%{+YY-MM-dd}"
+   		}
+   	}
+   }
+   ```
+
+## Kibana
+
+1. 安装
+
+   1. 引入gpg-key
+
+      ```
+      rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+      ```
+
+   2. 添加yum 配置文件
+
+      ```
+      [elasticsearch]
+      name=Elasticsearch repository for 7.x packages
+      baseurl=https://artifacts.elastic.co/packages/7.x/yum
+      gpgcheck=1
+      gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+      enabled=0
+      autorefresh=1
+      type=rpm-md
+      ```
+
+   3. 添加可用repo
+
+      ```
+      sudo yum install --enablerepo=elasticsearch elasticsearch
+      ```
+
+   4. 使用yum安装
+
+      ```
+      yum list --showduplicates kibana #查看版本
+      yum install kibana-版本号 -y
+      ```
+
+2. 配置
+
+   1. kibana.yml
+
+   2. ```
+      server.host: 0.0.0.0
+      server.port: 5601
+      elaticsearch.hosts: ["http://ip:port"]
+      logging.dest: /kibana/log/path
+      i18n.local: zh-CN
+      ```
+
+3. kibana页面配置
+
+   1. 索引配置 menu->managerment->Stack managerment-->索引模式->创建索引模式
+   2. 索引来源就是logstash中output索引的配置项
+
+## Kafka
+
+1. 概念：数据缓冲队列，提高了可扩展性，具有峰值处理能力。是一个分布式，支持分区的、多副本的，基于zookeeper协调的分布式消息系统，特性为高吞吐量，可扩展性，可靠性，容错性，高并发
+
+2. 基础名词
+
+   1. topic 特定类型的消息流
+   2. producer 发布消息到话题的任何对象
+   3. comsumer 订阅一个或多个话题，从而消费这些已发布的话题
+   4. Broker 已发布的消息保存在一组服务器中
+   5. partition 每个topic 包含一个或多个partition
+   6. replicatoin partition的副本，保障partition的高可用
+   7. leader replica 中的一个角色，producer和consumer 只限leader交互
+   8. follower replica 中的一个角色，从leader中复制数据
+   9. zookeeper kafka通过zookeeper来存储集群的信息，zookeeper是一个分布式协调服务，它的主要作用为分布式系统提供一致性服务，功能包括:配置维护、分布式同步等。
+
+3. 安装
+
+   1. kafka依赖于zookeeper，zookeeper又依赖于java，所以首先安装java环境
+   2. 通过yum直接安装java即可
+   3. zookeeper 安装
+      1. yum 安装
+   4. kafka 安装
+
+4. 配置
+
+   1. zookeeper
+
+      ```
+      dataDir    #zk数据存放目录
+      dataLogDir #zk日志存放目录
+      clientPort #客户端连接zk服务的端口
+      tickTime   #心跳检测间隔时长
+      initLimit  #允许follower连接并同步到Leader的初始化连接时长，超过值则连接失败
+      syncLimit  #Leader与Follower之前发送消息时如果在设置时间内不能通信，则follower将会被丢弃
+      #server如果有多台则配置多台，如server.2 ...
+      server.1=192.168.19.1:2888:3888  #2888是follower与leader交换信息的端口，3888是当leader挂了时用来执行选举服务器相互通信的端口
+      
+      
+      #每个节点需配置不同的ID，路径是zk的dirData的路径
+      
+      echo 1 > /zk/dirData/path/myid
+      ```
+
+   2. kafka
+
+      ```
+      
+      ```
+
+5. 使用
