@@ -467,7 +467,68 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
    2. kafka
 
       ```
-      
+      broker.id 每一个broker集群中的唯一标识，要求是正数。在改变IP地址，不改变broker.id时不会影响consumers 
+      listeners=PLAINTTEXT://192.168.19.1:9092 监听地址
+      num.network.threads			broker处理消息的最大线路数据，一般不修改
+      num.io.threads 			    broker处理磁盘IO的线程数，数值应大于硬盘数
+      socket.send.buffer.bytes	socket的发送缓冲区
+      socket.receive.buffer.bytes  socket的接收缓冲区
+      socket.request.max.bytes	 socket请求的最大数值，防止serverOOM,message.max.bytes必然要小于socket.request.max.bytes,会被topic创建时的指定参数覆盖
+      log.dirs	日志文件目录
+      num.partitions  数据分片
+      num.reconvery.threads.per.data.dir	线程池分匹配多少线程数处理每个分区日志
+      用于元数据内部话题消费偏移量和传输状态的副本数量
+      offsets.topic.replication.factor=1
+      transaction.state.log.replicateion.factor=1
+      transactoin.state.log.min.isr=1
+      log.cleanup.policy  日志清理策略
+      log.retentoin.hours  数据存储时长
+      log.segment.bytes	日志数据段长度
+      log.retention.check.interval.ms  日志校验时长
+      zookeeper.connect 连接zookeeper集群逗号分隔，格式ip:port
+      zookeeper.connection.timeout.ms  连接超时时长
+      group.initial.rebalance.delay.ms 消费组初始延迟
       ```
 
-5. 使用
+5. 验证测试
+
+   1. 启动zookeeper
+
+      ```
+      nohup bin/zookeeper-server-start.sh config/zookeeper.properties &
+      ```
+
+   2. 启动kafka
+
+      ```
+      nohup bin/kafka-server-start.sh config/server.properties &
+      ```
+
+   3. 创建话题
+
+      ```
+      bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1
+      --topic testtopic
+      
+      bin/kafka-topics.sh --zookeeper 192.168.1.1:2181 --list
+      
+      bin/kafka-console-producer.sh --broker-list 192.168.1.1:9092 --topic testtopic
+      bin/kafka-console-consumer.sh --bootstrap-server 192.168.1.1:9092 --topic testtopic --from-beginning
+      ```
+
+6. filebeat kafka配置
+
+   1. ```
+      output.kafka:
+      # 将日志传递给kafka集群
+        hosts: ["192.168.1.1:9092", "192.168.1.2:9092", "192.168.1.2:9092"]
+      # kafka topic
+        topic: 'testtopic'
+        partition.round_robin:
+          reachable_only: false
+        required_acks: 1
+        compression: gzip
+        max_message_bytes: 1000000
+      ```
+
+      
