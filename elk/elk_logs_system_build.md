@@ -293,6 +293,7 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
    ```
    cluster.name:  集群名
    node.name: 节点名   注意需要在hosts中配置对应的解析
+   node.master: true
    node.data: true
    path.data: 数据路径
    path.logs: 日志路径
@@ -302,6 +303,7 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
    cluster.initial_master_nodes: ["node1", "node2"] #需要初始集群的节点
    http.cors.enabled: true #支持跨域
    http.cors.allow-origin: "*"
+   gateway.recover_after_nodes: 1
    ```
 
 3. 系统配置
