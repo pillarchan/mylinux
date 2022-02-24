@@ -128,85 +128,145 @@ Prometheus时间序列
 
 时间序列数据：按照时间顺序记录系统、设备状态变化的数据，每个数据称为一个样本;
 
-![image-20220224084446905](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224084446905.png)
+![image-20220224084446905](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224084446905.png)
 
-![image-20220224084853444](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224084853444.png)
+![image-20220224084853444](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224084853444.png)
 
-![image-20220224084919935](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224084919935.png)
+![image-20220224084919935](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224084919935.png)
 
-![image-20220224084953492](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224084953492.png)
+![image-20220224084953492](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224084953492.png)
 
-![image-20220224085013950](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224085013950.png)
+![image-20220224085013950](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224085013950.png)
 
-![image-20220224085134688](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224085134688.png)
+![image-20220224085134688](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224085134688.png)
 
-![image-20220224085229198](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224085229198.png)
+![image-20220224085229198](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224085229198.png)
 
-![image-20220224085448819](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224085448819.png)
+![image-20220224085448819](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224085448819.png)
 
-![image-20220224090106449](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224090106449.png)
+![image-20220224090106449](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224090106449.png)
 
-![image-20220224090321334](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224090321334.png)
+![image-20220224090321334](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224090321334.png)
 
-![image-20220224095015928](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224095015928.png)
+![image-20220224095015928](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224095015928.png)
 
-![image-20220224095205003](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224095205003.png)
+![image-20220224095205003](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224095205003.png)
 
-![image-20220224100612521](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224100612521.png)
+![image-20220224100612521](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224100612521.png)
 
-![image-20220224100845540](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224100845540.png)
+![image-20220224100845540](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224100845540.png)
 
-![image-20220224101357231](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224101357231.png)
+![image-20220224101357231](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224101357231.png)
 
-![image-20220224101304504](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224101304504.png)
+![image-20220224101304504](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224101304504.png)
 
-![image-20220224101700249](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224101700249.png)
+![image-20220224101700249](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224101700249.png)
 
-![image-20220224101937164](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224101937164.png)
+![image-20220224101937164](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224101937164.png)
 
 ### PromQL进阶
 
-![image-20220224102400886](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224102400886.png)
+![image-20220224102400886](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224102400886.png)
 
-![image-20220224102454084](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224102454084.png)
+![image-20220224102454084](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224102454084.png)
 
-![image-20220224102620468](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224102620468.png)
+![image-20220224102620468](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224102620468.png)
 
-![image-20220224102859507](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224102859507.png)
+![image-20220224102859507](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224102859507.png)
 
-![image-20220224103044047](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224103044047.png)
+![image-20220224103044047](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224103044047.png)
 
-![image-20220224103131044](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224103131044.png)
+![image-20220224103131044](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224103131044.png)
 
-![image-20220224103212451](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224103212451.png)
+![image-20220224103212451](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224103212451.png)
 
 prometheus 配置中targets 有两种配置方式
 
 1. 基于静态，也就是IP:PORT的配置
 
-2. 基于动态，也就是基于服务发现，可以是基于文件
+2. 基于动态，也就是基于服务发现
 
-   ![image-20220224104605184](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224104605184.png)
+3. 基于文件![image-20220224104605184](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224104605184.png)
 
-```
-scrape_configs:
-  - job_name: "prometheus"
-    file_sd_configs:
-    - files:                        #指定要加载的文件列表
-      - targets/prometheus*.yml     #文件加载支持glob通配符
-      refresh_interval: 2m          #每隔2分钟重新加载一次文件中定义的Targets,默认是5m 
-  - job_name: "nodes"
-  	file_sd_configs:
-  	  - files:
-  	    - targets/node*.yml
-  	  refresh_interval: 2m
-  	  
-  	  
-目录为prometheus/xxx/targets/prometheus-servers.yml中则需要配置
-- targets:
-  - 192.168.58.101:9000
-  labels:
-    app: prometheus
-    job: prometheus
-```
+   1. ```
+        - job_name: "prometheus"
+          file_sd_configs:
+          - files:                        #指定要加载的文件列表
+            - targets/prometheus*.yml     #文件加载支持glob通配符
+            refresh_interval: 2m          #每隔2分钟重新加载一次文件中定义的Targets,默认是5m 
+        - job_name: "nodes"
+        	file_sd_configs:
+        	  - files:
+        	    - targets/node*.yml
+        	  refresh_interval: 2m
+        	  
+        	  
+      目录为prometheus/xxx/targets/prometheus-servers.yml中则需要配置
+      - targets:
+        - 192.168.58.101:9000
+        labels:
+          app: prometheus
+          job: prometheus
+      ```
 
+4. 基于DNS服务发现
+   ![image-20220224132538526](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224132538526.png)
+
+5. 基于consul的服务发现
+
+   ![image-20220224132707746](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224132707746.png)
+
+   配置文件
+
+   ```
+   /etc/consul/nodes.json
+   {
+   	"services":[ 
+   		{
+   			"id":"node-exporter-node01",
+   			"name":"node01",
+   			"address":"192.168.58.101",
+   			"port":"9100",
+   			"tags":["nodes"],
+   			"checks": [{
+   				"http": "http://192.168.58.101:9100/metrics",
+   				"interval": "5s"
+   			}]
+   		},{
+   			"id":"node-exporter-node02",
+   			"name":"node01",
+   			"address":"192.168.58.102",
+   			"port":"9100",
+   			"tags":["nodes"],
+   			"checks": [{
+   				"http": "http://192.168.58.102:9100/metrics",
+   				"interval": "5s"
+   			}]
+   		},...
+   	]
+   }
+   
+   
+   prometheus.yml
+   scrape_configs:
+     - job_name: "prometheus"
+       consul_sd_configs:
+       - server: "192.168.58.101:8500"
+         tags: 
+         - "prometheus"
+         refresh_interval: 2m
+     - job_name: "nodes"
+       consul_sd_configs:
+       - server: "192.168.58.101:8500"
+         tags:
+         - "nodes"
+         refresh_interval: 2m
+   ```
+
+   
+
+6. 111111
+
+7. 
+
+   
