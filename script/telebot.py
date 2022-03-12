@@ -45,7 +45,7 @@ def handle(msg):
         err_msg = 'ID未加白不能使用,请通知管理员加白ID:%s'%chat_id
         bot.sendMessage(chat_id, err_msg)
 
-TOKEN = '5201507400:AAG1LNkhDYSKmwPHcxattXf7QdA5GudPdiU'
+TOKEN = 'TOKEN_code'
 
 bot = telepot.Bot(TOKEN)
 MessageLoop(bot, handle).run_as_thread()
