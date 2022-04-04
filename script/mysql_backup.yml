@@ -1,0 +1,24 @@
+---
+- hosts: "{{ item_hosts }}"
+  gather_facts: no
+  tasks:
+  - name: dump a database
+    mysql_db:
+      login_host: "192.168.0.171"
+      login_user: "root"
+      login_password: "cOIuLF@y1H#GmQ4!d6U"
+      login_port: "3306"
+      name: "zcs"
+      target: "/tmp/zcs.sql"
+      state: "dump"
+  - name: zip the sql
+    shell: zip /tmp/zcs{{ lookup('pipe', 'date +%Y%m%d%H') }}.zip /tmp/zcs.sql -P kEU9TzQV
+  - name: send file
+    shell: curl -F "chat_id=id_num" -F document=@/tmp/zcs{{ lookup('pipe', 'date +%Y%m%d%H') }}.zip  https://api.telegram.org/bot_num:bot_token/sendDocument
+  - name: remove file
+    file:
+      path: "{{ item }}"
+      state: absent
+    with_items:
+      - /tmp/zcs{{ lookup('pipe', 'date +%Y%m%d%H') }}.zip
+      - /tmp/zcs.sql
