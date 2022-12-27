@@ -1,15 +1,15 @@
 #!/bin/bash
 #最新版本docker 安装
 sudo yum install -y yum-utils
-
+sudo yum install redhat-lsb-core-4.1-47.el8 -y
 if [ $(lsb_release -a | grep -i ^release | grep -oE '[0-9]') -eq 8 ];then
     sudo dnf config-manager \
 	 --add-repo \
 	 https://download.docker.com/linux/centos/docker-ce.repo
-    else 
-        sudo yum-config-manager \
-            --add-repo \
-        https://download.docker.com/linux/centos/docker-ce.repo	
+else 
+    sudo yum-config-manager \
+        --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo	
 fi
 sudo yum install epel-release -y
 sudo yum remove docker \
