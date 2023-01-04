@@ -19,7 +19,9 @@ sudo yum remove docker \
                   docker-latest \
                   docker-latest-logrotate \
                   docker-logrotate \
-                  docker-engine
+                  docker-engine \
+				docker-*
+sudo systemctl disable --now docker.service
 sudo yum install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
 sudo alias docker-compose='docker compose'
 sudo systemctl enable --now docker.service
