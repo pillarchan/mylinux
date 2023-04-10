@@ -1,0 +1,7 @@
+---
+- hosts: c7_admin
+  tasks:
+  - name: del ip from team_ip.ini
+    shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /home/wwwroot/team_new/config/team_ip.ini
+  - name: restart c7team_admin
+    shell: docker restart team_new_team_1

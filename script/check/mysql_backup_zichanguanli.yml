@@ -1,0 +1,24 @@
+---
+- hosts: all 
+  gather_facts: no
+  tasks:
+  - name: dump a database
+    mysql_db:
+      login_host: "127.0.0.1"
+      login_user: "root"
+      login_password: "lnmp.org"
+      login_port: "3306"
+      name: "zichanguanli"
+      target: "/tmp/zichanguanli.sql"
+      state: "dump"
+  - name: zip the sql  
+    shell: zip /tmp/zichanguanli{{ lookup('pipe', 'date +%Y%m%d%H') }}.zip /tmp/zichanguanli.sql -P kEU9TzQV
+  - name: send file
+    shell: curl -F "chat_id=1174929680" -F document=@/tmp/zichanguanli{{ lookup('pipe', 'date +%Y%m%d%H') }}.zip  https://api.telegram.org/bot5240878837:AAFq-JRxvsAgfAh7bQg7Zkm7bVYsgyI4dF4/sendDocument
+  - name: remove file
+    file: 
+      path: "{{ item }}"
+      state: absent
+    with_items: 
+      - /tmp/zichanguanli{{ lookup('pipe', 'date +%Y%m%d%H') }}.zip
+      - /tmp/zichanguanli.sql

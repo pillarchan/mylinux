@@ -1,0 +1,7 @@
+---
+- hosts: yihao_admin
+  tasks:
+  - name: add ip into admin_ip.ini
+    shell: sed -Ei "s@((([0-9]{1,3}\.?){4})+)@\1|{{ ip }}@" /home/yihao/config/admin_ip.ini 
+  - name: restart admin
+    shell: docker-compose -f /home/yihao/docker-compose.yml restart admin

@@ -1,0 +1,17 @@
+---
+- hosts: ww_admin_main
+  tasks:
+  - name: del ip from admin_ip.conf
+    shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /data/etc/nginx/conf.d/admin_ip.ini 
+  - name: test nginx
+    shell: docker exec -it wadmin nginx -t
+  - name: reload nginx
+    shell: docker exec -it wadmin nginx -s reload
+- hosts: ww_admin_yfb
+  tasks:
+  - name: del ip from admin_ip.conf
+    shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /data/etc/nginx/conf.d/admin_ip.ini
+  - name: test nginx
+    shell: docker exec -it wwp nginx -t
+  - name: reload nginx
+    shell: docker exec -it wwp nginx -s reload

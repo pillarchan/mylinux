@@ -1,0 +1,14 @@
+---
+- hosts: all 
+  gather_facts: no
+  tasks:
+  - name: send conf
+    ansible.builtin.copy:
+      src: "{{ src_file }}"
+      dest: "{{ ban_words_conf_path }}"
+    notify:
+      - reload nginx
+  handlers:
+  - name: reload nginx 
+    ansible.builtin.shell:
+      cmd: "{{ nginx_reload_cmd }}"

@@ -1,0 +1,10 @@
+---
+- hosts: yihao_admin
+  tasks:
+  - name: del ip from admin_ip.ini
+    lineinfile:
+        path: "/home/wwwroot/config/admin_ip.ini" 
+        regexp: "allow {{ ip }};"
+        state: absent
+  - name: restart admin
+    shell: docker-compose -f /home/wwwroot/docker-compose-match.yml restart match_admin

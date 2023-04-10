@@ -1,0 +1,7 @@
+---
+- hosts: chat_history_admin
+  tasks:
+  - name: add ip into admin_ip.conf
+    shell: sed -Ei "s@((([0-9]{1,3}\.?){4})+)@\1|{{ ip }}@" /home/www/config/admin_ip.conf 
+  - name: restart admin
+    shell: docker-compose -f /home/www/docker-compose.yml restart chat_admin

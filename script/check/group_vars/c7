@@ -1,0 +1,3 @@
+log_path: /home/wwwlogs/app.log 
+ban_words_conf_path: /usr/local/nginx/conf/ban_words.conf
+nginx_reload_cmd: /usr/bin/nginx -s reload

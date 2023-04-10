@@ -1,0 +1,7 @@
+---
+- hosts: c7_admin
+  tasks:
+  - name: del ip from admin_ip.ini
+    shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /usr/local/nginx/conf/vhost/admin_ip.ini 
+  - name: restart admin
+    shell: nginx -s reload

@@ -1,0 +1,10 @@
+---
+- hosts: all
+  gather_facts: no
+  tasks:
+  - name: Remote diff_code
+    unarchive: 
+      src: "{{ srcfile }}"
+      dest: "{{ destfile }}"
+      owner: www
+      group: www

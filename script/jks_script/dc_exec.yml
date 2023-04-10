@@ -1,0 +1,14 @@
+#---
+#- hosts: all
+#  gather_facts: no
+#  tasks:  
+#  - name: restart service
+#    community.docker.docker_container_exec:
+#      container: yihao_service_1
+#      command: /bin/bash -c "ls -alh"
+#      chdir: /home/wwwroot
+#    register: result
+#
+#  - name: Print stdout
+#    debug:
+#      var: result.stdout

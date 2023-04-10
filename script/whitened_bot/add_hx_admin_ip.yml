@@ -1,0 +1,7 @@
+---
+- hosts: ng_coin_admin
+  tasks:
+  - name: add ip into ugame_client_ip.conf
+    shell: sed -Ei "s@((([0-9]{1,3}\.?){4})+)@\1|{{ ip }}@" /home/ugame/nginx/ugame_client_ip.conf
+  - name: restart admin
+    shell: docker-compose -f /home/ugame/docker-compose.yml restart nginx

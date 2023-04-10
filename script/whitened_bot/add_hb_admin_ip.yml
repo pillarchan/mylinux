@@ -1,0 +1,7 @@
+---
+- hosts: hongbao_admin
+  tasks:
+  - name: add ip into admin_ip.ini
+    shell: sed -Ei "s@((([0-9]{1,3}\.?){4})+)@\1|{{ ip }}@" /www/server/nginx/conf/hongbaoadmin_ip.ini 
+  - name: restart admin
+    shell: nginx -s reload

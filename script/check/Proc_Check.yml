@@ -1,0 +1,6 @@
+---
+- hosts: all 
+  gather_facts: no
+  tasks:
+  - name: script Proc_Check
+    ansible.builtin.script: /opt/check/Proc_Check.sh

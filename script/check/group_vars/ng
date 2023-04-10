@@ -1,0 +1,3 @@
+log_path: /home/wwwroot/ngapp_pro/logs/app/app.log
+ban_words_conf_path: /home/wwwroot/ngapp_pro/config/ban_words.conf
+nginx_reload_cmd: /usr/bin/docker restart ng_app
