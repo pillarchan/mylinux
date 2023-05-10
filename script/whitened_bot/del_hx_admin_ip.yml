@@ -1,7 +1,7 @@
 ---
 - hosts: ng_coin_admin
   tasks:
-  - name: del ip from ugame_client_ip.conf
-    shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /home/ugame/nginx/ugame_client_ip.conf 
-  - name: restart admin
-    shell: docker-compose -f /home/ugame/docker-compose.yml restart nginx
+    - name: del ip from ugame_client_ip.conf
+      shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /home/ugame/nginx/ugame_client_ip.conf
+    - name: restart admin
+      shell: docker-compose -f /home/ugame/docker-compose.yml restart nginx

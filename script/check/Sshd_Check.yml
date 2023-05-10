@@ -1,6 +1,6 @@
 ---
-- hosts: all 
+- hosts: all
   gather_facts: no
   tasks:
-  - name: script Sshd_Check
-    ansible.builtin.script: /opt/check/Sshd_Check.sh
+    - name: script Sshd_Check
+      ansible.builtin.script: /opt/check/Sshd_Check.sh

@@ -2,10 +2,10 @@
 - hosts: all
   gather_facts: no
   tasks:
-  - name: restart app
-    shell: docker restart {{ item }}
-    with_items:
-      - yihao-app-1
-      - quan_app
-      - yihao_app_1
-    ignore_errors: yes
+    - name: restart app
+      shell: docker restart {{ item }}
+      with_items:
+        - yihao-app-1
+        - quan_app
+        - yihao_app_1
+      ignore_errors: yes

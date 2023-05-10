@@ -1,4 +1,4 @@
-# CentOS 7搭建gitlab环境
+# CentOS 7 搭建 gitlab 环境
 
 ### 一，更新系统
 
@@ -6,13 +6,13 @@
 yum update -y
 ```
 
-####     这个执行中间可能会需要5到10分钟左右，根据自己的网速快慢来决定执行的快慢，大家只需要耐心等待下就好了
+#### 这个执行中间可能会需要 5 到 10 分钟左右，根据自己的网速快慢来决定执行的快慢，大家只需要耐心等待下就好了
 
 ![在这里插入图片描述](https:////p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/a5520eeb06b1447d8dbaec1bf39a1fb6~tplv-k3u1fbpfcp-zoom-1.image)
 
-### 二，安装sshd
+### 二，安装 sshd
 
-#### 2.1 安装sshd依赖
+#### 2.1 安装 sshd 依赖
 
 ```powershell
 yum install -y curl policycoreutils-python openssh-server
@@ -29,7 +29,7 @@ systemctl start sshd
 
 #### 2.3 接下来我们配置下防火墙：
 
-​    打开 /etc/sysctl.conf 文件，在文件最后添加新的一行
+​ 打开 /etc/sysctl.conf 文件，在文件最后添加新的一行
 
 ```powershell
 net.ipv4.ip_forward = 1
@@ -37,19 +37,19 @@ net.ipv4.ip_forward = 1
 
 ![在这里插入图片描述](https:////p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/36a8efff0f324150acf15754b327bb8a~tplv-k3u1fbpfcp-zoom-1.image)
 
-#####     我们只需要sysctl.conf在最后添加一行，按下esc 加:wq 保存即可
+##### 我们只需要 sysctl.conf 在最后添加一行，按下 esc 加:wq 保存即可
 
 ### 三，接下来我们在安装 postfix
 
-#####     GitLab 需要使用 postfix 来发送邮件。当然，也可以使用 SMTP 服务器。
+##### GitLab 需要使用 postfix 来发送邮件。当然，也可以使用 SMTP 服务器。
 
-#### 3.1 安装postfix
+#### 3.1 安装 postfix
 
 ```powershell
 yum install -y postfix
 ```
 
-#####    打开 /etc/postfix/main.cf 文件，在第 119 行附近找到 inet_protocols = all，将 all 改为 ipv4
+##### 打开 /etc/postfix/main.cf 文件，在第 119 行附近找到 inet_protocols = all，将 all 改为 ipv4
 
 ```powershell
 inet_protocols = ipv4
@@ -60,13 +60,13 @@ inet_protocols = ipv4
 #### 3.2 启用并启动 postfix：
 
 ```powershell
-systemctl enable postfix 
+systemctl enable postfix
 systemctl start postfix
 ```
 
 ### 3.3 配置 swap 交换分区
 
-> ​    由于 GitLab 较为消耗资源，我们需要先创建交换分区，以降低物理内存的压力。 在实际生产环境中，如果服务器配置够高，则不必配置交换分区。
+> ​ 由于 GitLab 较为消耗资源，我们需要先创建交换分区，以降低物理内存的压力。 在实际生产环境中，如果服务器配置够高，则不必配置交换分区。
 
 ### 3.4 新建 2 GB 大小的交换分区：
 
@@ -83,7 +83,7 @@ swapon /root/swapfile
 
 ![在这里插入图片描述](https:////p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2cfc850de13f42ebb9786b386a5aef31~tplv-k3u1fbpfcp-zoom-1.image)
 
-#####    添加自启用。打开 /etc/fstab 文件，在文件最后添加新的一行
+##### 添加自启用。打开 /etc/fstab 文件，在文件最后添加新的一行
 
 ```powershell
 /root/swapfile swap swap defaults 0 0
@@ -91,7 +91,7 @@ swapon /root/swapfile
 
 ![在这里插入图片描述](https:////p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/42558515d80144f18a50cc25efa374c4~tplv-k3u1fbpfcp-zoom-1.image)
 
-### 四，接下里我们安装git
+### 四，接下里我们安装 git
 
 #### 4.1 安装 GitLab
 
@@ -129,7 +129,7 @@ yum install -y gitlab-ce
 
 ##### 5.1 配置 GitLab 的域名（非必需）
 
-######     打开 /etc/gitlab/gitlab.rb 文件，在第 13 行附近找到 external_url 'http://gitlab.example.com'，将单引号中的内容改为自己的域名（带上协议头，末尾无斜杠）
+###### 打开 /etc/gitlab/gitlab.rb 文件，在第 13 行附近找到 external_url 'http://gitlab.example.com'，将单引号中的内容改为自己的域名（带上协议头，末尾无斜杠）
 
 ```powershell
 external_url 'http://119.29.102.85'
@@ -149,7 +149,7 @@ sudo gitlab-ctl reconfigure
 
 ![在这里插入图片描述](https:////p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/9bbb14a3b0a64ebb95db0ad2bf8af315~tplv-k3u1fbpfcp-zoom-1.image) ![在这里插入图片描述](https:////p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/6608764925604340a75d331a4e0ce5ec~tplv-k3u1fbpfcp-zoom-1.image)
 
-###### 当看到这个就说明我们gitlab已经安装成功了。
+###### 当看到这个就说明我们 gitlab 已经安装成功了。
 
 ##### 5.3 启动成功之后我们通过浏览器访问下
 
@@ -161,11 +161,11 @@ sudo gitlab-ctl reconfigure
 
 #### 这种情况出现的原因：
 
-#####   原因1、8080端口被tomcat占用
+##### 原因 1、8080 端口被 tomcat 占用
 
-######     解决办法：更换端口
+###### 解决办法：更换端口
 
-  安装tomcat默认的是8080端口，netstat -ntpl查看端口情况 ![在这里插入图片描述](https:////p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5928bce0c28240fca7667b6d49427990~tplv-k3u1fbpfcp-zoom-1.image)    最简单的方式我们就是把8080端口kill掉，然后改下端口号 为了避免8080端口冲突问题，可以修改下的默认端口，vim打开/etc/gitlab/gitlab.rb配置文件
+安装 tomcat 默认的是 8080 端口，netstat -ntpl 查看端口情况 ![在这里插入图片描述](https:////p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/5928bce0c28240fca7667b6d49427990~tplv-k3u1fbpfcp-zoom-1.image) 最简单的方式我们就是把 8080 端口 kill 掉，然后改下端口号 为了避免 8080 端口冲突问题，可以修改下的默认端口，vim 打开/etc/gitlab/gitlab.rb 配置文件
 
 #### 执行重新启动
 
@@ -178,11 +178,11 @@ sudo gitlab-ctl start
 相关操作
 
 > 启动服务：gitlab -ctl start
->  查看状态：gitlab -ctl status
->  停掉服务：gitlab -ctl stop
->  重启服务：gitlab -ctl restart
->  让配置生效：gitlab -ctl reconfigure
+> 查看状态：gitlab -ctl status
+> 停掉服务：gitlab -ctl stop
+> 重启服务：gitlab -ctl restart
+> 让配置生效：gitlab -ctl reconfigure
 
-####     原因2、gitlab占用内存太多，导致服务器崩溃。尤其是使用阿里云服务器最容易出现502
+#### 原因 2、gitlab 占用内存太多，导致服务器崩溃。尤其是使用阿里云服务器最容易出现 502
 
-#####      解决办法：默认情况下，主机的swap功能是没有启用的，解决办法是启动swap分区，就是我们上面启用的这里就不再过多解释了
+##### 解决办法：默认情况下，主机的 swap 功能是没有启用的，解决办法是启动 swap 分区，就是我们上面启用的这里就不再过多解释了

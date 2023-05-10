@@ -1,7 +1,7 @@
 ---
 - hosts: c7_admin
   tasks:
-  - name: add ip into team_ip.ini
-    shell: sed -Ei "s@((([0-9]{1,3}\.?){4})+)@\1|{{ ip }}@" /home/wwwroot/team_new/config/team_ip.ini
-  - name: restart c7team_admin
-    shell: docker restart team_new_team_1
+    - name: add ip into team_ip.ini
+      shell: sed -Ei "s@((([0-9]{1,3}\.?){4})+)@\1|{{ ip }}@" /home/wwwroot/team_new/config/team_ip.ini
+    - name: restart c7team_admin
+      shell: docker restart team_new_team_1

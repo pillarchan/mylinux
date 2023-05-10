@@ -1,10 +1,10 @@
-# ELK日志系统
+# ELK 日志系统
 
 ## 基础架构工作流程
 
-filebeat -> kafka或redis -> logstash -> elasticsearth -> kibana
+filebeat -> kafka 或 redis -> logstash -> elasticsearth -> kibana
 
-filebeat,logstash,elasticsearth,kibana版本需一致
+filebeat,logstash,elasticsearth,kibana 版本需一致
 
 ## Filebeat
 
@@ -38,17 +38,17 @@ filebeat,logstash,elasticsearth,kibana版本需一致
          filebeat.inputs:
          - type: log
            enabled: true
-           paths: 
+           paths:
              - /tmp/*.log
          # ============================== Filebeat modules ==============================
          filebeat.config.modules:
            # Glob pattern for configuration loading
            path: ${path.config}/modules.d/*.yml
-         
+
            # Set to true to enable config reloading
-           reload.enabled: false    
+           reload.enabled: false
          # ======================= Elasticsearch template setting =======================
-         
+
          setup.template.settings:
            index.number_of_shards: 1
            #index.codec: best_compression
@@ -60,16 +60,16 @@ filebeat,logstash,elasticsearth,kibana版本需一致
            - add_cloud_metadata: ~
            - add_docker_metadata: ~
            - add_kubernetes_metadata: ~
-         
+
          output.console:
            pretty: true
          ```
 
 4. 模块应用
 
-   1. /etc/filebeat/modules.d 下有内置模块，需要应用可以开启，以nginx为例，直接修改nginx.yml.disable为nginx.yml,也可以使用命令filebeat modules enable nginx
+   1. /etc/filebeat/modules.d 下有内置模块，需要应用可以开启，以 nginx 为例，直接修改 nginx.yml.disable 为 nginx.yml,也可以使用命令 filebeat modules enable nginx
 
-   2. var.path 可以为多个日志文件，格式为数组 var.path: [/var/logs/access.log,/var/logs/error.log] 或 
+   2. var.path 可以为多个日志文件，格式为数组 var.path: [/var/logs/access.log,/var/logs/error.log] 或
 
       ```"
       var.path:
@@ -83,23 +83,23 @@ filebeat,logstash,elasticsearth,kibana版本需一致
    2. output.elasticsearch
    3. output.kafka
    4. output.logstash
-      注：output的方式只能是一种
+      注：output 的方式只能是一种
 
-6. 重读日志文件 
+6. 重读日志文件
 
-   1. 如果遇到filebeat.lock的情况，杀掉进程，删掉filebeat/data/目录，重启服务即可
+   1. 如果遇到 filebeat.lock 的情况，杀掉进程，删掉 filebeat/data/目录，重启服务即可
 
 7. processor 增删字段或正则匹配到的行
 
-   1. drop_fields: 
-        fields: ["a","b","c"]
+   1. drop_fields:
+      fields: ["a","b","c"]
    2. add_fields:
-        fields: 
-          host_tag: "xxx"
-   3. drop_event: 
-        when: 
-           regexp:
-              message:"^aaa"
+      fields:
+      host_tag: "xxx"
+   3. drop_event:
+      when:
+      regexp:
+      message:"^aaa"
 
 ## Logstash
 
@@ -131,12 +131,12 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
          logstash -e ''
          等同于
          logstash -e input { stdin { type => stdin } } output { stdout { codec => rubydebug } }
-         
+
          input { stdin { type => stdin } }表示要处理数据来源为标准设备
          output { stdout { codec => rubydebug } } 表示输出处理好的数据到标准设备
          ```
 
-      2. 配置文件 执行logstash 需要使用参数 -f  配置文件路径
+      2. 配置文件 执行 logstash 需要使用参数 -f 配置文件路径
 
          ```
          需要手动创建，如XXXX.conf
@@ -148,7 +148,7 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
          }
          ```
 
-      3. grok插件 是web日志信息过滤插件
+      3. grok 插件 是 web 日志信息过滤插件
 
          ```
          input {
@@ -167,7 +167,7 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
          }
          ```
 
-      4. mutate 在filter配置中，添加mutate对象，可以对字段名进行修改和删除
+      4. mutate 在 filter 配置中，添加 mutate 对象，可以对字段名进行修改和删除
 
          ```
          input {
@@ -192,7 +192,7 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
          }
          ```
 
-      5. geoip插件 用于显示ip的国家参数
+      5. geoip 插件 用于显示 ip 的国家参数
 
          ```
          input {
@@ -218,7 +218,7 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
          }
          ```
 
-      6. beats 收集filebeat所发出的日志
+      6. beats 收集 filebeat 所发出的日志
 
          ```
          input {
@@ -245,7 +245,7 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
          }
          ```
 
-         filebeat配置中需要配置output.logstash
+         filebeat 配置中需要配置 output.logstash
 
          ```
          output.logstash:
@@ -256,13 +256,13 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
 
 1. 安装
 
-   1. 引入gpg-key
+   1. 引入 gpg-key
 
       ```
       rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
       ```
 
-   2. 添加yum 配置文件
+   2. 添加 yum 配置文件
 
       ```
       [elasticsearch]
@@ -275,13 +275,13 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
       type=rpm-md
       ```
 
-   3. 添加可用repo
+   3. 添加可用 repo
 
       ```
       sudo yum install --enablerepo=elasticsearch elasticsearch
       ```
-      
-   3. 使用yum安装
+
+   4. 使用 yum 安装
 
       ```
       yum list --showduplicates elasticsearch #查看版本
@@ -314,22 +314,22 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
    * soft nofile 65536
    * soft nproc  65536
    * hard nproc  65536
-   
+
    ulimit -n 65535
-   
+
    vim /etc/sysctl.conf
    vm.max_map_count = 262144
    net.core.somaxconn=65535
    net.ipv4.ip_forward = 1
-   
+
    sysctl -p
-   
+
    swapoff -a
    ```
 
-3. 启动服务 systemctl start elasticsearch
+4. 启动服务 systemctl start elasticsearch
 
-4. 查看集群健康状态 curl -X GET "http://127.0.0.1:9200/_cat/health?v"
+5. 查看集群健康状态 curl -X GET "http://127.0.0.1:9200/_cat/health?v"
 
 6. 测试集群
 
@@ -373,13 +373,13 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
 
 1. 安装
 
-   1. 引入gpg-key
+   1. 引入 gpg-key
 
       ```
       rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
       ```
 
-   2. 添加yum 配置文件
+   2. 添加 yum 配置文件
 
       ```
       [elasticsearch]
@@ -392,13 +392,13 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
       type=rpm-md
       ```
 
-   3. 添加可用repo
+   3. 添加可用 repo
 
       ```
       sudo yum install --enablerepo=elasticsearch elasticsearch
       ```
 
-   4. 使用yum安装
+   4. 使用 yum 安装
 
       ```
       yum list --showduplicates kibana #查看版本
@@ -417,14 +417,14 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
       i18n.local: zh-CN
       ```
 
-3. kibana页面配置
+3. kibana 页面配置
 
    1. 索引配置 menu->managerment->Stack managerment-->索引模式->创建索引模式
-   2. 索引来源就是logstash中output索引的配置项
+   2. 索引来源就是 logstash 中 output 索引的配置项
 
 ## Kafka
 
-1. 概念：数据缓冲队列，提高了可扩展性，具有峰值处理能力。是一个分布式，支持分区的、多副本的，基于zookeeper协调的分布式消息系统，特性为高吞吐量，可扩展性，可靠性，容错性，高并发
+1. 概念：数据缓冲队列，提高了可扩展性，具有峰值处理能力。是一个分布式，支持分区的、多副本的，基于 zookeeper 协调的分布式消息系统，特性为高吞吐量，可扩展性，可靠性，容错性，高并发
 
 2. 基础名词
 
@@ -432,16 +432,16 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
    2. producer 发布消息到话题的任何对象
    3. comsumer 订阅一个或多个话题，从而消费这些已发布的话题
    4. Broker 已发布的消息保存在一组服务器中
-   5. partition 每个topic 包含一个或多个partition
-   6. replicatoin partition的副本，保障partition的高可用
-   7. leader replica 中的一个角色，producer和consumer 只限leader交互
-   8. follower replica 中的一个角色，从leader中复制数据
-   9. zookeeper kafka通过zookeeper来存储集群的信息，zookeeper是一个分布式协调服务，它的主要作用为分布式系统提供一致性服务，功能包括:配置维护、分布式同步等。
+   5. partition 每个 topic 包含一个或多个 partition
+   6. replicatoin partition 的副本，保障 partition 的高可用
+   7. leader replica 中的一个角色，producer 和 consumer 只限 leader 交互
+   8. follower replica 中的一个角色，从 leader 中复制数据
+   9. zookeeper kafka 通过 zookeeper 来存储集群的信息，zookeeper 是一个分布式协调服务，它的主要作用为分布式系统提供一致性服务，功能包括:配置维护、分布式同步等。
 
 3. 安装
 
-   1. kafka依赖于zookeeper，zookeeper又依赖于java，所以首先安装java环境
-   2. 通过yum直接安装java即可
+   1. kafka 依赖于 zookeeper，zookeeper 又依赖于 java，所以首先安装 java 环境
+   2. 通过 yum 直接安装 java 即可
    3. zookeeper 安装
       1. yum 安装
    4. kafka 安装
@@ -459,17 +459,17 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
       syncLimit  #Leader与Follower之前发送消息时如果在设置时间内不能通信，则follower将会被丢弃
       #server如果有多台则配置多台，如server.2 ...
       server.1=192.168.19.1:2888:3888  #2888是follower与leader交换信息的端口，3888是当leader挂了时用来执行选举服务器相互通信的端口
-      
-      
+
+
       #每个节点需配置不同的ID，路径是zk的dirData的路径
-      
+
       echo 1 > /zk/dirData/path/myid
       ```
 
    2. kafka
 
       ```
-      broker.id 每一个broker集群中的唯一标识，要求是正数。在改变IP地址，不改变broker.id时不会影响consumers 
+      broker.id 每一个broker集群中的唯一标识，要求是正数。在改变IP地址，不改变broker.id时不会影响consumers
       listeners=PLAINTTEXT://192.168.19.1:9092 监听地址
       num.network.threads			broker处理消息的最大线路数据，一般不修改
       num.io.threads 			    broker处理磁盘IO的线程数，数值应大于硬盘数
@@ -494,13 +494,13 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
 
 5. 验证测试
 
-   1. 启动zookeeper
+   1. 启动 zookeeper
 
       ```
       nohup bin/zookeeper-server-start.sh config/zookeeper.properties &
       ```
 
-   2. 启动kafka
+   2. 启动 kafka
 
       ```
       nohup bin/kafka-server-start.sh config/server.properties &
@@ -511,14 +511,14 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
       ```
       bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1
       --topic testtopic
-      
+
       bin/kafka-topics.sh --zookeeper 192.168.1.1:2181 --list
-      
+
       bin/kafka-console-producer.sh --broker-list 192.168.1.1:9092 --topic testtopic
       bin/kafka-console-consumer.sh --bootstrap-server 192.168.1.1:9092 --topic testtopic --from-beginning
       ```
 
-6. filebeat kafka配置
+6. filebeat kafka 配置
 
    1. ```
       output.kafka:
@@ -532,5 +532,3 @@ logstash 是免费且开放的服务器端数据处理管道，能够从多个�
         compression: gzip
         max_message_bytes: 1000000
       ```
-
-      

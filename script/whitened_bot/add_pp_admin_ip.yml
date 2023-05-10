@@ -1,10 +1,10 @@
 ---
 - hosts: match_trade
   tasks:
-  - name: add ip into admin_ip.ini
-    lineinfile:
-        path: "/home/wwwroot/config/admin_ip.ini" 
+    - name: add ip into admin_ip.ini
+      lineinfile:
+        path: "/home/wwwroot/config/admin_ip.ini"
         insertbefore: "deny"
         line: "allow {{ ip }};"
-  - name: restart admin
-    shell: docker-compose -f /home/wwwroot/docker-compose-match.yml restart match_admin
+    - name: restart admin
+      shell: docker-compose -f /home/wwwroot/docker-compose-match.yml restart match_admin

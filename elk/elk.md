@@ -1,31 +1,34 @@
-[:house: 主页](readme.md) 
- 
-### 目录 
-- [节点说明](#节点说明)
-- [Yum配置](#yum配置)
-- [系统配置](#系统配置)
-- [Kafka&ZK集群部署](#kafkazk集群部署)
-- [Elasticsearch安装与配置](#elasticsearch安装与配置)
-- [Kibana安装配置](#kibana安装配置)
-- [X-pack白金许可证破解](#x-pack白金许可证破解)
+[:house: 主页](readme.md)
 
-----
+### 目录
+
+- [节点说明](#节点说明)
+- [Yum 配置](#yum配置)
+- [系统配置](#系统配置)
+- [Kafka&ZK 集群部署](#kafkazk集群部署)
+- [Elasticsearch 安装与配置](#elasticsearch安装与配置)
+- [Kibana 安装配置](#kibana安装配置)
+- [X-pack 白金许可证破解](#x-pack白金许可证破解)
+
+---
 
 #### 节点说明
+
 - [返回目录 :leftwards_arrow_with_hook:](#目录)
 
-| 外网IP         | 内网IP        | HOSTNAME          | SOFTWARE                |
+| 外网 IP        | 内网 IP       | HOSTNAME          | SOFTWARE                |
 | -------------- | ------------- | ----------------- | ----------------------- |
 | 202.60.235.156 | 192.168.1.27  | elk1.stack kafka1 | ES、kafka、zk           |
 | 58.82.246.211  | 192.168.1.112 | elk2.stack kafka2 | ES、logstash、kafka、zk |
 | 103.41.126.138 | 192.168.1.58  | elk3.stack kafka3 | ES、kibana、kafka、zk   |
 
-----
+---
 
-#### Yum配置
+#### Yum 配置
+
 - [返回目录 :leftwards_arrow_with_hook:](#目录)
 
-**elk-stack** yum文件: **elk.repo**
+**elk-stack** yum 文件: **elk.repo**
 
 ```ini
 [elk-7.x]
@@ -37,7 +40,8 @@ enabled=1
 autorefresh=1
 type=rpm-md
 ```
-**zookeeper** yum文件: **mesosphere.repo**
+
+**zookeeper** yum 文件: **mesosphere.repo**
 
 ```ini
 [mesosphere]
@@ -57,7 +61,8 @@ baseurl=http://repos.mesosphere.io/el/7/SRPMS/
 enabled=0
 gpgcheck=0
 ```
-**安装epel yum源，并更新系统**
+
+**安装 epel yum 源，并更新系统**
 
 ```shell
 yum install epel-release -y
@@ -66,15 +71,16 @@ yum makecache
 yum update -y
 ```
 
-**JDK安装**
+**JDK 安装**
 
 ```shell
 yum install java-1.8.0-openjdk -y
 ```
 
-----
+---
 
 #### 系统配置
+
 - [返回目录 :leftwards_arrow_with_hook:](#目录)
 
 ```shell
@@ -96,12 +102,13 @@ sysctl -p
 swapoff -a
 ```
 
-----
+---
 
-#### Kafka&ZK集群部署
+#### Kafka&ZK 集群部署
+
 - [返回目录 :leftwards_arrow_with_hook:](#目录)
 
-**安装配置zookeeper集群**
+**安装配置 zookeeper 集群**
 
 ```shell
 # 安装zk
@@ -134,11 +141,12 @@ COMMAND  PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
 java    2017 root   23u  IPv6  22946      0t0  TCP *:eforward (LISTEN)
 ```
 
-**安装配置kafka集群**
+**安装配置 kafka 集群**
+
 ```shell
 #下载安装
 cd /opt
-wget http://mirror.rise.ph/apache/kafka/2.4.0/kafka_2.12-2.4.0.tgz && mv 
+wget http://mirror.rise.ph/apache/kafka/2.4.0/kafka_2.12-2.4.0.tgz && mv
 tar xvf kafka_2.12-2.4.0.tgz && mv kafka_2.12-2.4.0 kafka && cd kafka
 
 # 修改配置
@@ -179,12 +187,13 @@ java     31778 root  202u  IPv6 8511093      0t0  TCP elk1.stack:XmlIpcRegSvc->5
 java     31778 root  203u  IPv6 8518953      0t0  TCP elk1.stack:XmlIpcRegSvc->elk1.stack:41220 (ESTABLISHED)
 ```
 
-----
+---
 
-#### Elasticsearch安装与配置
+#### Elasticsearch 安装与配置
+
 - [返回目录 :leftwards_arrow_with_hook:](#目录)
 
-**安装elasticsearch**
+**安装 elasticsearch**
 
 ```shell
 yum install elasticsearch -y
@@ -196,7 +205,7 @@ mkdir /home/elasticsearch
 chown elasticsearch:elasticsearch /home/elasticsearch/
 ```
 
-**修改JVM堆大小为内存的一半**
+**修改 JVM 堆大小为内存的一半**
 
 ```she
 vim /etc/elasticsearch/jvm.options
@@ -204,20 +213,24 @@ vim /etc/elasticsearch/jvm.options
 -Xmx8g
 ```
 
-**增加systemctl配置**
+**增加 systemctl 配置**
 
 ```shell
 vim /usr/lib/systemd/system/elasticsearch.service
 ```
+
 ```ini
 [Service]
 LimitMEMLOCK=infinity
 ```
+
 ```shell
 # 重新载入
 systemctl daemon-reload
 ```
-**修改Elasticsearch配置**
+
+**修改 Elasticsearch 配置**
+
 ```yaml
 ## 节点1 ##
 # 集群名称，多集群节点依据相同名称自动加入到集群
@@ -239,7 +252,7 @@ network.host: 192.168.1.27
 # 服务监听端口
 http.port: 9200
 # 发现集群的节点
-discovery.seed_hosts: ["192.168.1.27", "192.168.1.112","192.168.1.58"]
+discovery.seed_hosts: ["192.168.1.27", "192.168.1.112", "192.168.1.58"]
 # 集群初始化时master节点
 cluster.initial_master_nodes: ["elk1.stack"]
 gateway.recover_after_nodes: 1
@@ -250,15 +263,18 @@ http.cors.allow-origin: "*"
 ```
 
 **启动服务，查看集群状态**
+
 ```shell
 curl 192.168.1.58:9200/_cat/health
 1582011786 07:43:06 elk-stack green 3 3 0 0 0 0 0 0 - 100.0%
 ```
-返回```green```表示集群正常
 
-----
+返回`green`表示集群正常
 
-#### Kibana安装配置
+---
+
+#### Kibana 安装配置
+
 - [返回目录 :leftwards_arrow_with_hook:](#目录)
 
 ```shell
@@ -281,12 +297,13 @@ i18n.locale: "zh-CN"
 systemctl start kibana.service
 ```
 
-----
+---
 
-#### X-pack白金许可证破解
+#### X-pack 白金许可证破解
+
 - [返回目录 :leftwards_arrow_with_hook:](#目录)
 
-**ES配置**
+**ES 配置**
 
 ```shell
 # ES生成证书
@@ -329,8 +346,9 @@ PASSWORD logstash_system = aGkcCh2gqNa9MOoeNbTO
 PASSWORD beats_system = HxyjDTdvgrgH0iIIbUWH
 PASSWORD remote_monitoring_user = VRI4kHYjmlVMI8CWFTDu
 # elastic 是整个elk-stack 管理员账号密码
-PASSWORD elastic = hD7uPvigYS3y6ceuQiFy 
+PASSWORD elastic = hD7uPvigYS3y6ceuQiFy
 ```
+
 - 下载
   - [:arrow_double_down: x-pack-core-7.6.0.jar](http://192.168.3.153:9980/xyang/yunwen-docs/raw/master/download/x-pack-core-7.6.0.jar)
   - [:arrow_double_down: license.json](download/license.json)
@@ -339,6 +357,7 @@ PASSWORD elastic = hD7uPvigYS3y6ceuQiFy
 # 验证许可证状态 active 表示激活， 过期时间 "expiry_date" : "2049-12-31T16:00:00.999Z"**
 curl -XGET -u elastic:hD7uPvigYS3y6ceuQiFy http://192.168.1.27:9200/_license
 ```
+
 ```json
 {
   "license" : {
@@ -356,7 +375,8 @@ curl -XGET -u elastic:hD7uPvigYS3y6ceuQiFy http://192.168.1.27:9200/_license
   }
 ```
 
-**Kibana配置**
+**Kibana 配置**
+
 ```shell
 # 配置kibana使用账密登录
 vim /etc/kibana/kibana.yml
@@ -368,7 +388,6 @@ systemctl restart kibana
 ```
 
 ![image-20200218165654489](./image/image-20200218165654489.png)
-
 
 **成功登录后，查看证书状态**
 

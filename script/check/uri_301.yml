@@ -2,24 +2,24 @@
 - hosts: all
   gather_facts: no
   tasks:
-#  - name: yum install ipset
-#    ansible.builtin.yum:
-#      name: ipset
-#      state: present
-#  - name: create ipset rule
-#    ansible.builtin.shell:
-#      cmd: "ipset create black_ip hash:net hashsize 4096 maxelem 200000 timeout 86400 -!"
-#  - name: create iptable INPUT rule
-#    ansible.builtin.shell:
-#      cmd: "iptables -L INPUT | grep black_ip || iptables -I INPUT -m set --match-set black_ip src -j DROP"
-#  - name: create iptable DOCKER rule
-#    ansible.builtin.shell:
-#      cmd: "iptables -L DOCKER && iptables -L DOCKER | grep black_ip || iptables -I DOCKER -m set --match-set black_ip src -j DROP"
-#    ignore_errors: yes
-#  - name: create iptable DOCKER rule
-#    ansible.builtin.shell:
-#      cmd: "iptables -L DOCKER-USER && iptables -L DOCKER-USER | grep black_ip || iptables -I DOCKER-USER -m set --match-set black_ip src -j DROP"
-#    ignore_errors: yes
-  - name: uri_301
-    ansible.builtin.script: /opt/check/uri_301.sh {{ log_path }}
-    ignore_errors: yes
+    #  - name: yum install ipset
+    #    ansible.builtin.yum:
+    #      name: ipset
+    #      state: present
+    #  - name: create ipset rule
+    #    ansible.builtin.shell:
+    #      cmd: "ipset create black_ip hash:net hashsize 4096 maxelem 200000 timeout 86400 -!"
+    #  - name: create iptable INPUT rule
+    #    ansible.builtin.shell:
+    #      cmd: "iptables -L INPUT | grep black_ip || iptables -I INPUT -m set --match-set black_ip src -j DROP"
+    #  - name: create iptable DOCKER rule
+    #    ansible.builtin.shell:
+    #      cmd: "iptables -L DOCKER && iptables -L DOCKER | grep black_ip || iptables -I DOCKER -m set --match-set black_ip src -j DROP"
+    #    ignore_errors: yes
+    #  - name: create iptable DOCKER rule
+    #    ansible.builtin.shell:
+    #      cmd: "iptables -L DOCKER-USER && iptables -L DOCKER-USER | grep black_ip || iptables -I DOCKER-USER -m set --match-set black_ip src -j DROP"
+    #    ignore_errors: yes
+    - name: uri_301
+      ansible.builtin.script: /opt/check/uri_301.sh {{ log_path }}
+      ignore_errors: yes

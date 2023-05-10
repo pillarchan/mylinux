@@ -1,7 +1,7 @@
 ---
 - hosts: cg_ziying_wechat
   tasks:
-  - name: add ip into admin_ip.ini
-    shell: sed -Ei "s@((([0-9]{1,3}\.?){4})+)@\1|{{ ip }}@" /home/config/admin_ip.ini
-  - name: restart admin
-    shell: docker-compose -f /home/docker-compose.yml restart wechat
+    - name: add ip into admin_ip.ini
+      shell: sed -Ei "s@((([0-9]{1,3}\.?){4})+)@\1|{{ ip }}@" /home/config/admin_ip.ini
+    - name: restart admin
+      shell: docker-compose -f /home/docker-compose.yml restart wechat

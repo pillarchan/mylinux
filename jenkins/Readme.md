@@ -1,26 +1,26 @@
 # Jenkins
 
-## 1.jenkins安装
+## 1.jenkins 安装
 
-1. 安装jdk
+1. 安装 jdk
 
    ```
    sudo yum install java-1.8.0-openjdk.x86_64
    ```
 
-2. 安装jenkins
+2. 安装 jenkins
 
    ```
      sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
      sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
-     
+
    ```
 
    If you've previously imported the key from Jenkins, the `rpm --import` will fail because you already have a key. Please ignore that and move on.
 
    ```
      yum install jenkins
-     
+
    ```
 
    The rpm packages were signed using this key:
@@ -28,14 +28,14 @@
    ```
    pub   rsa4096 2020-03-30 [SC] [expires: 2023-03-30]
          62A9756BFD780C377CF24BA8FCEF32E745F2C3D5
-   uid                      Jenkins Project 
+   uid                      Jenkins Project
    sub   rsa4096 2020-03-30 [E] [expires: 2023-03-30]
    ```
 
 3.配置文件
 
 ```
-/etc/sysconfig/jenkins  
+/etc/sysconfig/jenkins
 /var/lib/jenkins/plugin/   插件位置
 ```
 
@@ -50,22 +50,22 @@
 <sites>
   <site>
     <id>default</id>
-    <url>https://updates.jenkins.io/update-center.json</url> //将此标签中的值换成国内插件镜像地 
+    <url>https://updates.jenkins.io/update-center.json</url> //将此标签中的值换成国内插件镜像地
   </site>
 </sites>
 ```
 
-2.使用nginx反代到国内镜像站
+2.使用 nginx 反代到国内镜像站
 
 1. 将域名解析到本地
 
    ```
    vim /etc/hosts
-   
+
    127.0.0.1 updates.jenkins.io
    ```
 
-2. 安装nginx
+2. 安装 nginx
 
    ```
    wget https://nginx.org/download/nginx-1.18.0.tar.gz
@@ -76,7 +76,7 @@
    vim /etc/profile.d/nginx.sh
    ```
 
-3. 修改nginx配置文件,添加反代到国内镜像
+3. 修改 nginx 配置文件,添加反代到国内镜像
 
    ```
    location /download/plugins {
@@ -93,6 +93,5 @@
 
 1. 系统管理->系统配置
    1. 系统管理员邮件地址
-   2. 邮件通知  注意:SMTP中的密码指是SMTP的授权码并非登录密码![image-20210130174639751](https://i.loli.net/2021/01/30/yagUvlEdhTFOeC7.png)
-2. 
-
+   2. 邮件通知 注意:SMTP 中的密码指是 SMTP 的授权码并非登录密码![image-20210130174639751](https://i.loli.net/2021/01/30/yagUvlEdhTFOeC7.png)
+2.

@@ -1,7 +1,7 @@
 ---
 - hosts: cg_ziying_wechat
   tasks:
-  - name: del ip from admin_ip.ini
-    shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /home/config/admin_ip.ini
-  - name: restart admin
-    shell: docker-compose -f /home/docker-compose.yml restart wechat
+    - name: del ip from admin_ip.ini
+      shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /home/config/admin_ip.ini
+    - name: restart admin
+      shell: docker-compose -f /home/docker-compose.yml restart wechat

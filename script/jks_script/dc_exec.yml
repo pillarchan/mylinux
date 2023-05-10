@@ -1,7 +1,8 @@
+---
 #---
 #- hosts: all
 #  gather_facts: no
-#  tasks:  
+#  tasks:
 #  - name: restart service
 #    community.docker.docker_container_exec:
 #      container: yihao_service_1

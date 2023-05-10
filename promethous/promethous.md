@@ -1,5 +1,3 @@
-
-
 # Promethous 监控系统
 
 ## 概念 https://www.bilibili.com/video/BV1PT4y1P7bX?p=3&spm_id_from=pageDriver
@@ -73,11 +71,11 @@ scrape_configs:
 
 ## 应用
 
-通过 /matrics输出指标数据
+通过 /matrics 输出指标数据
 
-通过 label过滤
+通过 label 过滤
 
-prometheus的关键就是构建表达式
+prometheus 的关键就是构建表达式
 
 node_exporter 在监控的服务器上安装 即可
 
@@ -101,15 +99,15 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-### PromQL基础
+### PromQL 基础
 
-cpu利用率表达式 CPU在5分钟内的平均利用率
+cpu 利用率表达式 CPU 在 5 分钟内的平均利用率
 
 ```
 (1-avg(irate(node_cpu_seconds_total{mode='idle'}[5m])) by (instance)) * 100
 ```
 
-CPU饱和度，跟踪CPU的平均负载就能获取到相关主机的CPU饱和度，实际上，它是将主机上的CPU数量考虑在内的一段时间内的平均运行队列长度
+CPU 饱和度，跟踪 CPU 的平均负载就能获取到相关主机的 CPU 饱和度，实际上，它是将主机上的 CPU 数量考虑在内的一段时间内的平均运行队列长度
 
 ```
 node_load1 > on(instance) 2*count(node_cpu_seconds_total{mode="idle"}) by (instance)
@@ -124,7 +122,7 @@ node_memory_Buffers_bytes
 node_memory_Cached_bytes
 ```
 
-Prometheus时间序列
+Prometheus 时间序列
 
 时间序列数据：按照时间顺序记录系统、设备状态变化的数据，每个数据称为一个样本;
 
@@ -164,7 +162,7 @@ Prometheus时间序列
 
 ![image-20220224101937164](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224101937164.png)
 
-### PromQL进阶
+### PromQL 进阶
 
 ![image-20220224102400886](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224102400886.png)
 
@@ -180,9 +178,9 @@ Prometheus时间序列
 
 ![image-20220224103212451](https://raw.githubusercontent.com/pillarchan/mylinux/master/promethous/image-20220224103212451.png)
 
-prometheus 配置中targets 有两种配置方式
+prometheus 配置中 targets 有两种配置方式
 
-1. 基于静态，也就是IP:PORT的配置
+1. 基于静态，也就是 IP:PORT 的配置
 
 2. 基于动态，也就是基于服务发现
 
@@ -193,14 +191,14 @@ prometheus 配置中targets 有两种配置方式
           file_sd_configs:
           - files:                        #指定要加载的文件列表
             - targets/prometheus*.yml     #文件加载支持glob通配符
-            refresh_interval: 2m          #每隔2分钟重新加载一次文件中定义的Targets,默认是5m 
+            refresh_interval: 2m          #每隔2分钟重新加载一次文件中定义的Targets,默认是5m
         - job_name: "nodes"
         	file_sd_configs:
         	  - files:
         	    - targets/node*.yml
         	  refresh_interval: 2m
-        	  
-        	  
+
+
       目录为prometheus/xxx/targets/prometheus-servers.yml中则需要配置
       - targets:
         - 192.168.58.101:9000
@@ -209,10 +207,10 @@ prometheus 配置中targets 有两种配置方式
           job: prometheus
       ```
 
-4. 基于DNS服务发现
+4. 基于 DNS 服务发现
    ![image-20220224132538526](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224132538526.png)
 
-5. 基于consul的服务发现
+5. 基于 consul 的服务发现
 
    ![image-20220224132707746](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220224132707746.png)
 
@@ -221,7 +219,7 @@ prometheus 配置中targets 有两种配置方式
    ```
    /etc/consul/nodes.json
    {
-   	"services":[ 
+   	"services":[
    		{
    			"id":"node-exporter-node01",
    			"name":"node01",
@@ -245,14 +243,14 @@ prometheus 配置中targets 有两种配置方式
    		},...
    	]
    }
-   
-   
+
+
    prometheus.yml
    scrape_configs:
      - job_name: "prometheus"
        consul_sd_configs:
        - server: "192.168.58.101:8500"
-         tags: 
+         tags:
          - "prometheus"
          refresh_interval: 2m
      - job_name: "nodes"
@@ -263,10 +261,6 @@ prometheus 配置中targets 有两种配置方式
          refresh_interval: 2m
    ```
 
-   
-
 6. 111111
 
-7. 
-
-   
+7.

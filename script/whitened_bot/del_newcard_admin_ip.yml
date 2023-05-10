@@ -1,7 +1,7 @@
 ---
 - hosts: ww28game_out
   tasks:
-  - name: del ip from admin_ip.ini
-    shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /etc/nginx/conf.d/new_card_ip.ini 
-  - name: restart admin
-    shell: nginx -s reload
+    - name: del ip from admin_ip.ini
+      shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /etc/nginx/conf.d/new_card_ip.ini
+    - name: restart admin
+      shell: nginx -s reload

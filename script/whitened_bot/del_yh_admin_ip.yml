@@ -1,7 +1,7 @@
 ---
 - hosts: yihao_admin
   tasks:
-  - name: del ip from admin_ip.ini
-    shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /home/yihao/config/admin_ip.ini 
-  - name: restart admin
-    shell: docker-compose -f /home/yihao/docker-compose.yml restart admin
+    - name: del ip from admin_ip.ini
+      shell: sed -Ei "s@((\|?){{ ip }}\|?)@\2@" /home/yihao/config/admin_ip.ini
+    - name: restart admin
+      shell: docker-compose -f /home/yihao/docker-compose.yml restart admin

@@ -2,15 +2,14 @@
 - hosts: all
   gather_facts: no
   tasks:
-  - name: copy pack to remote
-    ansible.builtin.copy: 
-      src: "{{ srcfile }}"
-      dest: "{{ destfile }}"
-      owner: om_user
-      group: om_user
-  - name: upload to oss
-    ansible.builtin.shell:
-      cmd:  /opt/confd/bin/upload_pack.sh -p "{{ platform }}" -s "{{ filepath }}" -d "{{ filename }}"
-    register: ps
-  - debug: var=ps.stdout_lines
-     
+    - name: copy pack to remote
+      ansible.builtin.copy:
+        src: "{{ srcfile }}"
+        dest: "{{ destfile }}"
+        owner: om_user
+        group: om_user
+    - name: upload to oss
+      ansible.builtin.shell:
+        cmd: /opt/confd/bin/upload_pack.sh -p "{{ platform }}" -s "{{ filepath }}" -d "{{ filename }}"
+      register: ps
+    - debug: var=ps.stdout_lines

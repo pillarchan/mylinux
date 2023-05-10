@@ -2,8 +2,8 @@
 - hosts: "{{ item_hosts }}"
   gather_facts: no
   tasks:
-  - name: 回滚代码
-    unarchive:
-      src: /opt/backup/{{ item }}-{{ build_num }}.tar.gz
-      dest: /home/wwwroot/{{ item }}
-      remote_src: yes
+    - name: 回滚代码
+      unarchive:
+        src: /opt/backup/{{ item }}-{{ build_num }}.tar.gz
+        dest: /home/wwwroot/{{ item }}
+        remote_src: yes

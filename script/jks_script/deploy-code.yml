@@ -2,15 +2,15 @@
 - hosts: all
   gather_facts: no
   tasks:
-  - name: Create a backup directory
-    file:
-      path: /opt/backup
-      state: directory
-  - name: Delete files 7 days ago
-    shell: find /opt/backup -mtime +7 -name "*.tar.gz" -exec rm -rf {} \;
-  - name: Remote diff_code
-    unarchive: 
-      src: "{{ srcfile }}"
-      dest: "{{ destfile }}"
-      owner: root
-      group: root
+    - name: Create a backup directory
+      file:
+        path: /opt/backup
+        state: directory
+    - name: Delete files 7 days ago
+      shell: find /opt/backup -mtime +7 -name "*.tar.gz" -exec rm -rf {} \;
+    - name: Remote diff_code
+      unarchive:
+        src: "{{ srcfile }}"
+        dest: "{{ destfile }}"
+        owner: root
+        group: root

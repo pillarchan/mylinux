@@ -1,10 +1,10 @@
 ---
-- hosts: all 
+- hosts: all
   gather_facts: no
   tasks:
-  - name: yum install jq
-    yum:
-      name: jq
-      state: present
-  - name: script Foreign_Address_Check
-    ansible.builtin.script: /opt/check/Foreign_Address_Check.sh
+    - name: yum install jq
+      yum:
+        name: jq
+        state: present
+    - name: script Foreign_Address_Check
+      ansible.builtin.script: /opt/check/Foreign_Address_Check.sh
