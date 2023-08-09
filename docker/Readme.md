@@ -100,7 +100,7 @@ yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.r
 
          {
             "registry-mirrors":["https://docker.mirrors.ustc.edu.cn","https://registry.docker-cn.com"]
-
+        
          }
 
     镜像地址
@@ -350,7 +350,7 @@ yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.r
        "bip":"172.33.0.1/16", //填写IP段
        "hosts":["tcp://0.0.0.0:2375","unix:///var/run/docker.sock"] //配置连接远程docker
    }
-
+   
    注意:为避免docker的socket中hosts配置与/etc/docker/daemon.json中的发生冲突,须做以下修改:
    1./usr/lib/systemd/system/docker.service 文件中的
    ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock 注释掉修改为
@@ -569,12 +569,12 @@ dockerfile 是结合 docker build 命令来创建镜像的文件,创建并编写
 
     ```
     FROM nginx:1.18.0-alpine
-
+    
     ARG author="pillar <pillar@163.com>" \
         version="v3.0"
-
+    
     LABEL author=$author version=$version
-
+    
     ENV DOC_WEB_ROOT="/data/web/html/" \
         PORT=80 \
         HOSTNAME="myweb.com" \
@@ -583,13 +583,13 @@ dockerfile 是结合 docker build 命令来创建镜像的文件,创建并编写
     RUN mkdir -p $DOC_WEB_ROOT &&\
         echo "<h1>my nginx test web</h1>" > $DOC_WEB_ROOT/index.html && \
         mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.bak
-
+    
     EXPOSE 80 8080
-
+    
     VOLUME /data
-
+    
     ENTRYPOINT ["/bin/configure.sh"]
-
+    
     CMD ["nginx","-g","daemon off;"]
     HEALTHCHECK  --interval=3s --timeout=3s --retries=2 --start-period=3s CMD curl -f 172.33.0.2:10010 || exit 1
     ```
@@ -598,7 +598,7 @@ dockerfile 是结合 docker build 命令来创建镜像的文件,创建并编写
 
     ```
     #!/bin/sh
-
+    
     cat > /etc/nginx/conf.d/myweb.conf << EOF
     server {
         server_name ${HOSTNAME:-myweb.com};
@@ -606,7 +606,7 @@ dockerfile 是结合 docker build 命令来创建镜像的文件,创建并编写
         root ${DOC_WEB_ROOT:-/data/web/html};
     }
     EOF
-
+    
     exec "$@"
     ```
 
@@ -628,11 +628,43 @@ dockerfile 是结合 docker build 命令来创建镜像的文件,创建并编写
 2. 使用 vmware-harbor 来进行对私有镜像库的管理
 
    ```
+   https://github.com/goharbor/harbor
    访问vmware-harbor的github找到release 选择版本进行下载,有online和offline两种
    下载后解压安装,需要提前安装docker-compose
    使用http方式访问需要配置/etc/docker/daemon.json   "insecure-registries":[]
    ```
 
-八.docker 资源限制及验证
+## 八.docker 资源限制及验证
 
-1.
+为了防止容器运行后，因为某些原因造成容器大量消耗宿主机资源导致无法分配为容器足够的运行资源，而导致容器异常停止，可以在创建或运行容器时添加参数来限制容器对资源的最大使用
+
+1.内存限制 
+
+```
+-m, --memory bytes                   Memory limit
+      --memory-reservation bytes       Memory soft limit
+      --memory-swap bytes              Swap limit equal to memory plus swap: '-1' to enable unlimited swap
+      --memory-swappiness int          Tune container memory swappiness (0 to 100) (default -1)
+```
+
+2.CPU限制
+
+```
+-c, --cpu-shares int                 CPU shares (relative weight)
+      --cpus decimal                   Number of CPUs
+      --cpuset-cpus string             CPUs in which to allow execution (0-3, 0,1)
+```
+
+3.oom
+
+```
+--oom-kill-disable               Disable OOM Killer
+--oom-score-adj int              Tune host's OOM preferences (-1000 to 1000)
+```
+
+​	例：
+
+```
+docker run --name test1 -rm -it --cpus 2.5 -m 512m --oom-kill-disable test:tag
+```
+
