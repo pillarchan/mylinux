@@ -10,7 +10,7 @@
 git tag -a 版本名 -m "描述"
 git show 版本名       查看信息
 git tag -a 版本名 hash值 -m "描述"    给早期版本打标签
-
+git tag -d 版本名 删除
 git push -u origin 版本名   将打好的标签版本进行推送
 ```
 
@@ -45,3 +45,52 @@ mvn clean 清除打包文件
 java项目可以放在tomcat中，通过官网下载即可
 
 推代码时不要推打包后的代码
+
+创建jenkins maven 项目，配置mvn全局位置
+
+## 3.Maven私服nexus
+
+当公司几乎都是java项目时，可搭建
+https://www.sonatype.com/download-oss-sonatype
+环境 java 
+安装nexus 启动
+仓库选择public
+proxy为后端仓库，可以改为国内镜像源
+jenkins服务器需要重新配置maven的setting.xml
+
+```
+
+```
+
+## 4.pipline
+
+分块执行shell命令进行部署的框架
+
+```
+pipline{
+	agent any
+	stages{
+		stage('描述'){
+			steps{
+				echo 'get code'
+			}
+		}
+		stage('unit test'){
+			steps{
+				
+			}
+		}
+		stage('package'){
+			steps{
+				
+			}
+		}
+		stage('deploy'){
+			steps{
+				
+			}
+		}
+	}
+}
+```
+
