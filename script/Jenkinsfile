@@ -1,0 +1,27 @@
+pipeline {
+    agent any
+
+    stages {
+		stage('unit test') {
+            steps {
+               sh "rm -f Jenkinsfile;sonar-scanner -Dsonar.projectKey=html -Dsonar.sources=. -Dsonar.host.url=http://192.168.76.104:9000 -Dsonar.login=sqp_f294abaa601b0c2c4cb4829dbde85350a1a426d3"
+            }
+        }
+        stage('package') {
+            steps {
+               sh "tar zcf web_${BUILD_ID}.tar.gz --exclude=.git --exclude=Jenkinsfile ./*"
+            }
+        }
+        stage('deploy') {
+            steps {
+                sh "scp web_${BUILD_ID}.tar.gz 192.168.76.102:/opt/mytest;rm -f web_${BUILD_ID}.tar.gz"
+                sh "ssh 192.168.76.102 'cd /opt/mytest;mkdir web_${BUILD_ID};tar xf web_${BUILD_ID}.tar.gz -C web_${BUILD_ID};rm -f web_${BUILD_ID}.tar.gz'"
+            }
+        }
+        stage('lns') {
+            steps {
+                sh "ssh 192.168.76.102 'cd /opt/mytest;rm -f html;ln -s web_${BUILD_ID} html'"
+            }
+        }
+    }
+}

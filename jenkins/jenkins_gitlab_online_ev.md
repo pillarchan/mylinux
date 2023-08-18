@@ -42,24 +42,86 @@ mvn clean 清除打包文件
 
 由于maven服务器在国外，需要使用国内镜像源，在 maven/conf/settings.xml中mirror标签对中配置 
 
-java项目可以放在tomcat中，通过官网下载即可
+java项目可以放在tomcat中，通过官网或国内镜像下载即可，需配置
+server.xml service标签中配置
 
 推代码时不要推打包后的代码
 
-创建jenkins maven 项目，配置mvn全局位置
+创建jenkins maven 项目，配置mvn全局位置，需安安装插件Maven Integration,Jira,Pipeline Maven Integration
+
+### 遇坑 
+
+1. mvn打包hello-world遇到版本问题 原pom.xml中maven-war-plugin版本为2.1.1 环境为java17，安装java1.8并设置toolschain无效，修改pom.xml如下问题解决
+
+   ```
+   <plugin>
+   				<groupId>org.apache.maven.plugins</groupId>
+   				<artifactId>maven-war-plugin</artifactId>
+   				<version>3.2.2</version>
+   			</plugin>
+   ```
+
+   
+
+2. tomcat 自动解压 war包,server.xml设置问题，unpackWARs="true"改为false
+
+   ```
+    <Host name="localhost"  appBase="/opt/mymaven"
+               unpackWARs="false" autoDeploy="true">
+   ```
+
+   
+
+3. 测试sonaqube时，创建新项目时使用已存在key无效
+
+
 
 ## 3.Maven私服nexus
 
 当公司几乎都是java项目时，可搭建
 https://www.sonatype.com/download-oss-sonatype
 环境 java 
-安装nexus 启动
+
+```
+[Unit]
+Description=nexus service
+After=network.target
+
+[Service]
+Type=forking
+LimitNOFILE=65536
+ExecStart=/opt/nexus/bin/nexus start
+ExecStop=/opt/nexus/bin/nexus stop
+User=nexus
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
+```
+
+安装nexus 启动，启动前需添加nexus用户，并修改limits
+
+```
+nexus - nofile 65536
+```
+
 仓库选择public
 proxy为后端仓库，可以改为国内镜像源
+
+```
+proxy>remote storage
+http://maven.aliyun.com/nexus/content/groups/public
+```
+
 jenkins服务器需要重新配置maven的setting.xml
 
 ```
-
+<mirror>
+      <id>nexus-local</id>
+      <mirrorOf>*</mirrorOf>
+      <name>Nexus local</name>
+      <url>nexus中repositories maven-public的值</url>
+    </mirror>
 ```
 
 ## 4.pipline
