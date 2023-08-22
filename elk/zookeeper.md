@@ -134,7 +134,7 @@
 
 2. 集群的配置
 
-   1. 同步时间 npdate ntp.aliyun.com
+   1. 同步时间 ntpdate ntp.aliyun.com
    2. 配置cron 定期同步
    3. 配置免密登录
    4. 创建zookeeper的数据目录，都要
@@ -147,8 +147,8 @@
       server.id=ip/hostname:leader选举端口:数据传送端口
       如：
       server.111=192.168.76.111:2888:3888
-      server.112=192.168.76.111:2888:3888
-      server.113=192.168.76.111:2888:3888
+      server.112=192.168.76.112:2888:3888
+      server.113=192.168.76.113:2888:3888
       leader 可读写
       follow 可读
       可以理解为主从
@@ -309,3 +309,45 @@ setAcl /znode ip:ipad:permisson,auth:username:permisson,digest:username:cryptpas
    ```
 
 3. 所有节点都要操作，然后重启服务
+
+
+## 8.四字监控命令
+
+1. zookeeper常用四字命令
+
+   ```
+   zookeeper支持某些特定的四字命令与其的交互。它们大多是查询命令，用来获取zookeeper服务的当前状态及相关信息。用户在客户端可以通过telnet或者nc向zookeeper提交相应的命令。
+   
+   zookeeper常用四字命令如下所示:
+   conf:输出相关服务配置的详细信息。比如端口，zookeeper数据及日志配置路径，最大连接数，session超时时间，serverId等。
+   ruok:测试服务是否处于正确运行状态，如果回复的不是"imok"，那就说明该节点挂掉啦！注意观察输出结果哟！
+   envi:输出关于服务器的环境变量。
+   cons:列出所有连接到这台服务器的客户端连接/会话的详细信息。包括"接收/发送"的包数量，session id，操作延迟，最后的操作执行等信息。
+   dump:列出未经处理的会话和临时节点。打印集群的所有会话信息，包括ID，以及临时节点等信息。用在Leader节点上才有效果。
+   stat:输出服务器的详细信息，接收/发送包数量，连接数，模式(leader/follower)，节点总数，延迟。所有客户端的列表。查看统计信息，一般用来查看哪个节点被选择作为follower或者leader。
+   srvr:和stat输出信息一样，只不过少了客户端连接信息。
+   mntr:输出比stat更为详细的服务器统计信息。列出集群的健康状态。
+   wchs:列出服务器watches的简洁信息，如连接总数，watching节点总数和watches总数。
+   wchc:通过session分组，列出watch的所有节点，它的输出是一个与watch相关的会话的节点列表。
+   wchp:通过路径列出服务器watch的详细信息。它输出一个与session相关的路径。
+   reqs:查看未经处理的请求。
+   crst:重置当前这台服务器所有连接/会话的统计信息。
+   srst:重置server状态。
+   ```
+
+2. 使用工具 nc telnet 需要安装
+
+3. 基于nc查看zookeeper集群的状态信息
+
+   ```
+   [root@zookeeper ~]# echo ruok | nc 192.168.76.111 2181
+   ruok is not executed because it is not in the whitelist.
+   ```
+
+4. 报错未添加白名单，在 zookeeper/conf/zoo.cfg添加配置
+
+   ```
+   4lw.commands.whitelist=*
+   ```
+
+   
