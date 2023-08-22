@@ -350,4 +350,10 @@ setAcl /znode ip:ipad:permisson,auth:username:permisson,digest:username:cryptpas
    4lw.commands.whitelist=*
    ```
 
-   
+
+## 9.图形化工具
+
+1. ZooInspector 运行环境java1.8 
+   运行jar包  \ZooInspector\build
+2. Zkweb
+
