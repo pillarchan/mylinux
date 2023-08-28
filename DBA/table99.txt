@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS table_99 ( 
+	id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, 
+	times_value VARCHAR(1000) 
+)ENGINE=innodb CHARACTER SET=utf8;
+
+
+
+DELIMITER $$
+CREATE PROCEDURE table99()
+BEGIN
+	DECLARE x TINYINT;
+	DECLARE y TINYINT;
+	DECLARE z VARCHAR(1000);
+	SET x=1;
+	WHILE x<=9 DO
+		SET y=1;
+		SET c='';
+		WHILE y<=x DO
+			SET z=concat(z,' ',x,'*',y,,'=',x*y);
+			SET y=y+1;
+		END WHILE;
+		INSERT INTO table_99 (times_value) VALUES (z);
+		SET x=x+1;
+	END WHILE;
+END$$
+DELIMITER;
+CALL table99();
