@@ -4,9 +4,9 @@
 
 对数据库结构、表结构进行的操作
 
-### 	1.数据库结构操作
+### 		1.数据库结构操作
 
-#### 		1.增
+#### 				1.增
 
 ```
 Name: 'CREATE DATABASE'
@@ -21,7 +21,7 @@ create_option: [DEFAULT] {
 }
 ```
 
-#### 		2.删
+#### 				2.删
 
 ```
 Name: 'DROP DATABASE'
@@ -30,7 +30,7 @@ Syntax:
 DROP {DATABASE | SCHEMA} [IF EXISTS] db_name
 ```
 
-#### 		3.改
+#### 				3.改
 
 ```
 Name: 'ALTER DATABASE'
@@ -47,7 +47,7 @@ alter_option: {
 }
 ```
 
-#### 		4.查
+#### 				4.查
 
 ```
 Name: 'SHOW DATABASES'
@@ -62,9 +62,9 @@ SHOW CREATE DATABASE db_name;
 SELECT * FROM  information_schema.schemata;
 ```
 
-### 	2.表
+### 		2.表
 
-#### 				1.增
+#### 						1.增
 
 ```
 Name: 'CREATE TABLE'
@@ -218,10 +218,10 @@ query_expression:
     SELECT ...   (Some valid select or union statement)
 ```
 
-#### 		2.删
+#### 				2.删
 
 ```
-ame: 'DROP TABLE'
+Name: 'DROP TABLE'
 Description:
 Syntax:
 DROP [TEMPORARY] TABLE [IF EXISTS]
@@ -229,7 +229,7 @@ DROP [TEMPORARY] TABLE [IF EXISTS]
     [RESTRICT | CASCADE]
 ```
 
-#### 		3.改
+#### 				3.改
 
 ```
 Name: 'ALTER TABLE'
@@ -368,7 +368,7 @@ SELECT * FROM information_schema.tables where table_schema=db_name
 
 对数据进行的增、删、改的操作
 
-## 	1.增
+### 		1.增
 
 ```
 Name: 'INSERT'
@@ -416,7 +416,7 @@ assignment_list:
     assignment [, assignment] ...
 ```
 
-## 	2.删
+### 		2.删
 
 ```
 Single-Table Syntax
@@ -439,7 +439,7 @@ DELETE [LOW_PRIORITY] [QUICK] [IGNORE]
     [WHERE where_condition]    
 ```
 
-## 	3.改
+### 		3.改
 
 ```
 Single-table syntax:
@@ -470,9 +470,9 @@ UPDATE [LOW_PRIORITY] [IGNORE] table_references
 
 对数据库用户和权限进行的操作
 
-### 	1.用户
+### 		1.用户
 
-#### 		1.定义
+#### 				1.定义
 
 ```
 'username'@'hostname/ip_address' 
@@ -481,38 +481,115 @@ ip格式：% 表示所有
 	   172.76.10.0/21 
 ```
 
-#### 		2.用户的操作
+#### 				2.用户的操作
 
-##### 			1.查询用户信息
+##### 						1.查询用户信息
 
 ```
 DESC mysql.user
+SELECT user,host,password from mysql.user;
+5.7后
+SELECT user,host,anthentication_string from mysql.user;
 ```
 
-##### 			2.添加用户
+##### 						2.添加用户
 
 ```
 CREATE USER 'myuser'@'192.168.76.%';
 CREATE USER 'myuser'@'192.168.76.%' IDENTIFIED BY 'password';
 ```
 
-##### 			3.修改用户
+##### 						3.修改用户
 
 ```
 ALTER USER 'myuser'@'192.168.76.%' IDENTIFIED BY 'password';
 ```
 
-##### 			4.删除用户
+##### 						4.删除用户
 
 ```
 DROP USER 'myuser'@'192.168.76.%';
 ```
 
-### 	2.权限
+### 			2.权限
 
-## 4.DQL
+##### 			1.查看权限
 
-对数据查询进行的操作
+```
+show grants for 'uname'@'%'
+```
+
+##### 			2.添加权限
+
+```
+GRANT privileges ON db_name.table TO 'uname'@'%' [IDENTIFIED BY 'password'];
+FLUSH PRIVILEGES;
+如： GRANT ALL *.* TO 'root'@'localhost' IDENTIFIED BY 'lalala';
+FLUSH PRIVILEGES;
+
+8.0版本前此命令可以用创建修改用户和修改用户密码
+8.0后需先创建用户再使用此命令修改用户权限和密码
+
+CREATE USER 'myuser'@'192.168.76.%';
+ALTER USER 'myuser'@'192.168.76.%' IDENTIFIED BY 'password';
+GRANT ALL ON mydb.* TO 'myuser'@'192.168.76.%' IDENTIFIED BY 'lalala';
+```
+
+##### 			3.回收权限
+
+```
+REVOKE privileges ON db_name.table FROM 'uname'@'%';
+```
+
+### 		3.mysql8.0 角色新特性
+
+##### 			1.创建
+
+```
+CREATE ROLE 'role_name1','role_name2',..;
+注意：用户名与角色名一定不要一样
+```
+
+##### 			2.授权
+
+```
+GRANT privileges ON db_name.table TO 'role_name';
+```
+
+##### 			3.绑定
+
+```
+GRANT 'role_name' TO 'username'@'%';
+查看
+SHOW GRANTS FOR 'username'@'%' USING 'role_name';
+
+注意：一定要为用户激活角色
+SET DEFAULT ROLE ALL TO 'username1'@'%','username2'@'%',....
+```
+
+##### 			4.回收
+
+```
+(1)用户和角色取消绑定
+REVOKE role FROM user;
+例如: REVOKE app_developer FROM dev1;
+
+
+(2)为角色取消权限
+REVOKE INSERT, UPDATE, DELETE ON oldboyedu_linux.* FROM 'app_write';
+
+
+(3)删除角色(删除角色后,与之绑定的用户权限也会被随之回收!)
+DROP ROLE 'app_read', 'app_write';
+```
+
+### 	4.忘记密码重置
+
+​		1.停服
+
+​		2.修改配置文件或使用mysql_safe --skip-grant-tables --skip-networking 启动服务
+
+​		3.重置密码
 
 ## 面试题: 
 
