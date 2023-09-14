@@ -1,0 +1,12 @@
+curl "https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz" -o "aliyun-cli-linux-latest-amd64.tgz"
+tar xf aliyun-cli-linux-3.0.16-amd64.tgz
+cp aliyun /usr/local/bin
+
+aliyun configure set \
+  --profile akProfile \
+  --mode AK \
+  --region cn-shenzhen \
+  --access-key-id AccessKeyId \
+  --access-key-secret AccessKeySecret
+  
+aliyun auto-completion
