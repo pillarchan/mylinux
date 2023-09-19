@@ -1,0 +1,20 @@
+openresty lua geoip2
+
+
+github
+https://github.com/maxmind/libmaxminddb/releases
+https://github.com/leev/ngx_http_geoip2_module/tags
+https://www.maxmind.com/en/accounts/310722/geoip/downloads
+
+cd libmaxminddb-1.7.1/
+./configure 
+make && make install
+ls /usr/local/lib
+echo "/usr/local/lib" >> /etc/ld.so.conf.d/local.conf
+ldconfig
+
+cd openresty/
+./configure --add-module=/usr/local/src/ngx_http_geoip2_module-3.4 --with-http_realip_module --with-http_v2_module
+make && make install
+
+nginx http块中配置 geoip2

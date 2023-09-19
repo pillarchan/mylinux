@@ -1,0 +1,6 @@
+git config --global user.name sonar
+git config --global user.email sonar@xxx.email
+git config --global color.ui ture
+git config --global core.eol lf
+git config --global core.autocrlf input
+git config --global core.safecrlf false

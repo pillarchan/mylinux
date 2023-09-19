@@ -1,0 +1,27 @@
+CREATE DATABASE goods CHARACTER SET utf8mb4;
+
+USE goods;
+
+CREATE TABLE `appliance` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '商品ID',
+  `name` varchar(50) NOT NULL COMMENT '商品名称',
+  `price` float unsigned DEFAULT NULL COMMENT '商品价格',
+  `brand` varchar(50) NOT NULL COMMENT '商品品牌',
+  `producer` varchar(50) DEFAULT NULL COMMENT '商品制造商',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+
+INSERT INTO appliance 
+(name,price,brand,producer) 
+	VALUES
+('空调',3800.00,'格力','格力'),
+('洗衣机',6800.00,'松下','松下'),	
+('电视机',9800.00,'创维','创维'),
+('台式电脑',3600.00,'联想','联想'),	
+('笔记本',5500.00,'华硕','华硕'),
+('手机',9800.00,'苹果','苹果'),
+('电冰箱',4999.00,'格力','格力'),
+('电饭堡',1299.00,'苏泊尔','苏泊尔'),
+('热水器',6499.00,'威能','威能'),
+('打印机',899.00,'佳能','佳能'),
+('直饮机',699.00,'九能','九能');
