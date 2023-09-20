@@ -1,6 +1,82 @@
-git config --global user.name sonar
-git config --global user.email sonar@xxx.email
-git config --global color.ui ture
+sonar \
+	-Dsonar.projectKey=html \
+	-Dsonar.sources=. \
+	-Dsonar.host.url=http://192.168.76.104:9000
+	
+	
+	
+hostnamectl set-hostname jenkins
+nmcli connection modify ens33 ipv4.addresses 192.168.76.103/24
+nmcli d reapply ens33
+
+
+
+git config --global user.name jenkins
+git config --global user.email jenkins@jenkins.com
+git config --global color.ui true
 git config --global core.eol lf
 git config --global core.autocrlf input
 git config --global core.safecrlf false
+
+
+nohup java -Djava.awt.headless=true -jar /opt/jenkins_2.361.4.war --httpPort=58081 --logfile=/var/lib/jenkins/jenkins.log > /var/log/jenkins.log 2>&1 &
+
+
+
+sqp_f294abaa601b0c2c4cb4829dbde85350a1a426d3
+
+
+sonar-scanner \
+  -Dsonar.projectKey=html \
+  -Dsonar.sources=. \
+  -Dsonar.host.url=http://192.168.76.104:9000
+  
+  
+  
+mvn clean verify sonar:sonar \
+  -Dsonar.projectKey=java \
+  -Dsonar.host.url=http://192.168.76.104:9000 \
+  -Dsonar.login=sqp_72aee78cf6eb64755d5afd86b5752120eea878d4
+  
+  
+
+sonar.projectKey=java
+sonar.host.url=http://192.168.76.104:9000
+sonar.login=sqp_72aee78cf6eb64755d5afd86b5752120eea878d4
+
+
+
+
+/usr/java/jdk1.8.0_181-amd64
+
+
+
+git remote add origin http://192.168.76.101:58080/mygroup/myjavahello.git
+git branch -M main
+git push -uf origin main
+
+
+
+target/hello-world-war-1.0.0.war
+
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'Hello World'
+            }
+        }
+    }
+}
+
+mysql主从
+elk
+docker  dockerfile
+k8s
+
+综合架构
+k8s 无法启动
