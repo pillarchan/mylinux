@@ -6,15 +6,32 @@ https://github.com/maxmind/libmaxminddb/releases
 https://github.com/leev/ngx_http_geoip2_module/tags
 https://www.maxmind.com/en/accounts/310722/geoip/downloads
 
-cd libmaxminddb-1.7.1/
+apt install build-essential libreadline-dev libncurses5-dev libpcre3 libpcre3-dev libssl-dev zlib1g-dev unzip perl make libxml2-dev openssl iproute2 procps autoconf libexpat1-dev libgeoip-dev libpng-dev rcs libmcrypt-dev libcurl4-openssl-dev libjpeg-dev libpng-dev libwebp-dev pkg-config
+
+yum install gcc libxml2-devel openssl-devel libcurl-devel freetype-devel libjpeg-turbo-devel libicu-devel libccp4-devel gcc-c++ libsodium-devel
+cd /usr/local/src/php-7.3.33
+./configure  --prefix=/usr/local/php \
+--with-config-file-path=/usr/local/php/etc \
+--enable-fpm --enable-mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-iconv-dir \
+--with-jpeg-dir --with-png-dir --with-zlib --enable-xml --disable-rpath \
+--enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization --with-curl --enable-mbregex --enable-mbstring \
+--enable-intl --enable-ftp --with-gd --with-openssl --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap \
+--with-gettext --disable-fileinfo --enable-opcache --with-sodium --with-webp
+
+cd /usr/local/src/libmaxminddb-1.7.1/
 ./configure 
 make && make install
 ls /usr/local/lib
 echo "/usr/local/lib" >> /etc/ld.so.conf.d/local.conf
 ldconfig
 
-cd openresty/
+cd /usr/local/src/openresty/
 ./configure --add-module=/usr/local/src/ngx_http_geoip2_module-3.4 --with-http_realip_module --with-http_v2_module
 make && make install
 
+
+cd /usr/local/redis-5.3.7 && /usr/local/php/bin/phpize \
+./configure --with-php-config=/usr/local/php/bin/php-config \
+make && make install > phpredis_install.log \
+echo extension = $(cut -d':' -f2 phpredis_install.log | grep -E -o "/usr.+")redis.so >> /usr/local/php/etc/php.ini \
 nginx http块中配置 geoip2

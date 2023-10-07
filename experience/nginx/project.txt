@@ -1,0 +1,18 @@
+php 容器项目
+
+环境 nginx php php-redis
+
+nginx中php配置需加上 thinkphp伪静态
+location / {
+	if (!-e $request_filename){
+		rewrite  ^(.*)$  /index.php?s=$1  last;   break;
+	}
+}
+
+php-fpm redis db 连接须使用 容器中的IP地址，如docker创建了network，那么php-fpm redis db就必须使用给定容器IP
+
+docker network create -d bridge --gateway 172.x.x.1 --subnet 172.x.x.0/24
+
+workerman 需使用命令 php xxxx.php start -d 启动
+
+反代有websocket时，不能使用proxy_hide_header对Upgrade进行隐藏

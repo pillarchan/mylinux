@@ -1,0 +1,39 @@
+version: '3.1'
+
+services:
+
+  ngre:
+    image: nginx_php_redis_ext:v4
+    container_name: npre
+    privileged: true
+    ports:
+      - 80:80
+      - 443:443
+      - 3639:3639
+    volumes:
+      - /opt/nginx_php/conf/nginx:/usr/local/nginx/conf
+      - /opt/nginx_php/conf/php:/usr/local/php/etc
+      - /home/ruyi/logs:/home/wwwlogs/ruyi
+      - /home/ruyi/chat:/home/www/ruyi/chat
+      - /home/ruyi/do:/home/www/ruyi/do
+      - /home/ruyi/ewm:/home/www/ruyi/ewm
+      - /home/ruyi/h5:/home/www/ruyi/h5
+      - /home/ruyi/m:/home/www/ruyi/m
+      - /home/ruyi/server:/home/www/ruyi/server
+      - /home/ruyi/tiyu:/home/www/ruyi/tiyu
+      - /home/ruyi/web:/home/www/ruyi/web
+      - /home/ruyi/inter:/home/www/ruyi/inter
+    #command: 
+    #  lnmp start
+    deploy:
+      resources:
+        limits:
+          cpus: "3"
+          memory: 4096m
+    networks:
+       net_app:
+         ipv4_address: 172.20.0.4
+networks:
+  net_app: 
+    external: true
+
