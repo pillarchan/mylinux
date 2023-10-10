@@ -1,0 +1,15 @@
+/usr/local/openresty/nginx/logs/*.log {
+    daily
+    nocompress
+    rotate 7
+    copytruncate
+    missingok
+    notifempty
+    dateext
+#    sharedscripts
+#    postrotate
+#            if [ -f /usr/local/openresty/nginx/nginx.pid ]; then
+#                    kill -USR1 `cat /usr/local/openresty/nginx/nginx.pid`
+#            fi
+#    endscript
+}
