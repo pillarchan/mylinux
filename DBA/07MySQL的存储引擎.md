@@ -1248,7 +1248,7 @@ mysql>
 
 ## 4.补充内容
 
-![1631531944764](09-老男孩教育-MySQL的存储引擎.assets/1631531944764.png)
+
 
 ```
 内存的微观结构概述:
@@ -1342,7 +1342,7 @@ mysql>
 		https://dev.mysql.com/doc/refman/8.0/en/innodb-architecture.html
 ```
 
-![1631531925983](09-老男孩教育-MySQL的存储引擎.assets/1631531925983.png)
+
 
 ## 5.表空间迁移案例
 
@@ -1398,10 +1398,6 @@ mysql>
             解锁源端数据表:
                 unlock tables;   
 ```
-
-![1631619655324](09-老男孩教育-MySQL的存储引擎.assets/1631619655324.png)
-
-
 
 # 四.关于InnoDB存储引擎的优化实战
 
