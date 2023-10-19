@@ -1,0 +1,43 @@
+[mysqld]
+#normal
+user=mysql
+basedir=/opt/software/mysql
+datadir=/opt/data/mysql3308
+skip_name_resolve=1
+log-error=/opt/logs/mysql3308error.log
+pid-file=/opt/data/mysql3308/mysql3308.pid
+default_time_zone='+08:00'
+character-set-server=utf8mb4
+server-id=3308
+port=3308
+socket=/tmp/mysql3308.sock
+mysqlx_port=33080
+mysqlx_socket=/tmp/mysqlx33080.sock
+
+#tablespace
+innodb_file_per_table = 1
+innodb_data_file_path = ibdata1:12M;ibdata2:1G;ibdata3:4G
+#   undo_log
+#innodb_undo_tablespaces=5 
+innodb_undo_log_truncate=1
+innodb_max_undo_log_size=1073741824
+innodb_undo_directory=/opt/logs/mysql/undo/3308 
+innodb_purge_rseg_truncate_frequency = 32
+#innodb_rollback_segments=128
+#   tmp_tablespaces
+innodb_temp_tablespaces_dir=/opt/temp/mysql/3308
+innodb_temp_data_file_path=../../temp/mysql/3308/ibtmp33081:100M:autoextend:max:500M
+#innodb_temp_data_file_path=ibtmp1:100M:autoextend:max:500M
+#   redo_log
+innodb_log_file_size=512M
+innodb_log_files_in_group=5
+innodb_log_group_home_dir=/opt/logs/mysql/redo/3308
+#   double_write
+innodb_buffer_pool_instances=2
+innodb_doublewrite_files=5
+innodb_doublewrite_dir=/opt/logs/mysql/doublewrite/3308
+#cache
+innodb_buffer_pool_size=1G
+innodb_buffer_pool_filename=myib_buffer_pool
+[mysql]
+prompt=[\u \D \d]>
