@@ -16,3 +16,10 @@ docker network create -d bridge --gateway 172.x.x.1 --subnet 172.x.x.0/24
 workerman 需使用命令 php xxxx.php start -d 启动
 
 反代有websocket时，不能使用proxy_hide_header对Upgrade进行隐藏
+
+
+curl -sS --connect-timeout 10 -m 3600 'https://ruyizhushou.com/api/crontab/updatetotalinfo'
+curl -sS --connect-timeout 10 -m 3600 'https://ruyizhushou.com/api/crontab/score'
+curl -sS --connect-timeout 10 -m 3600 'https://ruyizhushou.com/api/crontab/forcheckout'
+curl -sS --connect-timeout 10 -m 3600 'https://ruyizhushou.com/api/crontab/result'
+curl -sS --connect-timeout 10 -m 3600 'https://ruyizhushou.com/api/crontab/updatetotalinfo'

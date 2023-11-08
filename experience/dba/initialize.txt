@@ -1,0 +1,5 @@
+初始化时
+mysqld [options] --initialize-insecure
+选项有先后顺序之分
+可以将--initialize-insecure放在最后进行初始化
+则 --defaults-file= 方可识别

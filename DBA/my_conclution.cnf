@@ -48,7 +48,7 @@ prompt=[\u \D \d]>
 
 [mysqld]
 user=mysql
-basedir=/opt/sofeware/mysql80
+basedir=/opt/software/mysql80
 datadir=/opt/data/mysql3308
 server-id=3308
 port=3308
@@ -87,7 +87,7 @@ prompt=[\u \D \d]>
 
 [mysqld]
 user=mysql
-basedir=/opt/sofeware/mysql80
+basedir=/opt/software/mysql80
 datadir=/opt/data/mysql3308
 server-id=3308
 port=3308
