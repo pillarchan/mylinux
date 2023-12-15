@@ -25,6 +25,7 @@ ls /usr/local/lib
 echo "/usr/local/lib" >> /etc/ld.so.conf.d/local.conf
 ldconfig
 
+yum install perl-devel pcre-devel.x86_64 zlib-devel.x86_64 openssl-devel
 cd /usr/local/src/openresty/
 ./configure --add-module=/usr/local/src/ngx_http_geoip2_module-3.4 --with-http_realip_module --with-http_v2_module
 make && make install
