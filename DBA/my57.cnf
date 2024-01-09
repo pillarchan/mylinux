@@ -1,50 +1,71 @@
+[mysql]
+prompt="\u@\h \R:\m:\s [\d]>"
+
+[mysqldump]
+quick
+
 [mysqld]
 user=mysql
 basedir=/opt/software/mysql57
-datadir=/opt/data/mysql3307
-skip_name_resolve = 1
-socket=/tmp/mysql3307.sock
-server_id=11
-port=3307
-log-error=/opt/logs/mysql3307/mysql3307_err.log
-pid-file=/opt/data/mysql3307/mysql3307.pid
-default_time_zone = "+08:00"
-character_set_server=utf8
+datadir=/opt/data/mysql3306
+server-id=1
+port=3306
+socket=/opt/data/mysql3306/mysql.sock
+skip_name_resolve=1
+
+pid-file=/opt/data/mysql3306/mysql.pid
+default-storage-engine=InnoDB
+character-set-server=utf8mb4
+default_time_zone='+08:00'
+innodb_file_per_table=1
+innodb_data_file_path=ibdata1:1G;ibdata2:4G
 
 innodb_buffer_pool_instances=2
 innodb_buffer_pool_size=384M
+innodb_buffer_pool_filename=myib_buffer_pool
 
-innodb_data_file_path=ibdata1:1G
+#innodb_undo_tablespaces=5
+
+#log
+log-error=/opt/logs/mysql3306/error.log
+general_log=0
+general_log_file=/opt/logs/mysql3306/genaral/mysql57.log
+
+innodb_undo_log_truncate=1
+innodb_max_undo_log_size=1073741824
+innodb_undo_directory=/opt/logs/mysql3306/undo
+innodb_purge_rseg_truncate_frequency=32
+innodb_rollback_segments=128
+
+#innodb_temp_tablespaces_dir=/opt/logs/mysql3306/tmp
+innodb_temp_data_file_path=../../logs/mysql3306/tmp/ibtmp33061:100M:autoextend:max:500M
 
 innodb_log_file_size=512M
 innodb_log_files_in_group=4
-innodb_log_group_home_dir=/opt/logs/mysql3307/redo
+#innodb_redo_log_capacity=2G
+innodb_log_group_home_dir=/opt/logs/mysql3306/redo
 
-innodb_max_undo_log_size=1073741824
-innodb_purge_rseg_truncate_frequency=33
-innodb_rollback_segments=128
-innodb_undo_directory=/opt/logs/mysql3307/undo
-innodb_undo_log_truncate=1
-innodb_undo_tablespaces=5
+#innodb_doublewrite_dir=/opt/logs/mysql3306/dbw
+#innodb_doublewrite_files=4
 
-innodb_temp_data_file_path=../../logs/mysql3307/tmp/ibtmp1:100M:autoextend:max:500M
-
-general_log=ON
-general_log_file=/opt/logs/mysql3307/general/mysql57.log
-
-log_bin=/opt/logs/mysql3307/binlog/mybinlog
+log_bin=/opt/logs/mysql3306/binlog/mybinlog
+binlog_format=ROW
+sync_binlog=1
+expire_logs_days=3
+#binlog_expire_logs_seconds=259200
 max_binlog_size=100M
 
 slow_query_log=1
-slow_query_log_file=/opt/logs/mysql3307/slow/slow.log
+slow_query_log_file=/opt/logs/mysql3306/slow/slow.log
 long_query_time=1
 log_queries_not_using_indexes=1
 
-relay_log=/opt/logs/mysql3307/relaylog/my-relay-log
+relay_log=/opt/logs/mysql3306/relay/my-relay-log
+
+autocommit=1
+transaction_isolation=REPEATABLE-READ
 
 gtid_mode=ON
 enforce_gtid_consistency=ON
 log_slave_updates=ON
-
-[mysql]
-prompt=[\u \D \d]>
+#log_replica_updates=ON
