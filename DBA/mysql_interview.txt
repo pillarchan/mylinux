@@ -1,0 +1,188 @@
+DBA
+
+1、负责管理和维护Tidb、MySQL、Mongo、Redis、ES、Tidb数据库实例；
+2、设计和开发数据库运维管理工具、制定缓存系统的使用方案；
+3、持续改进数据库和缓存系统方案，保障数据库的可靠、稳定、高效地运行。
+4、处理数据库的日常维护工作，及出现重大问题时的应急恢复；
+5、提供数据库开发支持，根据业务需求进行索引优化和调优
+6、定期进行系统的健康检查，并对性能问题进行定位和排查。
+7、配合开发同事完成数据库一系列优化工作。
+8、熟练执行数据库性能调优、监控、备份、异常处理、故障恢复
+9、熟悉数据库的高可用和动态扩展方案
+10、能提供良好的读写分离方案（IO读/写）
+
+1、5年以上Linux平台数据库管理经验；
+2、从事Mysql技术方面的支持和维护实际工作经验在5年以上；
+3、精通MySQL管理，数据备份，优化；
+4、有NoSQL的管理、优化经验, 熟悉Redis、MongoDB, Elasticsearch管理，数据备份，优化；
+5、精通MySQL数据库引擎原理，深入理解数据库引擎的实现机制，能根据相关机制优化数据库；
+6、善于学习总结，关注数据库技术发展，了解新技术；
+7、具备较强的责任心，良好的沟通能力，积极分享，带头提升整个团队的技术水平；
+8、接触过千万级数据库的处理经验
+9、有灾难性故障处理经验
+10、熟悉Tidb实例管理，备份与优化的优先
+
+
+
+
+MYSQL面试题
+
+
+
+
+MYISAM 和 INNODB 的区别
+1.表锁行锁
+2.事务处理
+
+	应用层的区别：
+	
+	1，MyISAM不支持外键，InnoDB支持，这是非关系型和关系型数据库的最大区别
+	2，MyISAM不支持事务，InnoDB支持
+	3，MyISAM不支持行锁，InnoDB支持，InnoDB也会退化为表锁
+	4，MyISAM支持全文索引，InnoDB不支持（5.7版本后支持）
+	5，MyISAM可以没有主键，InnoDB必须有（不设会内置）
+	
+	设计层的区别：
+	
+	1，先讲概念，什么是聚簇索引和非聚簇索引
+	1.1，聚簇索引：主键索引的叶子节点存储主键值；
+	1.2，非聚簇索引：主键索引的叶子节点不存储主键值，仅存主键值的地址；
+	
+	仅考虑算法层面的话，从聚簇索引中获取数据通常比在非聚簇索引中查找要快。
+	2，MyISAM和InnoDB索引都采用B+树结构（这里不讨论hash），区别在于
+	2.1，MyISAM主键索引是非聚簇索引；
+	2.2，InnoDB主键索引是聚簇索引；
+	2.3，InnoDB普通索引（二级索引）是非聚簇索引； 
+	
+	3，数据存储方式的不同
+	3.1，MyISAM索引文件和数据文件是分离的（.myi索引文件和.myd数据文件）
+	3.2，InnoDB的数据文件按主键聚集（.idb数据文件） 
+	
+	4，为什么MyISAM查询更快？
+	4.1，InnoDB要缓存数据块，MyISAM只缓存索引，加载索引可能更快
+	4.2，InnoDB寻址先到块再到行，MyISAM直接寻址到文件offset
+	4.3，InnoDB要维护MVCC一致
+
+权限管理
+(1) mysql部署依赖的系统用户权限
+	root: system mysql命令
+	mysql: mysql系统用户:/data /log 
+	数据安全
+
+(2)mysql访问用户，create user。
+数据库权限非常重要:
+一般业务需求: select (主,从) , delete、update、insert(主库)足以。千万不要给业务root用户，DBA用root?不要。
+root用户管理:权限只限于127.0.0.1/localhost。登录mysql主机才能操作。
+dbadmin: all,ddl+dml+select 
+replica用户: replica slave，replica client，切记权限扩小化
+权限IP限制?dbadmin@-%-? DB服务器开放了外网，撞库风险。权限管理平台，可以定到10.10.10.10,10.10.10.%，10.10.%。千万不要%?
+企业办公网访问?建议禁止，提供sql查询平台解决，跳转堡垒机进行访问。
+
+数据类型
+1、数值  INT TINYINT BIGINT
+2、浮点 FLOAT DOUBLE DECIMAL
+float:非精度类型(四舍五入), decimal(20，10)
+3、字符 CHAR VARCHAR TEXT
+	工作技巧 宁用varchar(10000) 不用text
+4、二进制 BLOB
+5、时间 DATE DATETIME TIMESTAMP
+timestamp玩法:
+(1)存的值固定。时区不同,显示不同
+(2)长度4字节
+(3)updato-time timestamp not null default current-timestamp on update current-timestamp;业务:1、update name update time;有了上面方式，只更新要更新的内容，update-time自动更新。
+datetime 1970之前,2038年之后,就用它。8字节够用。
+注意点:千万不用用varchar存储时间varchar (255)，时间范围查询。很慢!
+6、布尔
+
+varchar(10) 括号中的数代表的是什么？
+代表的是字符长度 可以用 char_length(table.volumn)进行查询，也就是可以存10个字符包括标号，而不是字节长度。
+如果超过会报错字符长度过长，则不会写入。
+如果实在想写入，可以修改参数 sql_mode 为 NO_ENGINE_SUBSITITUTION，但写入后也只是依据字符长度截取的内容
+
+datetime timestamp的区别
+1.datetime 是8个字节 timestamp 是4个字节
+2.timestamp 是数值
+
+MySQL日志介绍
+innodb日志:redo(事务流程、MCC) , undo (功能、不同版本undo特性)
+server日志: 
+binlog (复制,格式)，
+errorlog(排查问题必备，有时需要ELK)、 
+general log(审计日志，跟slow log结合优化优先级，问题排查)，
+slow log (30% sql 优化，重要数据来源，pt-query-digest,sql advise，web页面+慢SQL报表)。
+
+
+5.7和8.0新特性
+5.7
+https://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html
+(1）数据库安全
+引入ALTER USER命令，可用来修改用户密码，密码的过期策略，及锁定用户等表空间加密
+mysql.user表中存储密码的字段从password修改为authentication_string
+(2)复制
+MGR、多源复制、增强半同步(AFTER_SYNC)、基于WRITESET的并行复制、在线开启GTID复制、在线设置复制过滤规则
+(3)innodb
+UNDO表空间的自动回收，InnoDB原生支持分区表，在此之前，是通过ha_partition接口来实现的，引入了innodb_deadlock_detect选项，在高并发场景下，可使用该选项来关闭死锁检测
+(4)系统表
+优化了Performance Schema，其内存使用减少，集成了SYS数据库，简化了MySQL的管理及异常问题的定位，
+(5)操作性
+可设置SELECT操作的超时时长(max_execution_time)
+在线修改Buffer pool的大小 低峰期操作
+引入了查询改写插件(Query Rewrite Plugin)，可在服务端对查询进行改写mysql_install_db被mysqld --initialize代替，用来进行实例的初始化
+可通过SHUTDOwN命令关闭MySQL实例
+看阿里的数据库内核月报:
+https://www.bookstack.cn/read/aliyun-rds-core/fa26cd1629beddd8.md
+https://www.bookstack.cn/read/aliyun-rds-core/eb37d1fcc2b4ce76.md
+https://www.bookstack.cn/read/aliyun-rds-core/a3a0f1d936417434.md
+https://www.bookstack.cn/read/aliyun-rds-core/615266555fb07b04.md
+
+mysql 8.0新特性
+https://dev.mysql.com/doc/refman/8.0/en/mysql-nutshell.html
+1、新增降序索引
+order by A asc,B asc;order by A desc.B desc;order by A asc,B desc;
+2、隐式索引
+10个索引，索引优化，合并，干掉。drop index秒。后果??业务force index。月度跑，年度跑SQL，周跑,1天generi log.
+ALTER TABLE tALTER INDEX i INVISIBLE;
+3、全局参数持久化
+修改配置动态生效。100-》500,vim my。cnf:过了，主库切了。
+SET PERSIST max_connections = 5B0;
+auto-cnf
+4、字符集默认:Latin1->utf8mb4
+5、系统表引擎:MyISAM4->Innodb
+6、DDL原子化，在MySQL 8.0之前，DDL操作是非原子型操作，在执行过程中遇到实例故障重启，可能导致DDL没有完成也没有回滚。
+7、安全:身份认证方式由以前的mysql_native_password改为caching_sha2_password(就算同样的密码,加密后显示也不一样)
+8、binlog保留时间:由expire_logs_days => binlog_expire_logs_seconds
+9、关闭查询缓存。
+10、MGR优化
+11、JSON、GIS加强
+
+
+IO调度算法
+
+
+
+权限管理
+对于truncate drop 等权限如有人要求开放，需上级审批走流程
+
+
+
+
+
+慢查询会把数据库打挂（oom)
+ 1.一个大的慢查询-需要更多的内存作为缓存
+ 2.并发多的慢查询可能会遇到锁等等因素,消耗整个系统的资源,包括内存,但还会有cpu
+ 
+ 
+索引的优点
+1.减少了服务器需要扫描的数据量
+2.帮助服务器避免排序和临时表
+3.随机IO变成顺序IO
+
+提高查询速度，降低更新表的速度，如对表进行INSERT、UPDATE和DELETE。索引文件也要更新
+建立索引占用磁盘空间(大表多个组合索引),生产不超过8个索引
+数据列过滤因子过小(比如 1,0),索引没有什么效果
+小表全表扫描更高效
+
+隐式转换
+
+PMM
+ 

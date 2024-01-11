@@ -1,0 +1,99 @@
+#查看数据库大小
+information_schema
+select concat(round(sum(data_length/1024/1024),2),'MB') as data from information_schema.tables;
+select concat(round(sum(data_length/1024/1024),2),'MB') as data from information_schema.tables where table_schema='xxx';
+select concat(round(sum(data_length/1024/1024),2),'MB') as data from information_schema.tables where table_schema='xxx' and table_name='xxx';
+
+#用户的增删改查
+create user user@'ip' identified by 'password';
+create role rolename;
+
+drop user user@'ip';
+drop role rolename;
+
+RENAME USER old_user@'ip' TO new_user@'ip'
+ALTER USER user@'ip' IDENTIFIED BY 'password';
+ 
+
+select user,host,authentication_string from mysql.user;
+
+show privileges;
+grant privileges on database.tables to user@'ip';
+grant privileges on database.tables to rolename;
+grant rolename[,rolename...] to user@'ip';
+REVOKE privileges on database.tables FROM user@'ip';
+REVOKE privileges on database.tables FROM rolename;
+flush privileges;
+
+SHOW GRANTS FOR user@'ip';
+SHOW GRANTS FOR rolename;
+
+
+#激活角色很关键
+set global activate_all_roles_on_login=1;
+
+
+#索引的增删改查
+
+#允许
+show index from database.table_name;
+desc table_name;
+
+craete index index_name on table_name(`column`);
+drop index index_name on table_name;
+
+alter table table_name add index index_name(column,column,...)
+
+#加索引实战案例
+1.发现慢了
+2.先show processlist看
+3.explian 查看执行计划
+
+压测工具 mysqlslap
+
+#mysqlslap自带压测
+mysqlslap --defaults-file=/chj/class/data/mysql3306/etc/my3306.cnf \
+--concurrency=100 --iterations=1 --create-schema='test' \
+--query="SELECT * FROM app_user WHERE name='用户9999';" engine=innodb \
+--number-of-queries=2000 -uadmin -p123456 -h192.168.76.131 \
+-verbose
+
+--concurrency=100 ： 模拟同时100会话连接
+--create-schema='test' ： 操作的库是谁
+--query="select * from test.t100w where k2='780P'" ：做了什么操作
+--number-of-queries=2000 ： 一共做了多少次查询
+
+CREATE TABLE `app_user` (
+`id` int unsigned NOT NULL AUTO_INCREMENT,
+`name` varchar(50) DEFAULT '' COMMENT '昵称',
+`email` varchar(50) DEFAULT NULL COMMENT '邮箱',
+`phone` bigint DEFAULT NULL COMMENT '手机号',
+`gender` tinyint DEFAULT NULL COMMENT '性别 0-男, 1-女',
+ `password` varchar(36) NOT NULL COMMENT '密码',
+ `age` tinyint NOT NULL COMMENT '年龄',
+ `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+ `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+ ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY (`id`),
+ KEY `id_app_user_name` (`name`),
+ KEY `idx_name_phone_password` (`name`,`phone`,`password`)
+ ) ENGINE=InnoDB AUTO_INCREMENT=1000001 DEFAULT CHARSET=utf8mb4
+ COMMENT='app用户表';
+ 
+ 
+set global log_bin_trust_function_creators=ON;
+DELIMITER $$
+CREATE FUNCTION mock_data()
+RETURNS INT
+BEGIN
+DECLARE num INT DEFAULT 1000000;
+DECLARE i INT DEFAULT 0;
+WHILE i < num DO
+INSERT INTO `game`.`app_user`
+(`name`,`email`,`phone`,`gender`,`password`,`age`)VALUES
+(CONCAT('用户',i), '123456@qq.com', CONCAT('18',FLOOR(RAND()*((999999999-100000000)+100000000))),FLOOR(RAND()*2), UUID(), FLOOR(RAND()*100));
+SET i = i+1;
+END WHILE;
+RETURN i;
+END $$
+DELIMITER ;

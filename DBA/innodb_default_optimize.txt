@@ -1,0 +1,48 @@
+#线程默认配置
+innodb_capacity 200
+innodb_adaptive_flushing ON
+innodb_max_dirty_pages_pct 90  建议小于等于50 加快脏页刷新  设置为0尽快完成脏页刷新
+innodb_max_dirty_pages_pct_lwm 10  如innodb_max_dirty_pages_pct设置为0 此参数也设置为0 
+innodb_purge_batch_size 300  适当调大 避免undo堆积
+innodb_fast_shutdown 1 可设置为0 不使用快速关闭
+
+#check point
+innodb_adaptive_flushing       ON
+innodb_adaptive_flushing_lwm   10
+innodb_flush_neighbors         1  适合机械硬盘
+innodb_flush_sync              ON
+innodb_flushing_avg_loops      30
+innodb_flush_log_at_trx_commit  1
+
+
+#查看innodb线程
+select name,count(*) from performance_schema.threads where name like '%innodb%' group by name;
+select * from performance_schema.threads where processlist_id=;
+show engine innodb status\G
+
+ckpt和lsn差距过大   => innodb_buffer_pool_size
+modified db pages/buffer pool size  => innodb_max_dirty_pages_pct 服务器性能问题
+
+#innodb I/O 优化
+innodb_buffer_pool_size 200  可调整为2000
+innodb_io_capacity_max 2000 可调整为3000
+innodb_flush_method fsync  可调整为O_DSYNC
+innodb_fsync_threshold 0  是否启用 1或0
+innodb_use_fdatasync 0 是否启用 1或0
+innodb_use_native_aio 1
+
+To apply direct I/O only to InnoDB file operations rather than the whole file system, set innodb_flush_method = O_DIRECT
+
+#查看purge过程
+select * from information_schema.innodb_metrics where name='trx_rseg_history_len'\G
+
+#双"一"
+For durability and consistency in a replication setup that uses InnoDB with transactions:
+• If binary logging is enabled, set sync_binlog=1.
+• Always set innodb_flush_log_at_trx_commit=1
+
+#innodb buffer pool
+
+select count(pool_id) from information_schema.innodb_buffer_page;
+select page_type,sum(data_size)/1024/1024 as size_MB from information_schema.innodb_buffer_page group by page_type order by 2 desc;
+
