@@ -24,7 +24,7 @@ ckpt和lsn差距过大   => innodb_buffer_pool_size
 modified db pages/buffer pool size  => innodb_max_dirty_pages_pct 服务器性能问题
 
 #innodb I/O 优化
-innodb_buffer_pool_size 200  可调整为2000
+innodb_io_capacity 200  可调整为2000
 innodb_io_capacity_max 2000 可调整为3000
 innodb_flush_method fsync  可调整为O_DSYNC
 innodb_fsync_threshold 0  是否启用 1或0
