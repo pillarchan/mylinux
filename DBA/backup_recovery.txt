@@ -1,0 +1,84 @@
+CHANGE REPLICATION SOURCE TO
+SOURCE_HOST = '192.168.76.136',
+SOURCE_USER = 'copy',
+SOURCE_PASSWORD = '123',
+SOURCE_PORT = port,
+SOURCE_AUTO_POSITION = 1,
+GET_SOURCE_PUBLIC_KEY = 1;
+
+
+CHANGE REPLICATION SOURCE TO
+SOURCE_AUTO_POSITION = 0,
+SOURCE_LOG_FILE = 'mybinlog.000016',
+SOURCE_LOG_POS = 533;
+
+ongoing_anonymous_transaction_count
+global.gtid_owned
+
+CHANGE REPLICATION SOURCE TO
+SOURCE_HOST = '192.168.76.136',
+SOURCE_USER = 'copy',
+SOURCE_PASSWORD = '123',
+SOURCE_PORT = port,
+SOURCE_AUTO_POSITION = 1,
+GET_SOURCE_PUBLIC_KEY = 1
+FOR CHANNEL 'source136';
+
+
+CHANGE REPLICATION SOURCE TO
+SOURCE_HOST = '192.168.76.137',
+SOURCE_USER = 'copy',
+SOURCE_PASSWORD = '123',
+SOURCE_PORT = port,
+SOURCE_AUTO_POSITION = 1,
+GET_SOURCE_PUBLIC_KEY = 1
+FOR CHANNEL 'source137';
+
+
+mysqldump备份
+-- 查看表相关信息
+select table_schema,table_name,table_collation,engine,table_rows
+from information_schema.tables
+where table_schema NOT IN ('information_schema' , 'sys', 'mysql', 'performance_schema');
+
+
+-- 查看是否存在存储过程、触发器、调度事件等
+select count(*) from information_schema.events;
+select count(*) from information_schema.routines;
+select count(*) from information_schema.triggers;
+
+-- 查看字符集信息
+show variables like 'character%';
+
+
+全库备份
+mysqldump -uuser -ppassword -hip -Pport --default-character-set=utf8mb4 --single-transaction --max-allowed-packet=256M \ 
+ --master-data=2 --triggers --set-gtid-purged=off -E -R -A >/path/xxx_$(date +%Y%m%d%H%M%S).sql
+指定数据库备份
+mysqldump -uuser -ppassword -hip -Pport --default-character-set=utf8mb4 --single-transaction --max-allowed-packet=256M \ 
+ --master-data=2 --triggers --set-gtid-purged=off -E -R -B xxx >/path/xxx_$(date +%Y%m%d%H%M%S).sql
+指定数据库单或多表备份
+mysqldump -uuser -ppassword -hip -Pport --default-character-set=utf8mb4 --single-transaction --max-allowed-packet=256M \ 
+ --master-data=2 --triggers --set-gtid-purged=off -E -R -B xxx --tables xxx[,xxx] >/path/xxx_$(date +%Y%m%d%H%M%S).sql
+按条件备份（多用于单库单表，如有多表必须要保证每张表都有条件字段）
+mysqldump -uuser -ppassword -hip -Pport --default-character-set=utf8mb4 --single-transaction --max-allowed-packet=256M \ 
+ --master-data=2 --triggers --set-gtid-purged=off -E -R -B xxx --tables xxx[,xxx] --where='column=xxx' >/path/xxx_$(date +%Y%m%d%H%M%S).sql
+只导出表结构 **
+mysqldump -uuser -ppassword -hip -Pport --default-character-set=utf8mb4 --single-transaction --max-allowed-packet=256M \ 
+ --master-data=2 --triggers --set-gtid-purged=off -E -R -B xxx -d>/path/xxx_$(date +%Y%m%d%H%M%S).sql
+只备份数据
+mysqldump -uuser -ppassword -hip -Pport --default-character-set=utf8mb4 --single-transaction --max-allowed-packet=256M \ 
+ --master-data=2 --triggers --set-gtid-purged=off -E -R --hex-blob --no-create-info -B xxx >/path/xxx_$(date +%Y%m%d%H%M%S).sql
+
+恢复
+命令行文件
+mysql  -uuser -ppassword -hip -Pport --max-allowed-packet=256M  < xxx.sql
+mysql  -uuser -ppassword -hip -Pport databasename --max-allowed-packet=256M  < xxx.sql
+流式
+mysqldump -uuser -ppassword -hip -Pport --default-character-set=utf8mb4 --single-transaction --max-allowed-packet=256M  \ 
+ --master-data=2 --triggers --set-gtid-purged=off -E -R -A >/path/xxx_$(date +%Y%m%d%H%M%S).sql > mysql mysqldump -uuser -ppassword -hip -Pport
+监控式
+pv -W -L 2M xxx.sql | mysql mysqldump -uuser -ppassword -hip -Pport --max-allowed-packet=256M
+
+导出csv
+mysql -uuser -ppassword -hip -Pport -e "select * from table" > xxx.xls
