@@ -74,4 +74,12 @@ enforce_gtid_consistency=OFF
 #log_slave_updates=ON
 #log_replica_updates=ON
 #read_only=ON
-#innodb_read_only=ON
+#plugin-load="rpl_semi_sync_master=semisync_master.so,rpl_semi_sync_slave=semisync_slave.so"
+#rpl_semi_sync_master_enabled=1
+#rpl_semi_sync_slave_enabled=1
+#slave_parallel_type=LOGICAL_CLOCK
+#slave_parallel_workers=16
+#slave_preserve_commit_order=ON
+#binlog_transaction_dependency_tracking=WRITESET_SESSION
+#transaction_write_set_extraction=XXHASH64
+#binlog_transaction_dependency_history_size=25000
