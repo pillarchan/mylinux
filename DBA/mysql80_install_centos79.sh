@@ -44,10 +44,13 @@ source /etc/profile.d/mysql.sh
 
 chown -R $MYUSER:$MYUSER $MYSQL_DATA_DIR $MYSQL_LOGS_DIR $MYSQL_ETC_DIR $MYSQL_HOME_DIR
 
-cat > $MYSQL_ETC_DIR/my.cnf << EOF
+cat > /etc/my.cnf << EOF
 [mysql]
 prompt="\u@\h \R:\m:\s[\d]>"
+socket=$MYSQL_DATA_DIR/mysql.sock
+EOF
 
+cat > $MYSQL_ETC_DIR/my.cnf << EOF
 [mysqldump]
 quick
 
@@ -67,10 +70,13 @@ default-storage-engine=InnoDB
 character-set-server=utf8mb4
 default_time_zone='+08:00'
 innodb_file_per_table=1
-innodb_data_file_path=ibdata1:1G;ibdata2:4G
+innodb_data_file_path=ibdata1:1G
 
-innodb_buffer_pool_instances=2
-innodb_buffer_pool_size=384M
+activate_all_roles_on_login=1
+log_bin_trust_function_creators=1
+
+#innodb_buffer_pool_instances=4
+innodb_buffer_pool_size=768M
 innodb_buffer_pool_filename=myib_buffer_pool
 
 #innodb_undo_tablespaces=5
@@ -117,7 +123,9 @@ transaction_isolation=REPEATABLE-READ
 gtid_mode=ON
 enforce_gtid_consistency=ON
 #log_slave_updates=ON
-log_replica_updates=ON
+#log_replica_updates=ON
+#read_only=1
+#super_read_only=1
 
 EOF
 

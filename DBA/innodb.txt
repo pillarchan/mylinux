@@ -1,0 +1,67 @@
+innodb
+
+OLTP
+ 产品使用在前端交互产生两种数据:行为数据和业务数据，行为数据指点击,滑动等操作，也称为埋点数
+据.业务数据是在行为数据之后产生的与产品结果挂钩的数据，比如最终下单,存1W块到账号等数据.
+ OLTP为了保证业务快速响应与支持,数据库与业务直接高性能低延时并发交互操作(一秒钟几千个用户分
+别存钱,取钱).这个直接存储与业务直接相关的数据库,叫做OLTP型数据库，服务在线业务。
+
+
+什么是innodb
+存储引擎：相当于mysql内置的系统文件
+InnoDB是一个兼顾高可靠性和高性能的通用存储引擎，MySQL的默认事务型引擎，也是最重要的，使用最广泛的存储引擎，
+它被设计用来处理大量的短期(short-lived)事务，短期事务大部分情况是正常的提交的，
+很少会有被回滚，InnoDB性能和自动恢复性。
+
+InnoDB的核心特性包括但不限于以下特性:
+    (1)MVCC:多版本并发控制。
+    (2)群集索引: 可以理解为"聚簇索引"。
+    (3)自适应哈希索引:就是我们前面提到过的AHI。(adaptive hash index)
+    (4)更改缓冲:Change buffer。用于保存临时修改的辅助索引更新信息。
+    (5)事物:支持事物处理。
+    (6)支持热备:即再不停服务的前提下，还可以正常备份数据库。
+    (7)行级锁:支持锁粒度为行级锁。
+    (8)外键:外键可以维护数据的一致性，是一个不错的解决方案，但本身占用MySQL的性能，因此在开发过程中，使用的并不是特别流行。
+    (9)自动故障恢复
+    (10)多缓冲区池
+	
+InnoDB 的主要优势
+它的 DML 操作遵循 ACID 模型，事务具有提交、回滚和崩溃恢复功能以保护用户数据。
+行级锁定和 Oracle 风格的一致性读取提高了多用户并发性和性能。
+InnoDB表将您的数据排列在磁盘上以优化基于主键的查询。每个 InnoDB表都有一个称为聚簇索引的主键索引，它组织数据以最小化主键查找的 I/O。
+为了保持数据完整性，InnoDB支持 FOREIGN KEY约束。对于外键，检查插入、更新和删除以确保它们不会导致相关表之间的不一致。	
+
+innodb架构
+1.内存结构
+	buffer pool 缓存池是主内存中InnoDB用来访问缓存表和索引数据的一个区域。
+	缓冲池允许直接从内存访问经常使用的数据，加快处理速度。 
+	在专用服务器上，高达 80% 的物理内存通常分配给缓冲池。
+	为了提高大容量读取操作的效率，缓冲池被划分为多个页面，这些页面可能会保留多行。
+	为了提高缓存管理的效率，缓冲池被实现为链表页数； 
+	使用最近最少使用的变体将很少使用的数据从缓存中老化（LRU）算法。
+	 modified pages
+	 free buffers
+	change buffer 写缓存
+	AHI 自适应哈希索引
+	log buffer 日志缓存
+
+
+
+查看 show engines;
+show engine innode status\G
+show engine innodb mutex\G
+
+#buffer_pool
+show status where variable_name like '%buffer_pool_resize%';
+• 0: No Resize operation in progress
+• 1: Starting Resize
+• 2: Disabling AHI (Adaptive Hash Index)
+• 3: Withdrawing Blocks
+• 4: Acquiring Global Lock
+• 5: Resizing Pool
+• 6: Resizing Hash
+• 7: Resizing Failed
+From MySQL 8.0.31, starting the server with --log-error-verbosity=3 logs additional information
+to the error log during an online buffer pool resizing operation. Additional information includes the
+status codes reported by Innodb_buffer_pool_resize_status_code and the percentage
+progress value reported by Innodb_buffer_pool_resize_status_progress.
