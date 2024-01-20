@@ -50,7 +50,8 @@ select count(*) from information_schema.triggers;
 -- 查看字符集信息
 show variables like 'character%';
 
-
+备份用户权限
+GRANT SELECT, RELOAD, PROCESS, SHOW DATABASES, SUPER, LOCK TABLES, REPLICATION CLIENT, SHOW VIEW, EVENT, TRIGGER ON *.* TO 'backup'@'localhost'
 全库备份
 mysqldump -uuser -ppassword -hip -Pport --default-character-set=utf8mb4 --single-transaction --max-allowed-packet=256M \ 
  --master-data=2 --triggers --set-gtid-purged=off -E -R -A >/path/xxx_$(date +%Y%m%d%H%M%S).sql
@@ -82,3 +83,8 @@ pv -W -L 2M xxx.sql | mysql mysqldump -uuser -ppassword -hip -Pport --max-allowe
 
 导出csv
 mysql -uuser -ppassword -hip -Pport -e "select * from table" > xxx.xls
+
+
+
+mysqldump -u my_backup -p -S /opt/data/mysql3306/mysql.sock --default-character-set=utf8mb4 --max-allowed-packet=256M \
+--source-data=2 --single-transaction --set-gtid-purged=off -R -E --triggers -B game > /tmp/game$(date +%Y%m%d%H%M%S).sql
