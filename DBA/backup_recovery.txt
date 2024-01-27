@@ -88,3 +88,5 @@ mysql -uuser -ppassword -hip -Pport -e "select * from table" > xxx.xls
 
 mysqldump -u my_backup -p -S /opt/data/mysql3306/mysql.sock --default-character-set=utf8mb4 --max-allowed-packet=256M \
 --source-data=2 --single-transaction --set-gtid-purged=off -R -E --triggers -B game > /tmp/game$(date +%Y%m%d%H%M%S).sql
+
+

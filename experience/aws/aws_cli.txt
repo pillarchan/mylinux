@@ -17,3 +17,7 @@ output=json
 [profile user1]
 region=us-east-1
 output=text
+
+
+aws s3 cp D:\work\IM\app_wallet_mini-release.apk s3://walletbck/apk/app_wallet_mini-release.apk --acl public-read
+aws s3 cp D:\work\IM\TokenPocket-pro.apk s3://walletbck/apk/TokenPocket-pro.apk --acl public-read
