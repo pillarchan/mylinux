@@ -1,0 +1,88 @@
+zabbix debian12 install
+
+web端
+wget https://mirrors.tuna.tsinghua.edu.cn/zabbix/zabbix/6.0/debian/pool/main/z/zabbix-release/zabbix-release_6.0-5%2Bdebian12_all.deb
+dpkg -i zabbix-release_6.0-5+debian12_all.deb
+sed -ri "s@repo.zabbix.com@mirrors.tuna.tsinghua.edu.cn/zabbix@g" $(grep "repo.zabbix.com" -rl /etc/apt/sources.list.d)
+apt update
+apt install zabbix-frontend-php zabbix-nginx-conf zabbix-agent2 zabbix-agent2-plugin-* -y
+
+配置后再启动
+systemctl enable nginx php8.2-fpm zabbix-agent --now
+
+server端
+libpcre libevent libpthread zlib libssh2 fping libcurl libiksemel libxml2 net-snmp
+wget https://mirrors.tuna.tsinghua.edu.cn/zabbix/zabbix/6.0/debian/pool/main/z/zabbix-release/zabbix-release_6.0-5%2Bdebian12_all.deb
+dpkg -i zabbix-release_6.0-5+debian12_all.deb
+sed -ri "s@repo.zabbix.com@mirrors.tuna.tsinghua.edu.cn/zabbix@g" $(grep "repo.zabbix.com" -rl /etc/apt/sources.list.d)
+apt update
+apt install zabbix-agent2 zabbix-agent2-plugin-* zabbix-server-mysql -y
+
+配置后再启动
+systemctl enable zabbix-server zabbix-agent --now
+
+db端
+wget https://mirrors.tuna.tsinghua.edu.cn/zabbix/zabbix/6.0/debian/pool/main/z/zabbix-release/zabbix-release_6.0-5%2Bdebian12_all.deb
+dpkg -i zabbix-release_6.0-5+debian12_all.deb
+sed -ri "s@repo.zabbix.com@mirrors.tuna.tsinghua.edu.cn/zabbix@g" $(grep "repo.zabbix.com" -rl /etc/apt/sources.list.d)
+apt update
+apt install zabbix-agent2 zabbix-agent2-plugin-* zabbix-sql-scripts -y
+配置后再启动
+systemctl enable zabbix-agent --now
+
+CREATE DATABASE `zabbix` CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+
+
+agent2
+wget https://mirrors.tuna.tsinghua.edu.cn/zabbix/zabbix/6.0/debian/pool/main/z/zabbix-release/zabbix-release_6.0-5%2Bdebian12_all.deb
+dpkg -i zabbix-release_6.0-5+debian12_all.deb
+sed -ri "s@repo.zabbix.com@mirrors.tuna.tsinghua.edu.cn/zabbix@g" $(grep "repo.zabbix.com" -rl /etc/apt/sources.list.d)
+apt update
+apt install zabbix-agent2 zabbix-agent2-plugin-*
+配置后再启动
+systemctl enable zabbix-agent --now
+
+
+server端配置
+LogFile=/var/log/zabbix/zabbix_server.log
+LogFileSize=0
+PidFile=/run/zabbix/zabbix_server.pid
+SocketDir=/run/zabbix
+DBHost=192.168.76.163
+DBName=zabbix
+DBUser=zabbix
+DBPassword=123456
+DBPort=3306
+SNMPTrapperFile=/var/log/snmptrap/snmptrap.log
+Timeout=4
+FpingLocation=/usr/bin/fping
+Fping6Location=/usr/bin/fping6
+LogSlowQueries=3000
+StatsAllowedIP=127.0.0.1
+
+
+
+agent2配置
+/etc/zabbix/zabbix_agent2.conf
+PidFile=/var/run/zabbix/zabbix_agent2.pid
+LogFile=/var/log/zabbix/zabbix_agent2.log
+LogFileSize=0
+Server=192.168.76.162
+ServerActive=127.0.0.1
+Hostname=zabbixweb
+Include=/etc/zabbix/zabbix_agent2.d/*.conf
+PluginSocket=/run/zabbix/agent.plugin.sock
+ControlSocket=/run/zabbix/agent.sock
+Include=./zabbix_agent2.d/plugins.d/*.conf
+
+#nginx-conf
+listen 58080;
+server_name _;
+
+#php.ini
+max_execution_time = 300
+max_input_time = 300
+memory_limit = 128M
+post_max_size = 16M
+upload_max_filesize = 2M
+date.timezone = Asia/Shanghai
