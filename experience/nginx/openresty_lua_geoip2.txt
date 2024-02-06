@@ -36,3 +36,5 @@ cd /usr/local/redis-5.3.7 && /usr/local/php/bin/phpize \
 make && make install > phpredis_install.log \
 echo extension = $(cut -d':' -f2 phpredis_install.log | grep -E -o "/usr.+")redis.so >> /usr/local/php/etc/php.ini \
 nginx http块中配置 geoip2
+
+apt install gcc make libpcre3-dev zlib1g-dev openssl libssl-dev libgetopt-argvfile-perl -y

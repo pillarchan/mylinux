@@ -7,8 +7,9 @@ sed -ri "s@repo.zabbix.com@mirrors.tuna.tsinghua.edu.cn/zabbix@g" $(grep "repo.z
 apt update
 apt install zabbix-frontend-php zabbix-nginx-conf zabbix-agent2 zabbix-agent2-plugin-* -y
 
+
 配置后再启动
-systemctl enable nginx php8.2-fpm zabbix-agent --now
+systemctl enable nginx php8.2-fpm zabbix-agent2 --now
 
 server端
 libpcre libevent libpthread zlib libssh2 fping libcurl libiksemel libxml2 net-snmp
@@ -19,7 +20,7 @@ apt update
 apt install zabbix-agent2 zabbix-agent2-plugin-* zabbix-server-mysql -y
 
 配置后再启动
-systemctl enable zabbix-server zabbix-agent --now
+systemctl enable zabbix-server zabbix-agent2 --now
 
 db端
 wget https://mirrors.tuna.tsinghua.edu.cn/zabbix/zabbix/6.0/debian/pool/main/z/zabbix-release/zabbix-release_6.0-5%2Bdebian12_all.deb
@@ -28,8 +29,9 @@ sed -ri "s@repo.zabbix.com@mirrors.tuna.tsinghua.edu.cn/zabbix@g" $(grep "repo.z
 apt update
 apt install zabbix-agent2 zabbix-agent2-plugin-* zabbix-sql-scripts -y
 配置后再启动
-systemctl enable zabbix-agent --now
-
+systemctl enable zabbix-agent2 --now
+create user zabbix@'192.168.76.%' identified by '123456';
+grant all on *.* to zabbix@'192.168.76.%';
 CREATE DATABASE `zabbix` CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 
 
@@ -40,7 +42,7 @@ sed -ri "s@repo.zabbix.com@mirrors.tuna.tsinghua.edu.cn/zabbix@g" $(grep "repo.z
 apt update
 apt install zabbix-agent2 zabbix-agent2-plugin-*
 配置后再启动
-systemctl enable zabbix-agent --now
+systemctl enable zabbix-agent2 --now
 
 
 server端配置
@@ -86,3 +88,26 @@ memory_limit = 128M
 post_max_size = 16M
 upload_max_filesize = 2M
 date.timezone = Asia/Shanghai
+
+
+#模板的使用与配置
+使用模板时如没未获取到监控数据，需要在模块中的宏进行配置
+例如mysql agent2 就需要配置 mysql.dsn mysql.user mysql.password 后才获取到监控数据
+
+zabbix-pmp
+下载地址：https://github.com/slowtech/mysql/blob/master/%E7%AC%AC%E5%85%AD%E7%AB%A0%EF%BC%9A%E7%9B%91%E6%8E%A7/percona-zabbix-templates-1.1.8-1.tar.gz
+
+apt install -y apt-transport-https lsb-release ca-certificates wget 
+wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/php.list
+apt update
+
+apt install php7.4-cli php7.4-mysql
+zabbix-pmp的对php版本要求不能超过7
+https://git.zabbix.com/projects/ZBX/repos/zabbix/browse/src/go/plugins/mysql/README.md.
+
+
+
+#语言包
+apt install locales -y
+dpkg-reconfigure locales

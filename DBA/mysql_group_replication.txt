@@ -1,0 +1,88 @@
+MYSQL MGR
+
+#配置文件
+[client]
+socket = /data/mysql/3306/data/mysql.sock
+[mysqld]
+# Server
+user = mysql
+
+datadir = /data/mysql/3306/data
+basedir = /usr/local/mysql
+port = 3306
+socket = /data/mysql/3306/data/mysql.sock
+log_timestamps = system
+log_error = /data/mysql/3306/data/mysqld.err
+skip_name_resolve
+report_host = "192.168.79.10"
+disabled_storage_engines = "MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY"
+sql_require_primary_key = ON
+
+# Replication
+server_id = 1
+log_bin = mysql-bin
+binlog_format = ROW
+log_slave_updates = ON
+gtid_mode = ON
+enforce_gtid_consistency = ON
+master_info_repository = TABLE
+relay_log_info_repository = TABLE
+super_read_only = ON
+binlog_transaction_dependency_tracking = WRITESET
+transaction_write_set_extraction = XXHASH64
+
+# Multi-threaded Replication
+slave_parallel_type = LOGICAL_CLOCK
+slave_preserve_commit_order = ON
+slave_parallel_workers = 4
+
+# Group Replication Settings
+plugin_load_add = "group_replication.so"
+loose_group_replication_group_name = "22e34e6b-f37e-11ed-a2a8-000c29f6d187"
+loose_group_replication_start_on_boot = OFF
+loose_group_replication_local_address = "192.168.79.10:33061"
+loose_group_replication_group_seeds ="192.168.79.10:33061,192.168.79.20:33061,192.168.79.30:33061"
+loose_group_replication_bootstrap_group = OFF
+loose_group_replication_recovery_get_public_key = ON
+
+组复制的相关参数。
+plugin_load_add：加载组复制插件。也可在实例启动后，通过以下命令⼿动加载。
+group_replication_group_name：集群名。用于唯一标识某个集群，必须是个有效的 UUID 值。
+group_replication_start_on_boot：是否在实例启动时⾃动开启组复制，默认为 ON。
+group_replication_local_address：当前节点的内部通信地址。
+group_replication_group_seeds：种子节点地址。当有新的节点加入时，它会优先与种子节点建立连接。
+group_replication_bootstrap_group：是否由当前节点初始化集群，默认为 OFF。
+group_replication_recovery_get_public_key：如果复制用户使用了 caching_sha2_password，在分布式恢
+复阶段，如果没有使用 SSL（group_replication_recovery_use_ssl=ON），则必须使用 RSA 密钥对进行密码
+交换。将 group_replication_recovery_get_public_key 设置为 ON，则允许该节点直接从源节点获取公钥。
+
+注意：group_replication_local_address group_replication_group_seeds 里配置端口部分不能使用已用端口
+否则 start group_replication会失败
+
+实例启动成功后，检查group_replication插件是否启用成功
+show plugins;
+确认插件启用成功后
+
+主节点
+set global group_replication_bootstrap_group=ON;
+start group_replication;
+set global group_replication_bootstrap_group=OFF;
+change master to master_user='rpl_user', master_password='password' for channel 'group_replication_recovery';
+
+group_replcation启动成功后,查看一下组成员状态
+select member_id,member_host,member_port,member_state,member_role from performance_schema.replication_group_members;
+
+创建用户并授于权限
+Replication slave,BACKUP_ADMIN,SERVICE_CONNECTION_ADMIN,GROUP_REPLICATION_STREAM,CONNECTION_ADMIN
+
+从节点
+change master to master_user='rpl_user', master_password='password' for channel 'group_replication_recovery';
+start group_replication;
+
+再次确认组成员状态
+select * from performance_schema.replication_group_members;
+注意：
+主节点 启动组复制之前必须开启 group_replication_bootstrap_group=ON
+待启动成功后再将其关闭 group_replication_bootstrap_group=OFF
+channel 必须为group_replication_recovery
+

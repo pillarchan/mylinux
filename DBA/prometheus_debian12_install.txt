@@ -1,0 +1,84 @@
+debian12 prometheus+grafana+mysqld_export
+
+https://prometheus.io/download/#prometheus
+
+服务端
+下载解压
+https://github.com/prometheus/prometheus/releases/download/v2.45.3/prometheus-2.45.3.linux-amd64.tar.gz
+https://mirrors.tuna.tsinghua.edu.cn/github-release/prometheus/prometheus/2.45.3%20_%202024-01-24/prometheus-2.45.3.linux-amd64.tar.gz
+
+wget https://mirrors.tuna.tsinghua.edu.cn/github-release/prometheus/prometheus/2.45.3%20_%202024-01-24/prometheus-2.45.3.linux-amd64.tar.gz \
+-O　/usr/local/src/prometheus-2.45.3.linux-amd64.tar.gz
+tar xf  /usr/local/src/prometheus-2.45.3.linux-amd64.tar.gz -C ../
+ln -sv /usr/local/prometheus-2.45.3.linux-amd64 /usr/local/prometheus
+启动
+/usr/local/prometheus/prometheus --config.file=/usr/local/prometheus/prometheus.yml &
+配置文件
+/usr/local/prometheus/prometheus.yml
+
+客户端
+下载解压
+https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+
+wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz \
+-O　/usr/local/src/node_exporter-1.7.0.linux-amd64.tar.gz
+tar xf  /usr/local/src/node_exporter-1.7.0.linux-amd64.tar.gz -C ../
+ln -sv /usr/local/node_exporter-1.7.0.linux-amd64 /usr/local/node_exporter
+启动
+/usr/local/node_exporter/node_exporter &
+
+查看端口是否启用
+root@debian12prometheus:/usr/local# ss -tnl
+State          Recv-Q          Send-Q                   Local Address:Port                   Peer Address:Port         Process         
+LISTEN         0               128                            0.0.0.0:22                          0.0.0.0:*                            
+LISTEN         0               128                          127.0.0.1:6011                        0.0.0.0:*                            
+LISTEN         0               4096                                 *:9090                              *:*                            
+LISTEN         0               4096                                 *:9100                              *:*                            
+LISTEN         0               128                               [::]:22                             [::]:*                            
+LISTEN         0               128                              [::1]:6011                           [::]:* 
+
+看到有9090和9100 已启用 说明服务端和采集服务都正常启动
+
+通过访问 http://ip:9100/metrics 查看指标采集数据是否正常
+
+配置prometheus.yml文件
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "prometheus"
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "self_node"
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+      - targets: ["localhost:9100"]
+
+修改添加 -job_name 和目标服务器监控IP与端口
+
+重启prometheus服务
+pkill prometheus;/usr/local/prometheus/prometheus --config.file=/usr/local/prometheus/prometheus.yml &
+
+访问 ip:9090/targets 查看被监控目标服务器的状态是否正常，主要查看state是否为up
+确认都为正常，说明服务端和被监控端为正常运行
+
+#Grafana
+https://grafana.com/grafana/download
+
+wget https://dl.grafana.com/oss/release/grafana-10.3.1.linux-amd64.tar.gz -O /usr/local/src/grafana-10.3.1.linux-amd64.tar.gz
+tar xvf /usr/local/src/grafana-10.3.1.linux-amd64.tar.gz -C ../
+ln -sv /usr/local/grafana-v10.3.1 /usr/local/grafana
+
+/usr/local/grafana/bin/grafana-server &
+
+访问 ip:3000 进入 granfana界面
+引用数据源为prometheus
+导入面板 node_exporter id 为1860 mysqld_export id 为7362
