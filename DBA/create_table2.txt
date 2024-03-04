@@ -24,3 +24,19 @@ BEGIN
             i = i +1; 
     END WHILE;
 END$$
+
+
+
+#批量插入
+DELIMITER $$
+CREATE PROCEDURE haha(in m_max int,m_i int)
+BEGIN
+DECLARE i,k int;
+SET i=m_i;
+WHILE i<m_max DO
+INSERT INTO user (name,pwd) VALUES (CONCAT('user',i),CONCAT('user',i));
+SET i=i+1;
+END WHILE;
+END;
+$$
+DELIMITER ; 

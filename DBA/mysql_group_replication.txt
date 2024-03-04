@@ -86,3 +86,76 @@ select * from performance_schema.replication_group_members;
 待启动成功后再将其关闭 group_replication_bootstrap_group=OFF
 channel 必须为group_replication_recovery
 
+多主模式
+	配置
+		group_replication_single_primary_mode=OFF
+		group_replcation_enforce_update_everywhere_checks=ON
+	8.0.13之后可以不用配置重启，直接用命令设置
+		select group_replication_switch_to_multi_primary_mode()
+		select group_replication_switch_to_single_primary_mode(member_uuid)
+		select group_replication_set_as_primary(member_uuid)
+组复制要求
+	只支持innodb
+	表上必须有主键或唯一非空键
+	8.0.21之前不支持binlog_chekcsum，只能设置为NONE
+	最大节点数为9
+	不允许对group_replication_applier或group_replication_recovery设置过滤
+	8.0.20之前不允许手动克隆
+多主模式的限制
+	建议事务隔离级别调整为RC
+	不能通过select ... for update 或 select ... for share锁定数据
+	组复制中没有对 DDL 进行冲突检测。当针对同一对象的 DDL 和 DML 操作在不同节点并发执行时，有可能会导致节点数据不一致
+	不允许将事务隔离级别设置为serializable，不允许删除外键级联
+组复制查看监控项
+	select * from performance_schema.replication_group_members;
+	select * from performance_schema.replication_group_member_stats;
+MGR 的新主选举算法
+	5.7.20引入 group_replication_member_weight 值在0-100，默认50
+	权重越高，server_uuid值越小则优先级越高
+流控
+	group_replication是一种shared_nothing架构，每个节点都会保留一份数据，但系统吞吐量则由最弱的那个节点决定
+	由于各节点机器性能不同，最慢的节点会造成事务堆积，出现事务堆积会引起旧数据读取和写冲突
+	等待事务堆积完成则会影响性能
+	在此基础上引入了流控模块，它会定期检查各节点的事务堆积情况，超过阈值就触发流控
+	依据上一周期各节点的事务认证和应用情况，决定当前节点下一周的写入配额
+	触发条件
+		1.group_replication_flow_control_mode=QUOTA 默认为QUOTA
+		2.当前事务等待应用 COUNT_TRANSACTIONS_REMOTE_IN_APPLIER_QUEUE 值大于 group_replication_flow_control_applier_threshold时
+		group_replication_flow_control_applier_threshold=25000 默认为25000
+		3.当前事务等待认证 COUNT_TRANSACTIONS_IN_QUEUE 值大于 group_replication_flow_control_certifier_threshold时
+		group_replication_flow_control_certifier_threshold=25000 默认为25000
+	相关参数与默认值
+	group_replication_flow_control_applier_threshold    | 25000 事务等待应用
+	group_replication_flow_control_certifier_threshold  | 25000 事务等待认证
+	group_replication_flow_control_hold_percent         | 10    预留的配额可以来处理落后节点积压的事务
+	group_replication_flow_control_max_quota            | 0     下一周期的最大配额
+	group_replication_flow_control_member_quota_percent | 0     分配给当前成员的配额比例，为0时节点配额 = 集群配额 / 上个周期写节点的数量
+	group_replication_flow_control_min_quota            | 0     决定下一周期的最小配额，适用于所有场景
+	group_replication_flow_control_min_recovery_quota   | 0     决定下一周期的最小配额，适用于新节点加入分布式恢复阶段，同时设置此参优化级高于min_quota
+	group_replication_flow_control_mode                 | QUOTA  流控开启
+	group_replication_flow_control_period               | 1      流控周期，建议各节点保持一致
+	group_replication_flow_control_release_percent      | 50     当流控结束后，会逐渐增加吞吐量以避免出现突刺。下一周期的quota_size=上一周期的quota_size*（1+group_replication_flow_control_release_percent/100）。有效值0-1000。
+	
+	上一周期的quota_size获取方式
+	SELECT last_cycle_quota_size FROM performance_schema.replication_group_members WHERE member_id = @@server_id;
+	
+	
+	
+	
+#使用MYSQL_SHELL部署
+1.创建用户分配权限
+set session sql_log_bin=0;
+create user admin identified by '123456';
+grant all on *.* to admin with grant option;
+
+drop user admin;
+
+log_error_suppression_list='MY-013360'
+
+事务在group中的处理流程
+
+
+sed -r '/MANDATORY_MANPATH\s+\/usr\/local\/share\/man/ a MANDATORY_MANPATH /usr/local/mysql-router/man'  /etc/manpath.config
+
+
+
