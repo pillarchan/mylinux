@@ -2,29 +2,29 @@
 #GENERAL
 user=mysql
 basedir=/opt/software/mysql80
-datadir=/opt/data/mysql80/data
+datadir=/opt/data/mysql3306/data
 port=3306
-socket=/opt/data/mysql80/mysql.socket
+socket=/opt/data/mysql3306/mysql.socket
 mysqlx_port=33060
-mysqlx_socket=/opt/data/mysql80/mysqlx.socket
+mysqlx_socket=/opt/data/mysql3306/mysqlx.socket
 
-log-error=/opt/logs/mysql80/mysql80err.log
-pid-file=/opt/data/mysql80/mysql80.pid
+log-error=/opt/logs/mysql3306/mysql80err.log
+pid-file=/opt/data/mysql3306/mysql80.pid
 default_time_zone="+08:00"
 log_timestamps=system
 default_storage_engine=InnoDB
 character_set_server=utf8mb4
 transaction_isolation=REPEATABLE-READ
 activate_all_roles_on_login=1
-tmpdir=/opt/data/mysql80/tmp #用于控制 MySQL 服务器临时文件的存储路径。
-secure_file_priv=/opt/data/mysql80/tmp #用于控制 MySQL 服务器导入导出数据的操作权限，只基于文件
+tmpdir=/opt/data/mysql3306/tmp #用于控制 MySQL 服务器临时文件的存储路径。
+secure_file_priv=/opt/data/mysql3306/tmp #用于控制 MySQL 服务器导入导出数据的操作权限，只基于文件
 
 #LOGS
 general_log=0
-general_log_file=/opt/logs/mysql80/genaral/mysql80.log
+general_log_file=/opt/logs/mysql3306/genaral/mysql3306.log
 
 slow_query_log=1
-slow_query_log_file=/opt/logs/mysql80/slow/slow.log
+slow_query_log_file=/opt/logs/mysql3306/slow/slow.log
 long_query_time=1
 log_queries_not_using_indexes=1
 
@@ -82,8 +82,8 @@ innodb_adaptive_hash_index=OFF #用于控制 InnoDB 引擎是否自动创建自�
 
 #REPLICATION
 server_id=1
-log_bin=/opt/logs/mysql80/binlog/mysql-bin
-relay_log=/opt/logs/mysql80/relaylog/relay-bin
+log_bin=/opt/logs/mysql3306/binlog/mysql-bin
+relay_log=/opt/logs/mysql3306/relaylog/relay-bin
 sync_binlog=1
 binlog_format=ROW
 master_info_repository=TABLE
@@ -125,18 +125,6 @@ table_open_cache=65535 #用于控制 MySQL 服务器可以同时打开的表文�
 table_definition_cache=65535 #用于控制 MySQL 服务器可以缓存的表定义数量。根据 show status like '%table_definition_cache%',查看命中率进行调整
 table_open_cache_instances=64 #用于控制表缓存实例的数量。根据SHOW GLOBAL STATUS LIKE 'Table_open_cache_instances%'查看使用情况
 
-
-
- mysql  join_buffer_size 是什么
- 
-read_buffer_size=2M
-read_rnd_buffer_size=4M
-sort_buffer_size=4M
-join_buffer_size=4M
-
-
-[mysql]
-prompt=[\u \D \d]>
 
 [mysqldump]
 quick
