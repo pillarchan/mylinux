@@ -1,0 +1,10 @@
+apt 无法更新 安装
+
+报错 _apt 用户没有 /tmp的权限
+
+可以先使用 chmod 777 /tmp 添加权限后安装 acl
+apt install acl -y
+将 /tmp 的权限 设置为 700
+
+再使用 setfacl 命令 为指定目录 设置权限 如：
+setfacl -m u:_apt:rwx /tmp
