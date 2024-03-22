@@ -1,0 +1,23 @@
+debian12 install jenkins ansible
+
+apt update
+apt install fontconfig openjdk-17-jre -y
+wget -O /usr/share/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+  echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian-stable binary/ |  tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+apt-get update
+apt-get install jenkins -y
+
+UBUNTU_CODENAME=jammy
+apt update && apt install gpg -y
+wget -O- "https://keyserver.ubuntu.com/pks/lookup?fingerprint=on&op=get&search=0x6125E2A8C77F2818FB7BD15B93C4A3FD7BB9C367" |  gpg --dearmour -o /usr/share/keyrings/ansible-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/ansible-archive-keyring.gpg] http://ppa.launchpad.net/ansible/ansible/ubuntu $UBUNTU_CODENAME main" |  tee /etc/apt/sources.list.d/ansible.list
+apt update &&  apt install ansible -y
+
+apt update
+apt install unzip lz4 curl -y
+
+
+HSzUSpZ!skF3Kc2r

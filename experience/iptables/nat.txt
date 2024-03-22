@@ -1,0 +1,7 @@
+使用 192.168.76.111 作为 nat 将192.168.76.111上端口888dnat到192.168.76.112的999端口，同样192.168.76.112上端口999snat到192.168.76.112的888端口
+
+iptables -t nat -A PREROUTING -p tcp --dport 888 -j DNAT --to-destination 192.168.76.112:999
+iptables -t nat -A POSTROUTING -p tcp --dport 999 -j SNAT --to-source 192.168.76.111:888
+
+iptables -t nat -A PREROUTING -p tcp --dport 888 -d 192.168.76.111 -j DNAT --to-destination 192.168.76.112:999
+iptables -t nat -A POSTROUTING -p tcp --dport 999 -d 192.168.76.112 -j SNAT --to-source 192.168.76.111:888

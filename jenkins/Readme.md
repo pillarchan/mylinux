@@ -93,6 +93,14 @@
 
 可以将插件打包解压到 /var/lib/jenkins/plugins,然后重启jenkins
 
+常用插件
+
+1.  Role-based Authorization Strategy
+2.  Post build task
+3.  Telegram
+4.  Ansible
+5.  build user vars
+
 ## 4.构建项目
 
 ```

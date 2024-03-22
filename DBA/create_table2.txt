@@ -29,14 +29,25 @@ END$$
 
 #批量插入
 DELIMITER $$
-CREATE PROCEDURE haha(in m_max int,m_i int)
+
+CREATE function haha(max INT,min INT)
+RETURNS INT
 BEGIN
-DECLARE i,k int;
-SET i=m_i;
-WHILE i<m_max DO
+DECLARE i int default min;
+WHILE i<=max DO
 INSERT INTO user (name,pwd) VALUES (CONCAT('user',i),CONCAT('user',i));
 SET i=i+1;
 END WHILE;
+RETURN i;
 END;
+
 $$
 DELIMITER ; 
+
+
+SELECT
+  table_schema AS 库名,
+  SUM(data_length + index_length) / 1024 / 1024 AS 大小MB
+FROM tables
+WHERE table_schema = 'ysgame'
+GROUP BY table_schema;

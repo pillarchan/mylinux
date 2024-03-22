@@ -192,6 +192,7 @@ tmp_table_size=32M
 table_open_cache=65535
 table_definition_cache=65535
 table_open_cache_instances=64
+log_bin_trust_function_creators=1
 EOF
 
 cp $MYSQL_HOME_DIR/support-files/mysql.server $MYSQL_START_FILE
