@@ -1,0 +1,14 @@
+---
+- hosts: all
+  gather_facts: no
+  tasks:
+    - name: create dir
+      file:
+        path: "{{ webdir }}"
+        state: directory
+    - name: unzip web.zip to specified path
+      ansible.builtin.unarchive:
+        src: "{{ srcfile }}"
+        dest: "{{ destdir }}"
+        owner: root
+        group: root

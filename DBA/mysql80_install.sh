@@ -12,10 +12,11 @@ fi
 
 if [ -e /etc/redhat-release ];then 
 	yum remove mariadb-libs.x86_64 -y
+	yum bc numactl-devel ncurses-devel ncurses-compat-libs -y
 fi
 
 if [ -e /etc/os-release ];then 
-	apt install libnuma-dev libncurses5 libncurses6 -y
+	apt install libnuma-dev libncurses5 libncurses6 bc -y
 fi
 
 MYPORT=$1
