@@ -1,0 +1,117 @@
+mongodump --host btu1.cluster-cowpylptmsaw.ap-east-1.docdb.amazonaws.com --port 37017 -u btuadmin -p'ru1Q531ti!xeuqIR' --oplog  -o /opt/oplog
+
+
+mongodump --host btu1.cluster-cowpylptmsaw.ap-east-1.docdb.amazonaws.com --port 37017 -u btuadmin -p'ru1Q531ti!xeuqIR' -o /opt/all40.bson
+mongorestore --port 37017 -u admin -p'zbl913978964!@#' /opt/all40.bson/
+
+mongodump --port 37017 -u admin -p'zbl913978964!@#' -o /opt/all50.bson
+mongorestore --port 27101 -u admin -p'zbl913978964!@#' /opt/all50.bson
+
+
+
+
+mongod -f /data/mongodb/mongodb_shard/conf/conf_27100.conf --shutdown
+mongod -f /data/mongodb/mongodb_shard/conf/conf_27101.conf --shutdown
+mongod -f /data/mongodb/mongodb_shard/conf/conf_27102.conf --shutdown
+mongod -f /data/mongodb/mongodb_shard/conf/conf_27103.conf --shutdown
+mongod -s /data/mongodb/mongodb_shard/conf/conf_27000.conf --shutdown
+
+
+mongod -f /data/mongodb/mongodb_shard/conf/conf_27100.conf
+mongod -f /data/mongodb/mongodb_shard/conf/conf_27101.conf
+mongod -f /data/mongodb/mongodb_shard/conf/conf_27102.conf
+mongod -f /data/mongodb/mongodb_shard/conf/conf_27103.conf
+
+mongos -f /data/mongodb/mongodb_shard/conf/conf_27000.conf
+
+
+
+
+mongo：btu1.cluster-cowpylptmsaw.ap-east-1.docdb.amazonaws.com:37017
+ btuadmin
+ ru1Q531ti!xeuqIR
+
+
+db.createUser( 
+ { 
+ user: "admin", 
+ pwd: "zbl913978964!@#", 
+ roles: [ { role: "root", db: "admin" } ] 
+ } 
+)
+db.auth('admin','zbl913978964!@#')
+
+
+config = { _id:"repl_config",members:[{_id:0,host:"172.31.13.19:27100"},{_id:1,host:"172.31.1.98:27100"},{_id:2,host:"172.31.10.9:27100"}] }
+config = { _id:"shard1",members:[{_id:0,host:"172.31.13.19:27101"},{_id:1,host:"172.31.1.98:27101"},{_id:2,host:"172.31.10.9:27101"}] }
+config = { _id:"shard2",members:[{_id:0,host:"172.31.1.98:27102"},{_id:1,host:"172.31.10.9:27102"},{_id:2,host:"172.31.13.19:27102"}] }
+config = { _id:"shard3",members:[{_id:0,host:"172.31.10.9:27103"},{_id:2,host:"172.31.13.19:27103"},{_id:1,host:"172.31.1.98:27103"}] }
+
+
+
+config = { _id:"shard3",members:[{_id:0,host:"172.31.13.19:27103"},{_id:1,host:"172.31.1.98:27103"},{_id:2,host:"172.31.10.9:27103",arbiterOnly:true}] }
+
+
+
+
+
+sh.addShard('shard1/172.31.13.19:27101,172.31.1.98:27101,172.31.10.9:27101')
+sh.addShard('shard2/172.31.1.98:27102,172.31.10.9:27102,172.31.13.19:27102')
+sh.addShard('shard3/172.31.10.9:27103,172.31.13.19:27103,172.31.1.98:27103')
+
+db.runCommand({listshards:1})
+sh.status()
+
+db.settings.save({"_id":"chunksize","value":1})
+
+db.runCommand( { enablesharding : "imapi" } )
+db.runCommand( { enablesharding : "imRoom" } ) ?
+
+
+db.im_group_message.createIndex({"messageId":"hashed"})
+db.im_message.createIndex({"messageId":"hashed"})
+db.RedReceive.createIndex({"redId":"hashed"})
+db.Transfer.createIndex({"_id":"hashed"})
+
+
+
+
+sh.shardCollection("imapi.RedPacket",{"_id":"hashed"})
+sh.shardCollection("imapi.ConsumeRecord",{"_id":"hashed"})
+sh.shardCollection("imapi.Transfer",{"_id":"hashed"}) 1
+sh.shardCollection("imapi.im_group_message",{"messageId":"hashed"})
+sh.shardCollection("imapi.im_message",{"messageId":"hashed"})
+sh.shardCollection("imapi.RedReceive",{"redId":"hashed"})
+
+
+
+
+
+config>db.databases.find()
+
+
+
+
+
+for(i=1;i<50000;i++){ db.vast.insert({"id":i,"name":"shenzheng","age":i,"date":new Date()}); }
+
+
+
+(^[0-9].+|.+1|REGULAR)
+
+db.getCollectionNames().forEach(function(collectionName) {
+  db[collectionName].getIndex();
+});
+
+
+
+
+
+(.+)_1_(.+)_1
+{"\1":1,"\2":1}
+
+
+内网mongos
+172.31.10.9:27000
+外网mongos
+18.162.218.110:27000
