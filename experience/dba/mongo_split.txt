@@ -103,15 +103,3 @@ db.getCollectionNames().forEach(function(collectionName) {
   db[collectionName].getIndex();
 });
 
-
-
-
-
-(.+)_1_(.+)_1
-{"\1":1,"\2":1}
-
-
-内网mongos
-172.31.10.9:27000
-外网mongos
-18.162.218.110:27000

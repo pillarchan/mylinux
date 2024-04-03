@@ -19,17 +19,17 @@ cd /usr/local/src/php-7.3.33
 --enable-intl --enable-ftp --with-gd --with-openssl --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap \
 --with-gettext --disable-fileinfo --enable-opcache --with-sodium --with-webp
 
-cd /usr/local/src/libmaxminddb-1.7.1/
+cd /usr/local/src/libmaxminddb-1.9.1/
 ./configure 
 make && make install
 ls /usr/local/lib
 echo "/usr/local/lib" >> /etc/ld.so.conf.d/local.conf
 ldconfig
 
-yum install perl-devel pcre-devel.x86_64 zlib-devel.x86_64 openssl-devel libmaxminddb libmaxminddb-devel
+yum install perl-devel pcre-devel zlib-devel openssl-devel libmaxminddb libmaxminddb-devel -y
 cd /usr/local/src/openresty/
 ./configure --add-module=/usr/local/src/ngx_http_geoip2_module-3.4 --add-module=/usr/local/src/headers-more-nginx-module-0.33 --with-http_realip_module --with-http_v2_module
-make && make install
+gmake && gmake install
 
 
 cd /usr/local/redis-5.3.7 && /usr/local/php/bin/phpize \
