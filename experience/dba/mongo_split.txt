@@ -1,20 +1,12 @@
-mongodump --host btu1.cluster-cowpylptmsaw.ap-east-1.docdb.amazonaws.com --port 37017 -u btuadmin -p'ru1Q531ti!xeuqIR' --oplog  -o /opt/oplog
-
-
-mongodump --host btu1.cluster-cowpylptmsaw.ap-east-1.docdb.amazonaws.com --port 37017 -u btuadmin -p'ru1Q531ti!xeuqIR' -o /opt/all40.bson
-mongorestore --port 37017 -u admin -p'zbl913978964!@#' /opt/all40.bson/
-
-mongodump --port 37017 -u admin -p'zbl913978964!@#' -o /opt/all50.bson
-mongorestore --port 27101 -u admin -p'zbl913978964!@#' /opt/all50.bson
-
-
+mkdir -pv /data/mongodb/testshard/{auth,conf,confsvr/{data,log},shard1/{data,log},shard2/{data,log},shard3/{data,log},mongos/{data,log}}
 
 
 mongod -f /data/mongodb/mongodb_shard/conf/conf_27100.conf --shutdown
 mongod -f /data/mongodb/mongodb_shard/conf/conf_27101.conf --shutdown
 mongod -f /data/mongodb/mongodb_shard/conf/conf_27102.conf --shutdown
 mongod -f /data/mongodb/mongodb_shard/conf/conf_27103.conf --shutdown
-mongod -s /data/mongodb/mongodb_shard/conf/conf_27000.conf --shutdown
+
+mongos -s /data/mongodb/mongodb_shard/conf/conf_27000.conf --shutdown
 
 
 mongod -f /data/mongodb/mongodb_shard/conf/conf_27100.conf
@@ -24,67 +16,57 @@ mongod -f /data/mongodb/mongodb_shard/conf/conf_27103.conf
 
 mongos -f /data/mongodb/mongodb_shard/conf/conf_27000.conf
 
+mongod -f /data/mongodb/mongodb40shard/conf/conf_config.conf
+mongod -f /data/mongodb/mongodb40shard/conf/conf_shard1.conf
+mongod -f /data/mongodb/mongodb40shard/conf/conf_shard2.conf
+mongod -f /data/mongodb/mongodb40shard/conf/conf_shard3.conf
+mongos -s /data/mongodb/mongodb40shard/conf/conf_mongos.conf
 
-
-
-mongo：btu1.cluster-cowpylptmsaw.ap-east-1.docdb.amazonaws.com:37017
- btuadmin
- ru1Q531ti!xeuqIR
-
-
-db.createUser( 
- { 
- user: "admin", 
- pwd: "zbl913978964!@#", 
- roles: [ { role: "root", db: "admin" } ] 
- } 
-)
-db.auth('admin','zbl913978964!@#')
+mongod -f /data/mongodb/mongodb40shard/conf/conf_config.conf --shutdown
+mongod -f /data/mongodb/mongodb40shard/conf/conf_shard1.conf --shutdown
+mongod -f /data/mongodb/mongodb40shard/conf/conf_shard2.conf --shutdown
+mongod -f /data/mongodb/mongodb40shard/conf/conf_shard3.conf --shutdown
 
 
 config = { _id:"repl_config",members:[{_id:0,host:"172.31.13.19:27100"},{_id:1,host:"172.31.1.98:27100"},{_id:2,host:"172.31.10.9:27100"}] }
 config = { _id:"shard1",members:[{_id:0,host:"172.31.13.19:27101"},{_id:1,host:"172.31.1.98:27101"},{_id:2,host:"172.31.10.9:27101"}] }
-config = { _id:"shard2",members:[{_id:0,host:"172.31.1.98:27102"},{_id:1,host:"172.31.10.9:27102"},{_id:2,host:"172.31.13.19:27102"}] }
-config = { _id:"shard3",members:[{_id:0,host:"172.31.10.9:27103"},{_id:2,host:"172.31.13.19:27103"},{_id:1,host:"172.31.1.98:27103"}] }
-
-
+config = { _id:"shard2",members:[{_id:0,host:"172.31.13.19:27102"},{_id:1,host:"172.31.1.98:27102"},{_id:2,host:"172.31.10.9:27102"}] }
+config = { _id:"shard3",members:[{_id:0,host:"172.31.13.19:27103"},{_id:2,host:"172.31.1.98:27103"},{_id:1,host:"172.31.10.9:27103"}] }
 
 config = { _id:"shard3",members:[{_id:0,host:"172.31.13.19:27103"},{_id:1,host:"172.31.1.98:27103"},{_id:2,host:"172.31.10.9:27103",arbiterOnly:true}] }
 
 
-
-
-
 sh.addShard('shard1/172.31.13.19:27101,172.31.1.98:27101,172.31.10.9:27101')
-sh.addShard('shard2/172.31.1.98:27102,172.31.10.9:27102,172.31.13.19:27102')
-sh.addShard('shard3/172.31.10.9:27103,172.31.13.19:27103,172.31.1.98:27103')
+sh.addShard('shard2/172.31.13.19:27102,172.31.1.98:27102,172.31.10.9:27102')
+sh.addShard('shard3/172.31.13.19:27103,172.31.1.98:27103,172.31.10.9:27103')
+
 
 db.runCommand({listshards:1})
 sh.status()
 
-db.settings.save({"_id":"chunksize","value":1})
+config > db.settings.save({"_id":"chunksize","value":1})
 
 db.runCommand( { enablesharding : "imapi" } )
 db.runCommand( { enablesharding : "imRoom" } ) ?
 
 
-db.im_group_message.createIndex({"messageId":"hashed"})
-db.im_message.createIndex({"messageId":"hashed"})
-db.RedReceive.createIndex({"redId":"hashed"})
-db.Transfer.createIndex({"_id":"hashed"})
+sh.shardCollection("imapi.ConsumeRecord",{ "userId" : 1, "time" : 1 })
+sh.shardCollection("imapi.Transfer",{"_id":"hashed"})
+sh.shardCollection("imapi.im_message",{"_id":"hashed"})
+
+im_group_message
+ConsumeRecord
+im_message
+RedPacket
+RedReceive
+TransferReceive
+Transfer
 
 
 
 
-sh.shardCollection("imapi.RedPacket",{"_id":"hashed"})
-sh.shardCollection("imapi.ConsumeRecord",{"_id":"hashed"})
-sh.shardCollection("imapi.Transfer",{"_id":"hashed"}) 1
-sh.shardCollection("imapi.im_group_message",{"messageId":"hashed"})
-sh.shardCollection("imapi.im_message",{"messageId":"hashed"})
-sh.shardCollection("imapi.RedReceive",{"redId":"hashed"})
 
-
-
+db.RedPacket.createIndex({"roomJid":1,"thunderId":1})
 
 
 config>db.databases.find()
@@ -103,3 +85,110 @@ db.getCollectionNames().forEach(function(collectionName) {
   db[collectionName].getIndex();
 });
 
+
+#存储函数
+db.system.js.save({
+  _id: "formatDate",
+  value: function(date) {
+    var year = date.getFullYear();
+    var month = date.getMonth() + 1;
+    var day = date.getDate();
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var seconds = date.getSeconds();
+    return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+  }
+});
+
+
+db.currentOp({ $all: { locks: { $exists: true } } })
+
+
+db.currentOp({ $all: { locks: { $exists: true } } })
+
+db.createRole({
+  "role": "btuadmin",
+  "privileges": [
+    {
+      "resource": {
+        "db": "imRoom",
+        "collection": "*"
+      },
+      "actions": ["anyAction"]
+    },
+    {
+      "resource": {
+        "db": "imapi",
+        "collection": "*"
+      },
+      "actions": ["anyAction"]
+    },
+    {
+      "resource": {
+        "db": "resources",
+        "collection": "*"
+      },
+      "actions": ["anyAction"]
+    },
+    {
+      "resource": {
+        "db": "shiku_roomJids_userId",
+        "collection": "*"
+      },
+      "actions": ["anyAction"]
+    },
+    {
+      "resource": {
+        "db": "shiku_room_member",
+        "collection": "*"
+      },
+      "actions": ["anyAction"]
+    },
+    {
+      "resource": {
+        "db": "tigase",
+        "collection": "*"
+      },
+      "actions": ["anyAction"]
+    },
+    {
+      "resource": {
+        "db": "u_friends",
+        "collection": "*"
+      },
+      "actions": ["anyAction"]
+    }
+  ],
+  roles:[]
+})
+
+
+db.grantRolesToUser("root",["dbAdminAnyDatabase","readWriteAnyDatabase","clusterAdmin"])
+
+
+anyAction: 允许用户执行任何操作。
+allActionsOnDatabase: 允许用户对指定数据库执行所有操作。
+allActionsOnCollection: 允许用户对指定集合执行所有操作。
+cloneCollection: 允许用户克隆集合。
+createCollection: 允许用户创建集合。
+createIndex: 允许用户创建索引。
+deleteIndex: 允许用户删除索引。
+dropCollection: 允许用户删除集合。
+find: 允许用户查询数据。
+insert: 允许用户插入数据。
+killOp: 允许用户终止操作。
+listCollections: 允许用户列出集合。
+listDatabases: 允许用户列出数据库。
+listIndexes: 允许用户列出索引。
+mapreduce: 允许用户使用 MapReduce 进行数据分析。
+modifyCollection: 允许用户修改集合的配置。
+removeShard: 允许用户从分片集群中删除分片。
+renameCollection: 允许用户重命名集合。
+repairDatabase: 允许用户修复数据库。
+restore: 允许用户从备份恢复数据库。
+roleAdmin: 允许用户管理角色。
+runCommand: 允许用户运行数据库命令。
+shutdown: 允许用户关闭数据库。
+updateIndex: 允许用户更新索引。
+viewClusterStats: 允许用户查看集群统计信息。
+watch: 允许用户监视数据更改。

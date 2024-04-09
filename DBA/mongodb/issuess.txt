@@ -1,0 +1,2 @@
+1.启用 auth key keyfile.key 文件权限应为600 或400
+2.keyfile.key文件内容字符长度在 6至1024之间
