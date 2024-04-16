@@ -1,0 +1,13 @@
+[Unit]
+Description=java imapi
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash -c "cd /data/imapi;/usr/local/jdk1.8.0_171/bin/java -jar -Xms512m -Xmx512m imapi.jar"
+ExecReload=/bin/bash -c "/bin/kill -s HUP $(ps -A -opid,cmd | grep imapi | cut -d' ' -f1 | head -n1)"
+ExecStop=/bin/bash -c "/bin/kill -s TERM $(ps -A -opid,cmd | grep imapi | cut -d' ' -f1 | head -n1)"
+
+[Install]
+WantedBy=multi-user.target

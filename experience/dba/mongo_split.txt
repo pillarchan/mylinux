@@ -1,45 +1,29 @@
 mkdir -pv /data/mongodb/testshard/{auth,conf,confsvr/{data,log},shard1/{data,log},shard2/{data,log},shard3/{data,log},mongos/{data,log}}
 
+mongod -f /data/mongodb/testshard/conf/confsvr.conf
+mongod -f /data/mongodb/testshard/conf/shard1.conf
+mongod -f /data/mongodb/testshard/conf/shard2.conf
+mongod -f /data/mongodb/testshard/conf/shard3.conf
 
-mongod -f /data/mongodb/mongodb_shard/conf/conf_27100.conf --shutdown
-mongod -f /data/mongodb/mongodb_shard/conf/conf_27101.conf --shutdown
-mongod -f /data/mongodb/mongodb_shard/conf/conf_27102.conf --shutdown
-mongod -f /data/mongodb/mongodb_shard/conf/conf_27103.conf --shutdown
+mongos -f /data/mongodb/testshard/conf/mongos.conf
 
-mongos -s /data/mongodb/mongodb_shard/conf/conf_27000.conf --shutdown
-
-
-mongod -f /data/mongodb/mongodb_shard/conf/conf_27100.conf
-mongod -f /data/mongodb/mongodb_shard/conf/conf_27101.conf
-mongod -f /data/mongodb/mongodb_shard/conf/conf_27102.conf
-mongod -f /data/mongodb/mongodb_shard/conf/conf_27103.conf
-
-mongos -f /data/mongodb/mongodb_shard/conf/conf_27000.conf
-
-mongod -f /data/mongodb/mongodb40shard/conf/conf_config.conf
-mongod -f /data/mongodb/mongodb40shard/conf/conf_shard1.conf
-mongod -f /data/mongodb/mongodb40shard/conf/conf_shard2.conf
-mongod -f /data/mongodb/mongodb40shard/conf/conf_shard3.conf
-mongos -s /data/mongodb/mongodb40shard/conf/conf_mongos.conf
-
-mongod -f /data/mongodb/mongodb40shard/conf/conf_config.conf --shutdown
-mongod -f /data/mongodb/mongodb40shard/conf/conf_shard1.conf --shutdown
-mongod -f /data/mongodb/mongodb40shard/conf/conf_shard2.conf --shutdown
-mongod -f /data/mongodb/mongodb40shard/conf/conf_shard3.conf --shutdown
+mongod -f /data/mongodb/testshard/conf/confsvr.conf --shutdown
+mongod -f /data/mongodb/testshard/conf/shard1.conf --shutdown
+mongod -f /data/mongodb/testshard/conf/shard2.conf --shutdown
+mongod -f /data/mongodb/testshard/conf/shard3.conf --shutdown
 
 
-config = { _id:"repl_config",members:[{_id:0,host:"172.31.13.19:27100"},{_id:1,host:"172.31.1.98:27100"},{_id:2,host:"172.31.10.9:27100"}] }
-config = { _id:"shard1",members:[{_id:0,host:"172.31.13.19:27101"},{_id:1,host:"172.31.1.98:27101"},{_id:2,host:"172.31.10.9:27101"}] }
-config = { _id:"shard2",members:[{_id:0,host:"172.31.13.19:27102"},{_id:1,host:"172.31.1.98:27102"},{_id:2,host:"172.31.10.9:27102"}] }
-config = { _id:"shard3",members:[{_id:0,host:"172.31.13.19:27103"},{_id:2,host:"172.31.1.98:27103"},{_id:1,host:"172.31.10.9:27103"}] }
+config = { _id:"repl_test_config",members:[{_id:0,host:"172.31.13.19:37100"},{_id:1,host:"172.31.1.98:37100"},{_id:2,host:"172.31.10.9:37100"}] }
+config = { _id:"test_shard1",members:[{_id:0,host:"172.31.13.19:37101"},{_id:1,host:"172.31.1.98:37101"},{_id:2,host:"172.31.10.9:37101"}] }
+config = { _id:"test_shard2",members:[{_id:0,host:"172.31.13.19:37102"},{_id:1,host:"172.31.1.98:37102"},{_id:2,host:"172.31.10.9:37102"}] }
+config = { _id:"test_shard3",members:[{_id:0,host:"172.31.13.19:37103"},{_id:2,host:"172.31.1.98:37103"},{_id:1,host:"172.31.10.9:37103"}] }
 
-config = { _id:"shard3",members:[{_id:0,host:"172.31.13.19:27103"},{_id:1,host:"172.31.1.98:27103"},{_id:2,host:"172.31.10.9:27103",arbiterOnly:true}] }
+config = { _id:"shard3",members:[{_id:0,host:"172.31.13.19:37103"},{_id:1,host:"172.31.1.98:37103"},{_id:2,host:"172.31.10.9:37103",arbiterOnly:true}] }
 
 
-sh.addShard('shard1/172.31.13.19:27101,172.31.1.98:27101,172.31.10.9:27101')
-sh.addShard('shard2/172.31.13.19:27102,172.31.1.98:27102,172.31.10.9:27102')
-sh.addShard('shard3/172.31.13.19:27103,172.31.1.98:27103,172.31.10.9:27103')
-
+sh.addShard('shard1/172.31.13.19:37101,172.31.1.98:37101,172.31.10.9:37101')
+sh.addShard('shard2/172.31.13.19:37102,172.31.1.98:37102,172.31.10.9:37102')
+sh.addShard('shard3/172.31.13.19:37103,172.31.1.98:37103,172.31.10.9:37103')
 
 db.runCommand({listshards:1})
 sh.status()
@@ -47,61 +31,9 @@ sh.status()
 config > db.settings.save({"_id":"chunksize","value":1})
 
 db.runCommand( { enablesharding : "imapi" } )
-db.runCommand( { enablesharding : "imRoom" } ) ?
-
-
-sh.shardCollection("imapi.ConsumeRecord",{ "userId" : 1, "time" : 1 })
-sh.shardCollection("imapi.Transfer",{"_id":"hashed"})
-sh.shardCollection("imapi.im_message",{"_id":"hashed"})
-
-im_group_message
-ConsumeRecord
-im_message
-RedPacket
-RedReceive
-TransferReceive
-Transfer
-
-
-
-
-
 db.RedPacket.createIndex({"roomJid":1,"thunderId":1})
+sh.shardCollection("imapi.ConsumeRecord",{ "userId" : 1, "time" : 1 })
 
-
-config>db.databases.find()
-
-
-
-
-
-for(i=1;i<50000;i++){ db.vast.insert({"id":i,"name":"shenzheng","age":i,"date":new Date()}); }
-
-
-
-(^[0-9].+|.+1|REGULAR)
-
-db.getCollectionNames().forEach(function(collectionName) {
-  db[collectionName].getIndex();
-});
-
-
-#存储函数
-db.system.js.save({
-  _id: "formatDate",
-  value: function(date) {
-    var year = date.getFullYear();
-    var month = date.getMonth() + 1;
-    var day = date.getDate();
-    var hours = date.getHours();
-    var minutes = date.getMinutes();
-    var seconds = date.getSeconds();
-    return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
-  }
-});
-
-
-db.currentOp({ $all: { locks: { $exists: true } } })
 
 
 db.currentOp({ $all: { locks: { $exists: true } } })
