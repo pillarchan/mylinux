@@ -307,3 +307,39 @@ mongod -f /data/mongodb/testshard/conf/shard3.conf --shutdown
 
 ### 2.用户
 
+## 4.分片管理
+
+### 1.添加分片
+
+```
+sh.addShard('shard_name/ip1:port[,ip2:port][,ip3:port]...')
+```
+
+### 2.删除分片
+
+```
+db.runCommand({ removeshard: "shard_name" })
+```
+
+### 3.查看分片
+
+```
+db.runCommand({listshards:1})
+db.status()
+```
+
+
+
+## 故障
+
+### 1.config.system.sessions 元数据缺失
+
+```
+{"t":{"$date":"2024-04-27T01:20:58.791+08:00"},"s":"I",  "c":"CONTROL",  "id":20714,   "ctx":"LogicalSessionCacheRefresh","msg":"Failed to refresh session cache, will try again at the next refresh interval","attr":{"error":"StaleConfig{ ns: \"config.system.sessions\", vReceived: { t: Timestamp(1714106992, 21414), e: ObjectId('662b3270993bbb34211287db'), v: Timestamp(1, 1024) }, shardId: \"test_shard1\" }: Exceeded maximum number of 10 retries attempting SessionsCollectionConfigServer::_generateIndexesIfNeeded :: caused by :: got stale shardVersion response from shard test_shard1 at host 172.31.10.9:37101 :: caused by :: No metadata for namespace config.system.sessions therefore the shard version attached to the request must be unset, UNSHARDED or IGNORED"}}
+
+简单处理方式处理方式，重新搭建了 configsvr集群
+```
+
+### 2.分片不分chunks
+
+新建分片，移出旧片，重新同步旧片

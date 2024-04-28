@@ -11,7 +11,9 @@ iptables -t nat -A POSTROUTING -p tcp --dport 999 -d 192.168.76.112 -j SNAT --to
 
 
 iptables -t nat -A PREROUTING -p tcp -m tcp --dport 61005 -j DNAT --to-destination 18.162.111.186:7001
-iptables -t nat -A POSTROUTING -d 18.162.111.186 -p tcp -m tcp --dport 7001 -j SNAT --to-source 45.207.52.201:61005
+iptables -t nat -A POSTROUTING -d 18.162.111.186 -p tcp -m tcp --dport 7001 -j SNAT --to-source 45.207.52.201
+iptables -t nat -A PREROUTING -p tcp -m tcp --dport 61005 -j DNAT --to-destination 18.162.111.186:7001
+iptables -t nat -A POSTROUTING -d 18.162.111.186 -p tcp -m tcp --dport 7001 -j SNAT --to-source 45.207.52.201
 
 
 

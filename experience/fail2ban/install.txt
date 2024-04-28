@@ -1,0 +1,5 @@
+yum install -y python3 2to3 epel-release -y
+#aws
+amazon-linux-extras install epel
+
+yum install fail2ban -y

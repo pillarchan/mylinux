@@ -1,34 +1,68 @@
 mkdir -pv /data/mongodb/testshard/{auth,conf,confsvr/{data,log},shard1/{data,log},shard2/{data,log},shard3/{data,log},mongos/{data,log}}
 
-mongod -f /data/mongodb/testshard/conf/confsvr.conf
-mongod -f /data/mongodb/testshard/conf/shard1.conf
-mongod -f /data/mongodb/testshard/conf/shard2.conf
-mongod -f /data/mongodb/testshard/conf/shard3.conf
+/usr/local/mongodb6/bin/mongod -f /data/mongodb/testshard/conf/confsvr.conf
+/usr/local/mongodb6/bin/mongod -f /data/mongodb/testshard/conf/shard1.conf
+/usr/local/mongodb6/bin/mongod -f /data/mongodb/testshard/conf/shard2.conf
+/usr/local/mongodb6/bin/mongos -f /data/mongodb/testshard/conf/mongos.conf
+				  
+/usr/local/mongodb6/bin/mongod -f /data/mongodb/testshard/conf/shard2.conf --shutdown
+/usr/local/mongodb6/bin/mongod -f /data/mongodb/testshard/conf/shard1.conf --shutdown
+/usr/local/mongodb6/bin/mongod -f /data/mongodb/testshard/conf/confsvr.conf --shutdown
 
-mongos -f /data/mongodb/testshard/conf/mongos.conf
 
-mongod -f /data/mongodb/testshard/conf/confsvr.conf --shutdown
-mongod -f /data/mongodb/testshard/conf/shard1.conf --shutdown
-mongod -f /data/mongodb/testshard/conf/shard2.conf --shutdown
-mongod -f /data/mongodb/testshard/conf/shard3.conf --shutdown
 
 
 config = { _id:"repl_test_config",members:[{_id:0,host:"172.31.13.19:37100"},{_id:1,host:"172.31.1.98:37100"},{_id:2,host:"172.31.10.9:37100"}] }
 config = { _id:"test_shard1",members:[{_id:0,host:"172.31.13.19:37101"},{_id:1,host:"172.31.1.98:37101"},{_id:2,host:"172.31.10.9:37101"}] }
 config = { _id:"test_shard2",members:[{_id:0,host:"172.31.13.19:37102"},{_id:1,host:"172.31.1.98:37102"},{_id:2,host:"172.31.10.9:37102"}] }
 config = { _id:"test_shard3",members:[{_id:0,host:"172.31.13.19:37103"},{_id:2,host:"172.31.1.98:37103"},{_id:1,host:"172.31.10.9:37103"}] }
+cfg = rs.conf()
+cfg.members[0].priority = 2
+cfg.members[1].priority = 1
+cfg.members[2].priority = 1
+rs.reconfig(cfg)
+
 
 config = { _id:"shard3",members:[{_id:0,host:"172.31.13.19:37103"},{_id:1,host:"172.31.1.98:37103"},{_id:2,host:"172.31.10.9:37103",arbiterOnly:true}] }
 
 
-sh.addShard('shard1/172.31.13.19:37101,172.31.1.98:37101,172.31.10.9:37101')
-sh.addShard('shard2/172.31.13.19:37102,172.31.1.98:37102,172.31.10.9:37102')
-sh.addShard('shard3/172.31.13.19:37103,172.31.1.98:37103,172.31.10.9:37103')
+sh.addShard('test_shard1/172.31.13.19:37101,172.31.1.98:37101,172.31.10.9:37101')
+sh.addShard('test_shard2/172.31.13.19:37102,172.31.1.98:37102,172.31.10.9:37102')
+sh.addShard('test_shard3/172.31.13.19:37103,172.31.1.98:37103,172.31.10.9:37103')
 
 db.runCommand({listshards:1})
 sh.status()
 
 config > db.settings.save({"_id":"chunksize","value":1})
+
+sh.enableSharding("imRoom")
+sh.enableSharding("imapi")
+sh.enableSharding("resources")
+sh.enableSharding("shiku_roomJids_userId")
+sh.enableSharding("shiku_room_member")
+sh.enableSharding("tigase")
+sh.enableSharding("u_friends")
+
+
+db.ConsumeRecord.createIndex({"_id":"hashed"})
+db.RedPacket.createIndex({"_id":"hashed"})
+db.RedReceive.createIndex({"_id":"hashed"})
+db.Transfer.createIndex({"_id":"hashed"})
+db.TransferReceive.createIndex({"_id":"hashed"})
+db.logging.createIndex({"_id":"hashed"})
+db.im_group_message.createIndex({"_id":"hashed"})
+db.im_message.createIndex({"_id":"hashed"})
+
+sh.shardCollection("imapi.ConsumeRecord",{"_id":"hashed"})
+sh.shardCollection("imapi.RedPacket",{ type: 1, seqNo: 1 })
+sh.shardCollection("imapi.RedReceive",{"_id":"hashed"})
+sh.shardCollection("imapi.Transfer",{"_id":"hashed"})
+sh.shardCollection("imapi.TransferReceive",{"_id":"hashed"})
+sh.shardCollection("imapi.logging",{"_id":"hashed"})
+
+
+sh.shardCollection("imapi.im_group_message",{"_id":"hashed"})
+sh.shardCollection("imapi.im_message",{"_id":"hashed"})
 
 db.runCommand( { enablesharding : "imapi" } )
 db.RedPacket.createIndex({"roomJid":1,"thunderId":1})
@@ -124,3 +158,86 @@ shutdown: 允许用户关闭数据库。
 updateIndex: 允许用户更新索引。
 viewClusterStats: 允许用户查看集群统计信息。
 watch: 允许用户监视数据更改。
+
+#5.0及以上版本可用
+db.adminCommand({
+  reshardCollection: "imapi.RedPacket",
+  key: { _id:"hashed" }
+})
+
+
+db.adminCommand(
+   {
+     configureCollectionBalancing: "imapi.RedPacket",
+     chunkSize: 1,
+     defragmentCollection: true
+   }
+)
+
+
+db.adminCommand(
+   {
+     shardCollection: "imapi.RedPacket",
+     key: { _id: "hashed"}
+ )
+
+db.adminCommand(
+   {
+     reshardCollection: "imapi.RedPacket",
+     key: {_id: "hashed"},
+     unique: false,
+     numInitialChunks: 1,
+     collation: { locale: "simple" }
+	 }
+ ) 
+ 
+db.adminCommand({
+  commitReshardCollection: "imapi.RedPacket"
+})
+
+ 
+db.runCommand(
+   {
+     cleanupOrphaned: "imapi.RedPacket"
+   }
+) 
+
+db.adminCommand(
+   {
+     flushRouterConfig: "imapi"
+   }
+)
+
+db.adminCommand(
+   {
+    setAllowMigrations: "imapi.RedPacket",
+    allowMigrations: true
+   }
+)
+
+db.settings.updateOne(
+   { _id: "chunksize" },
+   { $set: { _id: "chunksize", value: 1 } },
+   { upsert: true }
+)
+
+db.getSiblingDB("admin").aggregate([
+  { $currentOp: { allUsers: true, localOps: false } },
+  {
+    $match: {
+      type: "op",
+      "originatingCommand.reshardCollection": "imapi.RedPacket"
+    }
+  }
+])
+
+db.adminCommand({ removeShard: "test_shard1" })
+
+db.adminCommand( { movePrimary: "imapi", to: "test_shard2" })
+db.adminCommand( { movePrimary: "u_friends", to: "test_shard2" })
+db.adminCommand( { movePrimary: "resources", to: "test_shard2" })
+db.adminCommand( { movePrimary: "imRoom", to: "test_shard2" })
+db.adminCommand( { movePrimary: "shiku_roomJids_userId", to: "test_shard2" })
+db.adminCommand( { movePrimary: "shiku_room_member", to: "test_shard2" })
+db.adminCommand( { movePrimary: "tigase", to: "test_shard2" })
+
