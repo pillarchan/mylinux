@@ -177,8 +177,14 @@ db.adminCommand(
 
 db.adminCommand(
    {
-     shardCollection: "imapi.RedPacket",
-     key: { _id: "hashed"}
+     shardCollection: "<database>.<collection>",
+     key: { <field1>: <1|"hashed">, ... },
+     unique: <boolean>,
+     numInitialChunks: <integer>,
+     presplitHashedZones: <boolean>,
+     collation: { locale: "simple" },
+     timeseries: <object>
+   }
  )
 
 db.adminCommand(
@@ -241,3 +247,4 @@ db.adminCommand( { movePrimary: "shiku_roomJids_userId", to: "test_shard2" })
 db.adminCommand( { movePrimary: "shiku_room_member", to: "test_shard2" })
 db.adminCommand( { movePrimary: "tigase", to: "test_shard2" })
 
+db.RedPacket.explain("executionStats").aggregate([{$match:{type:2}},{$limit:100000}])
