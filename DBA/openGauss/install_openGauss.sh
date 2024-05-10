@@ -12,3 +12,13 @@ if [ -e /sys/kernel/mm/transparent_hugepage/defrag ];then
 fi
 EOF
 
+cat >> /etc/hosts << EOF
+192.168.76.201 centos76opengauss01
+192.168.76.202 centos76opengauss02
+192.168.76.203 centos76opengauss03
+EOF
+
+
+mkdir -pv /gauss/{soft,app,log,tmp,corefile,data}
+mkdir -pv /gauss/data/{cm,dn}
+

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ROOT>
+<!-- openGauss整体信息：一主二备 -->
+    <CLUSTER>
+        <!-- 集群名称 -->
+        <PARAM name="clusterName" value="gsCluster" />
+        <!-- 数据库节点名称(hostname) -->
+        <PARAM name="nodeNames" value="centos76opengauss01,centos76opengauss02,centos76opengauss03" />
+        <!-- 数据库安装目录 与其他路径相互独立-->
+        <PARAM name="gaussdbAppPath" value="/gauss/app" />
+        <!-- 日志目录 -->
+        <PARAM name="gaussdbLogPath" value="/gauss/log" />
+        <!-- 临时文件目录 -->
+        <PARAM name="tmpMppdbPath" value="/gauss/tmp" />
+        <!--数据库工具目录 -->
+        <PARAM name="gaussdbToolPath" value="/gauss/om" />
+        <!--数据库core文件目录-->
+        <PARAM name="corePath" value="/gauss/corefile" />
+        <!-- 节点后端通讯IP，与nodeNames对应 -->
+        <PARAM name="backIp1s" value="192.168.76.201,192.168.76.202,192.168.76.203"/>
+        <!-- openGauss类型，此处示例为单机类型，"single-inst"表示单机一主多备部署形态-->
+        <!-- PARAM name="clusterType" value="single-inst" -->
+        <PARAM name="enable_dcf" value="on"/>
+        <!-- DCF config配置信息，节点IP、PORT和角色信息 -->
+        <PARAM name="dcf_config" value='[{"stream_id":1,"node_id":1,"ip":"192.168.76.201","port":16683,"role":"LEADER"},{"stream_id":1,"node_id":2,"ip":"192.168.76.202","port":16683,"role":"FOLLOWER"},{"stream_id":1,"node_id":3,"ip":"192.168.76.203","port":16683,"role":"FOLLOWER"}]'/>
+    </CLUSTER>
+    <!-- 每台服务器上的节点部署信息 -->
+    <DEVICELIST>
+        <!-- node1上的节点部署信息 -->
+        <DEVICE sn="centos76opengauss01">
+            <!-- node1的hostname -->
+            <PARAM name="name" value="centos76opengauss01"/>
+            <!-- 节点所在的AZ及AZ优先级 -->
+            <PARAM name="azName" value="AZ1"/>
+            <PARAM name="azPriority" value="1"/>
+            <PARAM name="backIp1" value="192.168.76.201"/>
+            <!-- 若服务器仅有一个网卡，将backIP1和sshIP1配置成同一个IP -->
+            <PARAM name="sshIp1" value="192.168.76.201"/>
+            <!--CM-->
+            <!--CM数据目录-->
+            <PARAM name="cmDir" value="/gauss/data/cm" />
+            <PARAM name="cmsNum" value="1" />
+            <!--CM监听端口-->
+            <PARAM name="cmServerPortBase" value="15000" />
+            <PARAM name="cmServerlevel" value="1" />
+            <!--CM所有实例所在节点名及监听ip-->
+            <PARAM name="cmServerHaIp1" value="192.168.76.201,192.168.76.202,192.168.76.203"/>
+            <PARAM name="cmServerListenIp1" value="192.168.76.201,192.168.76.202,192.168.76.203"/>
+            <PARAM name="cmServerRelation" value="centos76opengauss01,centos76opengauss02,centos76opengauss03" />
+            <!--DN-->
+            <!--当前主机上需要部署的数据库节点个数-->
+            <PARAM name="dataNum" value="1"/>
+            <!--DN端口号-->
+            <PARAM name="dataPortBase" value="15400"/>
+            <PARAM name="dataListenIp1" value="192.168.76.201,192.168.76.202,192.168.76.203"/>
+            <!--DN监听IP-->
+            <!--DN主节点上数据目录及备机数据目录-->
+            <PARAM name="dataNode1"
+            value="/gauss/data/dn,gsnode2,/gauss/data/dn,gsnode3,/gauss/data/dn"/>
+             <!--DN节点上设定同步模式的节点数-->
+            <PARAM name="dataNode1_syncNum" value="0"/>
+        </DEVICE>
+        <!-- node2上的节点部署信息，其中name的值配置为主机名称 -->
+        <DEVICE sn="gsnode2">
+            <!-- node2的hostname -->
+            <PARAM name="name" value="gsnode2"/>
+            <PARAM name="azName" value="AZ1"/> <!-- 节点所在的AZ及AZ优先级 -->
+            <PARAM name="azPriority" value="1"/>
+            <PARAM name="backIp1" value="192.168.76.202"/>
+            <PARAM name="sshIp1" value="192.168.76.202"/>
+            <!--CM-->
+            <PARAM name="cmServerPortStandby" value="15000"/>
+            <PARAM name="cmDir" value="/gauss/data/cm"/>
+        </DEVICE>
+        <!-- node3上的节点部署信息，其中name的值配置为主机名称 -->
+        <DEVICE sn="gsnode3">
+            <!-- node3的hostname -->
+            <PARAM name="name" value="gsnode3"/>
+            <PARAM name="azName" value="AZ1"/> <!-- 节点所在的AZ及AZ优先级 -->
+            <PARAM name="azPriority" value="1"/>
+            <PARAM name="backIp1" value="192.168.76.203"/>
+            <PARAM name="sshIp1" value="192.168.76.203"/>
+            <!--CM-->
+            <PARAM name="cmServerPortStandby" value="15000"/>
+            <PARAM name="cmDir" value="/gauss/data/cm" />
+        </DEVICE>
+    </DEVICELIST>
+</ROOT>
