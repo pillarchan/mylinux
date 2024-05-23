@@ -1,0 +1,64 @@
+curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+tiup playground
+tiup playground v7.1.5 --db 2 --pd 3 --kv 3
+
+tiup install bench
+tiup bench tpch --sf=1 prepare
+SELECT CONCAT(table_schema,'.',table_name) AS 'Table Name', table_rows AS 'Number of Rows', CONCAT(ROUND(data_length/(1024*1024*1024),4),'G') AS 'Data Size', CONCAT(ROUND(index_length/(1024*1024*1024),4),'G') AS 'Index Size', CONCAT(ROUND((data_length+index_length)/(1024*1024*1024),4),'G') AS'Total'FROM information_schema.TABLES WHERE table_schema LIKE 'test';
+
+SELECT
+    l_orderkey,
+    SUM(
+        l_extendedprice * (1 - l_discount)
+    ) AS revenue,
+    o_orderdate,
+    o_shippriority
+FROM
+    customer,
+    orders,
+    lineitem
+WHERE
+    c_mktsegment = 'BUILDING'
+AND c_custkey = o_custkey
+AND l_orderkey = o_orderkey
+AND o_orderdate < DATE '1996-01-01'
+AND l_shipdate > DATE '1996-02-01'
+GROUP BY
+    l_orderkey,
+    o_orderdate,
+    o_shippriority
+ORDER BY
+    revenue DESC,
+    o_orderdate
+limit 10;
+
+SELECT * FROM information_schema.tiflash_replica WHERE TABLE_SCHEMA = 'test' and TABLE_NAME = 'customer';
+SELECT * FROM information_schema.tiflash_replica WHERE TABLE_SCHEMA = 'test' and TABLE_NAME = 'orders';
+SELECT * FROM information_schema.tiflash_replica WHERE TABLE_SCHEMA = 'test' and TABLE_NAME = 'lineitem';
+
+
+explain analyze SELECT
+    l_orderkey,
+    SUM(
+        l_extendedprice * (1 - l_discount)
+    ) AS revenue,
+    o_orderdate,
+    o_shippriority
+FROM
+    customer,
+    orders,
+    lineitem
+WHERE
+    c_mktsegment = 'BUILDING'
+AND c_custkey = o_custkey
+AND l_orderkey = o_orderkey
+AND o_orderdate < DATE '1996-01-01'
+AND l_shipdate > DATE '1996-02-01'
+GROUP BY
+    l_orderkey,
+    o_orderdate,
+    o_shippriority
+ORDER BY
+    revenue DESC,
+    o_orderdate
+limit 10;
