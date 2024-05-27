@@ -546,7 +546,7 @@ admin(简称"a"):可以设置节点访问控制列表权限。
    setAcl /znode auth:username:permisson 
    如: 
    addauth digest admin:myman123
-   setAcl /kafka auth:myman123:crwda
+   setAcl /kafka auth:admin:crwda
    
    getAcl /znode
    ```
@@ -562,7 +562,6 @@ admin(简称"a"):可以设置节点访问控制列表权限。
    setAcl /kafka digest:admin:Tmbbt77KcTd1bAgjQaI+GqI0hjM=:cdrwa
    ```
 
-   
 
 ### 	混合权限
 
@@ -571,8 +570,6 @@ setAcl /znode ip:ipad:permisson,auth:username:permisson,digest:username:cryptpas
 
 设置混合权限，以逗号分隔
 ```
-
-
 
 ### 	超管
 
@@ -638,7 +635,19 @@ setAcl /znode ip:ipad:permisson,auth:username:permisson,digest:username:cryptpas
 
 1. ZooInspector 运行环境java1.8 
    运行jar包  \ZooInspector\build
+   
+   ```
+   java -jar zookeeper-dev-ZooInspector.jar
+   ```
 2. Zkweb
+
+   ```
+   https://github.com/zhitom/zkweb/releases 下载地址
+   java -jar zkWeb.jar
+   运行前需要修改 /etc/hosts
+   ```
+
+   
 
 ## 10.监控工具
 
@@ -699,8 +708,12 @@ setAcl /znode ip:ipad:permisson,auth:username:permisson,digest:username:cryptpas
 
 1. 查看命令
 
-   1. jps
+   1. jps -mlvV
    2. jmap
+
+      ```
+      jmap -heap pid
+      ```
 
 2. 调大zookeeper的堆内存大小
 
