@@ -178,29 +178,29 @@ RocketMQ:
    默认是1个G
    ```
 
-7. 集群部署
+### 集群部署
 
-   ```
-   至少3台同样配置的服务器，安装好kafka后修改配置文件中 broker.id，一定是不一样的值
-   然后启动服务即可
-   
-   可修改配置文件中
-   log.dirs=为自定义目录
-   默认为/tmp/kafka-logs
-   log.dirs就是数据存储目录
-   
-   如果已经存在/tmp/kafka-logs/meta.properties
-   须注意：
-   cluster.id 是否一致
-   broker.id 是否与配置文件中的broker.id一致
-   ```
+```
+至少3台同样配置的服务器，安装好kafka后修改配置文件中 broker.id，一定是不一样的值
+然后启动服务即可
 
-8. 访问集群
+可修改配置文件中
+log.dirs=为自定义目录
+默认为/tmp/kafka-logs
+log.dirs就是数据存储目录
 
-   ```
-   kafka-topics.sh --bootstrap-server ip:port,ip:port,ip:port[,ip:port...] --list
-   如：kafka-topics.sh --bootstrap-server 192.168.76.114:9092,192.168.76.115:9092,192.168.76.116:9092 --list
-   ```
+如果已经存在/tmp/kafka-logs/meta.properties
+须注意：
+cluster.id 是否一致
+broker.id 是否与配置文件中的broker.id一致
+```
+
+访问集群
+
+```
+kafka-topics.sh --bootstrap-server ip:port,ip:port,ip:port[,ip:port...] --list
+如：kafka-topics.sh --bootstrap-server 192.168.76.114:9092,192.168.76.115:9092,192.168.76.116:9092 --list
+```
 
 ## Kafka基础管理命令
 
@@ -241,23 +241,105 @@ kafka集群 kafka cluster也叫broker list 分为实例节点，用不同的brok
 
 生产者通过API或脚本基于topic将数据写入集群
 
-### topic数据
+#### 	分区
 
-topic数据就存储在配置文件中logs.dir目录里，其中topic名的构成就是topic主题名-partition编号组成
+##### 	原因
 
-topic数据包括有 topic主题名 id 分区 副本数 配置，当指定了分区数和副本数，一个topic数据就会按分区和副本分别存储到所分配的分区和副本中，其中leader为读写节点，存储的位置在配置文件中logs.dir目录下对应topic目录下，包括索引、日志、元数据、时间索引、检查点
+(1)可以提高数据的负载均衡能力，如果一个topic只有一个partition，那么所有的消息都只能在一个broker，但一个topic有多个partition时，就可以有效的解决数据的负载均衡;
+(2)可以提高并发，因为可以用以partition为单位进行读写了。
 
-```
-Topic: lala	TopicId: FOCb5jseRbS2HJTFo8OiLQ	PartitionCount: 3	ReplicationFactor: 2	Configs: 
-	Topic: lala	Partition: 0	Leader: 116	Replicas: 116,115	Isr: 116,115
-	Topic: lala	Partition: 1	Leader: 115	Replicas: 115,114	Isr: 115,114
-	Topic: lala	Partition: 2	Leader: 114	Replicas: 114,116	Isr: 114,116
-	topic主题名  分区编号        读定节点      副本存放节点为的编号
-```
+##### 	分区数量的分区策略
 
-#### 分区
+考虑的因素
 
-​	可以将数据均衡地分布在不同的节点上，降低磁盘占用率，充分利用集群提升I/O性能，网络性能
+        (1)topic需要达到多大的吞吐量？例如，是希望每秒钟写入100KB的数据还是1GB数据呢?
+        (2)从单个分区读取数据的最大吞吐量是多少？每个分区一般都会有一个消费者，如果你知道消费者将数据写入数据库的速度不会超过50MB，那么你也该知道，从一个分区读取数据的吞吐量不需要超过每秒50MB。
+        (3)可以通过类似的方法估算生产者向单个分区写入数据的吞吐量，不过生产者的速度一般比消费者快得多，所以最好为生产者多估算一些吞吐量。
+        (4)每个broker包含的分区个数，可用的磁盘空间和网络带宽。
+        (5)如果消息是按照不同的键来写入分区的，那么为已有的主题新增分区就会很困难;
+        (6)单个broker对分区个数是有限制的，因为分区越多，占用的内存越多，完成leader选举需要的时间也越长;
+        选择分区数的粗略公式基于吞吐量。您可以衡量在单个分区上可以实现的整体产量，将其用于生产（称为p）和消费（称为c）。假设您的目标吞吐量为t。然后，您至少需要有max（t / p，t / c）个分区。
+
+##### 	生产者提交（发送）数据到分区的原则
+
+ 需要将producer发送的数据封装成一个ProducerRecord对象。
+        (1)指明partition的情况下，直接将指明的值直接作为partition值;也就是在发送数据的时候已经指定了分区的时候，数据就会发送到指定的分区
+        (2)没有指明partition值但有key的情况下，将key的hash值与topic的partition数进行取余得到要提交的partition编号;这个编号就是数据将要被发送到的分区值
+            Math.abs(key.hashCode()) % numPartitions
+        (3)既没有partition值有没有key值的情况下，第一次调用时随机生成一个整数(后面每次调用在这个整数上自增)，将这个值与topic可用的partition总数取余得到partition值，也就是常说的round-robin算法;也就是轮询，而默认的提交（发送）方式就是轮询
+
+##### 	数据可靠性保证
+
+###### 		同步原理
+
+为保证producer发送的数据能可靠地发送到指定的topic，topic的每个partition的leader收到producer发送的数据后，都需要向producer发送ack（acknowledgement确认收到），当producer收到ack，才会进行下一轮的发送，否则重新发送数据。
+为了确保有follower与leader同步完成，follower会发送ack给leader确认数据同步完成，leader再发送ack给producer，这样才能保证leader挂掉之后，能在follower中选举出新的leader。
+
+###### 		同步方案
+
+多少个follower同步完成之后发送ack?请思考以下两种方案：
+            (1)半数以上的follower同步完成，即可发送ack;
+                优点:
+                    延迟低。
+                缺点:
+                    选举新的leader时，容忍N台节点的故障，需要2N+1个副本。
+                举例： 
+                    假设N为1，容忍1台节点故障，则需要3个副本，因为此时只有半数以上的副本数是完全同步的，理想情况下是2个副本是数据同步的，这样就算挂掉一个leader副本，还有一个副本立马能顶上去。
+            (2)全部的follower同步完成，才可以发送ack;
+                优点:
+                    选举新的leader时，容忍N台节点的故障，需要N+1个副本。
+                缺点:
+                    延迟高。
+                举例： 
+                    假设N为1，容忍1台节点故障，则需要2个副本，因为此时全部的副本是完全同步的，理想情况下2个副本是数据同步的，这样就算挂掉一个副本，还有一个副本立马能顶上去。
+
+###### 		方案选择
+
+kafka选择了第二种方案，原因如下：
+		(1)同样容忍N台节点故障，第一种方案需要2N+1个副本，而第二种方案只需要N+1个副本，而kafka的每个分区都有大量的数据，第一种方案会造成大量数据的冗余。
+		(2)虽然第二种方案的网络延迟会比较高，但网络延迟对kafka的影响较小。
+
+###### 		ISR
+
+但是采用第二种方案之后，设想以下情景：
+	leader收到数据，所有follower都开始同步数据，但有一个follower，因为某种故障，迟迟不能与leader进行同步，那leader就要一直等下去，直到它完成同步，才能发送ACK，这个问题怎么解决呢？
+
+与此同时，提出了优化策略，即ISR：	
+	leader维护了一个动态的in-sync replica set(ISR)，意味和leader保持同步的follower集合。当ISR中的follower完成数据的同步之后，leader就会给生产者发送ACK。如果follower长时间未向leader同步数据，则该follower将被剔出ISR，该时间阈值由"replica.lag.time.max.ms"参数设定(在kafka 0.9版本之前，还有"replica.lag.max.messages"参数可以控制)，leader发生故障之后，就会从ISR中选举新的leader。
+
+###### 		ack应答机制
+
+​	对于某些不太重要的数据，对数据的可靠性要求不是很高，能够容忍数据的少量丢失，所以没必要等ISR中follower全部接受成功。
+​	所以kafka为用户提供了三种可靠型级别，用户根据对可靠性和延迟的要求进行权衡，可供选择以下acks参数配置:
+​		0: producer不等待broker的ack，这一操作提供了一个最低的延迟，broker一接收到还没有写入磁盘就已经返回，当broker故障时有可能丢失数据。
+​		1: producer等待broker的ack，partition的leader落盘成功后返回ack，如果在follower同步之前leader故障，那么将会丢失数据。
+​		-1(all): producer等待broker的ack，partition的leader和ISR中的follower全部落盘成功后才返回ACK，但是如果在follower同步完成后，broker发送ack之前，leader发生故障，那么会就造成数据重复。该模式下值得注意的是：当ISR只有leader一个节点时，其他的follower均不在ISR中，而是被剔出到OSR，此时当leader提交ack后立刻宕机，数据也可能会丢失的，因为ISR中没有其他的follower
+
+###### HW（High Watermark，高水位）和LEO（Log End Offset）的关系
+
+LEO是每个副本的最后一个offset
+
+HW是所有副本中最小的LEO
+
+HW之前的数据玫对consumer是可见的
+
+如果在replica.lag.time.max.ms时间内，follower的leo的值与leader的不一致，那么不一致的follower就会被踢出isr。
+
+当leader故障时，leo最大的follower将成为新的leader，而此时如果故障leader的leo大于新的leader的leo，则新的leader不会再去写入故障leader的leo之前的数据，而是直接写入新的数据，follower也会去同步新的leader。
+
+故障leader恢复后，则会成为follower，此时它会根据故障前的HW值，删除掉这个值之后的数据，然后HW值的LEO位置同步数据，以保证数据一致
+
+	
+	
+	
+	        
+	如下图所示，描述了。
+	
+	温馨提示:
+		为什么在kafka 0.9版本之后，"replica.lag.max.messages"参数被移除了呢？
+		举个例子，假设我们设置最大延迟的消息数是100，而生产者在批量写入数据时，很可能所有的follower节点的延迟消息均大于100条消息，而过段时间后，各个节点又逐渐追回消息，这会导致频繁的出现follower节点重新加入或被剔出ISR的现象。
+		一旦修改比较频繁，这些ISR数据都会同步到zookeeper集群中，无疑是增加了成本。
+		而保留的基于时间间隔来判断可以减少频繁被剔出或加入到ISR的现象哟~
 
 #### 副本
 
@@ -266,6 +348,34 @@ Topic: lala	TopicId: FOCb5jseRbS2HJTFo8OiLQ	PartitionCount: 3	ReplicationFactor:
 注意：
 
 kafka中的读写都是基于leader的
+
+### 数据存储
+
+由于生产者生产的消息会不断追加到log文件末尾，为防止log文件过大导致数据定位效率低下，kafka采取了分片和索引机制，将每个partition分为多个segment；
+每个segment对应两个文件，即"*.index"文件和"*.log"文件，这些文件位于一个文件夹下，该文件夹的命名规则为: "topic名称 + 分区序号"
+
+"*.index"文件和"*.log"文件以当前segment的第一条消息的offset命名
+
+topic数据就存储在配置文件中logs.dir目录里，其中topic名的构成就是topic主题名-partition编号组成
+
+topic数据包括有 topic主题名 id 分区 副本数 配置，当指定了分区数和副本数，一个topic数据就会按分区和副本分别存储到所分配的分区和副本中，其中leader为读写节点，存储的位置在配置文件中logs.dir目录下对应topic目录下，包括索引、日志、元数据、时间索引、检查点
+
+```
+Topic: mydemo	TopicId: pS9NSpUmThm4BYp_LtsAXQ	PartitionCount: 3	ReplicationFactor: 2	Configs: 
+	Topic: mydemo	Partition: 0	Leader: 114	Replicas: 114,116	Isr: 114,116
+	Topic: mydemo	Partition: 1	Leader: 116	Replicas: 116,115	Isr: 116,115
+	Topic: mydemo	Partition: 2	Leader: 115	Replicas: 115,114	Isr: 115,114
+	topic主题名  分区编号        读定节点      副本存放节点为的编号
+	
+[root@centos79kafka3 ~]# file /data/kafka/data/mydemo-0/*
+/data/kafka/data/mydemo-0/00000000000000000000.index:     data
+/data/kafka/data/mydemo-0/00000000000000000000.log:       empty
+/data/kafka/data/mydemo-0/00000000000000000000.timeindex: data
+/data/kafka/data/mydemo-0/leader-epoch-checkpoint:        empty
+/data/kafka/data/mydemo-0/partition.metadata:             ASCII text
+```
+
+
 
 ### 消费者
 
@@ -279,40 +389,40 @@ kafka中的读写都是基于leader的
 
 ### 小节
 
-### Producer:
+#### Producer
 
 消息生产者，就是向kafka broker发消息的客户端。
 
-### Consumer:
+#### Consumer
 
 消息消费者，向kafka broker拉取消息的客户端。
 
-### Consumer Group(简称"CG"):
+#### Consumer Group(简称"CG")
 
 消费者组，由多个consumer组成。消费者组内每个消费者负责消费不同分区的数据，一个分区只能由一个组内消费者消费，消费者组之间互不影响。
 所有的消费者都属于某个消费者组，即消费者组是逻辑上的一个订阅者。
 
-### Broker:
+#### Broker
 
 一台kafka服务器就是一个broker，一个集群由多个broker组成。一个broker可以容纳多个topic。
 
-### Topic:
+#### Topic
 
 可以理解为一个队列，生产者和消费者面向的都是一个topic。
 
-### Parition:
+#### Parition
 
 为了实现扩展性，一个非常大的topic可以分不到多个broker(即服务器)上，一个topic可以分为多个pairtition，每个partition是一个有序的队列。
 
-### Replica:
+#### Replica
 
 副本，为保证集群中的某个节点发生故障时，该节点上的partition数据不丢失，且kafka仍然能够继续工作，kafka提供了副本机制，一个topic的每个分区都有若干个副本，一个leader和若干个follower。
 
-#### 	leader:
+##### 	leader
 
 每个分区多个副本为"主"，生产者发送数据的对象，以及消费者消费数据的对象都是leader。
 
-#### 	follower:
+##### 	follower
 
 每个分区多个副本中的"从"，实时从leader中同步数据，保持和leader数据的同步。leader发生故障时，某个follower会成为新的leader。
 
@@ -322,3 +432,12 @@ kafka中的读写都是基于leader的
     (3)producer生产的数据会被不断追加到该log文件末尾，且每条数据都有自己的offset；
     (4)消费者组中的每个消费者，都会实时记录自己消费到了哪个offset，以便出错恢复时，从上次的位置继续消费;
 
+### admin api
+
+运维用于管理kafka的API，比如 topic 管理，kafka优化
+
+### connect api
+
+用于连接后端数据库的API
+
+### stream api
