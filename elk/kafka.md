@@ -252,13 +252,13 @@ kafka集群 kafka cluster也叫broker list 分为实例节点，用不同的brok
 
 考虑的因素
 
-        (1)topic需要达到多大的吞吐量？例如，是希望每秒钟写入100KB的数据还是1GB数据呢?
-        (2)从单个分区读取数据的最大吞吐量是多少？每个分区一般都会有一个消费者，如果你知道消费者将数据写入数据库的速度不会超过50MB，那么你也该知道，从一个分区读取数据的吞吐量不需要超过每秒50MB。
-        (3)可以通过类似的方法估算生产者向单个分区写入数据的吞吐量，不过生产者的速度一般比消费者快得多，所以最好为生产者多估算一些吞吐量。
-        (4)每个broker包含的分区个数，可用的磁盘空间和网络带宽。
-        (5)如果消息是按照不同的键来写入分区的，那么为已有的主题新增分区就会很困难;
-        (6)单个broker对分区个数是有限制的，因为分区越多，占用的内存越多，完成leader选举需要的时间也越长;
-        选择分区数的粗略公式基于吞吐量。您可以衡量在单个分区上可以实现的整体产量，将其用于生产（称为p）和消费（称为c）。假设您的目标吞吐量为t。然后，您至少需要有max（t / p，t / c）个分区。
+(1)topic需要达到多大的吞吐量？例如，是希望每秒钟写入100KB的数据还是1GB数据呢?
+(2)从单个分区读取数据的最大吞吐量是多少？每个分区一般都会有一个消费者，如果你知道消费者将数据写入数据库的速度不会超过50MB，那么你也该知道，从一个分区读取数据的吞吐量不需要超过每秒50MB。
+(3)可以通过类似的方法估算生产者向单个分区写入数据的吞吐量，不过生产者的速度一般比消费者快得多，所以最好为生产者多估算一些吞吐量。
+(4)每个broker包含的分区个数，可用的磁盘空间和网络带宽。
+(5)如果消息是按照不同的键来写入分区的，那么为已有的主题新增分区就会很困难;
+(6)单个broker对分区个数是有限制的，因为分区越多，占用的内存越多，完成leader选举需要的时间也越长;
+选择分区数的粗略公式基于吞吐量。您可以衡量在单个分区上可以实现的整体产量，将其用于生产（称为p）和消费（称为c）。假设您的目标吞吐量为t。然后，您至少需要有max（t / p，t / c）个分区。
 
 ##### 	生产者提交（发送）数据到分区的原则
 
@@ -329,10 +329,10 @@ HW之前的数据玫对consumer是可见的
 
 故障leader恢复后，则会成为follower，此时它会根据故障前的HW值，删除掉这个值之后的数据，然后HW值的LEO位置同步数据，以保证数据一致
 
-	
-	
-	
-	        
+
+​	
+​	
+​	        
 	如下图所示，描述了。
 	
 	温馨提示:
@@ -381,11 +381,56 @@ Topic: mydemo	TopicId: pS9NSpUmThm4BYp_LtsAXQ	PartitionCount: 3	ReplicationFacto
 
 ​	消费者是去kafka集群拉取数据
 
+#### 消费方式
+
+consumer采用pull(拉)模式从broker中读取数据。
+
+push(推)模式很难适应消费速率不同的消费者，因为消息发送速率是由broker决定的。它的目标是尽可能以最快速度传递消息，但是这样很容易造成consumer来不及处理消息，典型的表现就是拒绝服务以及网络拥塞。
+
+而pull模式则可以根据consumer的消费能力以适当的速率消费消息。
+
+pull模式不足之处是，如果kafka没有数据，消费者可能会陷入循环中，一直返回空数据。
+
+针对这一点，kafka的消费者在消费数据时会传入一个时长参数timeout，如果当前没有数据可供消费，consumer会等待一段时间之后再返回，这段时长即为timeout。
+
+#### 分区分配策略
+
+ 一个consumer group中有多个consumer，一个topic有多个partition，所以必然会涉及到partition的分配问题，即确定哪个partition由哪个consumer来消费。
+
+kafka有两种分配策略，一个是RoundRobin，一个是Range。
+    RoundRobin策略:
+        工作原理:
+            将消费者组订阅的一个或多个主题的所有分区进行排序，而后依次将partition分发给该组的各个消费者。
+        优点:
+            轮询使不同topic的所有分区看作一个整体，分区数相对来说比较均衡的分配到同一个消费者组的各个消费者上。
+        缺点:
+            当同一个消费者组的不同消费者订阅了不同的topic时，这种方式方式就不太合适了，因为很有可能导致消费者消费到未订阅的topic。
+
+Range策略(也是官方的默认策略):
+    工作原理:
+        将分区数和同一个消费者组的消费者数量进行取商，然后多出来的余数会随机分配到该组的某个消费者。当订阅的topic数量的分区较少时，可能还看不出明显的数据不均衡现象。
+    优点:
+        范围是订阅同一topic的所有消费者组。
+    缺点:
+        当同一个消费者组的某个消费者单独订阅了一个主题，按照range策略的话会将topic的所有分区都分配给该消费者，而该消费者所在的消费者组内的其它成员(由于没有订阅该主题)无法消费数据。
+        举个例子: 999个分区被100个消费者进行消费,就会出现严重的不均衡的现象!
+
+温馨提示:
+    当消费者组中的消费者个数发生变化(比如消费者增加或减少)，都会触发消费者分区策略进行对分区的重新分配（reblance）。
+    注意哈，即使同一个消费者组中新增消费者数量后，此时消费者数量已经大于订阅topic的分区数，也会触发分区的重新均衡，因为我们改变了该消费者组中的消费者数量。当然，多出来的消费者会处于空闲状态。
+
+#### offset的维护
+
+由于consumer在消费过程中可能会出现断电宕机等故障，consumer恢复后，需要从故障前的位置继续消费，所以consumer需要实时记录自己消费到了哪个offset，以便故障恢复后继续消费。
+
+温馨提示:
+    kafka 0.9版本之前，consumer默认将offset保存在zookeeper中，从0.9版本开始，consumer默认将offset保存在kafka内置的一个topic中，该topic为"__consumer_offsets"。
+
 ### 消费者组
 
 当生产者发送的数据过多，而单个消费者无法即时消费完就会造成延迟，这时，就需要考虑使用消费者组来共同消费生产者发送的数据。
 
-当消费者组中一个消费者在消费一个partition中leader的数据时，其它的消费者是不能来进行访问，即消费者不能同时消费同一partition中leader的数据
+当消费者组中一个消费者在消费一个partition中leader的数据时，其它的消费者是不能来进行访问，即消费者不能同时消费同一partition中leader的数据，当数据已经被消费后就不能再次消费了
 
 ### 小节
 
@@ -441,3 +486,114 @@ Topic: mydemo	TopicId: pS9NSpUmThm4BYp_LtsAXQ	PartitionCount: 3	ReplicationFacto
 用于连接后端数据库的API
 
 ### stream api
+
+## kafka高效读写数据的底层原理
+
+### 	顺序写磁盘
+
+​	kafka的producer生产数据，将数据顺序写入到磁盘，从而优化磁盘写入效率
+
+### 	零拷贝技术
+
+​	DMA的英文拼写是"Direct Memory Access"，汉语的意思就是直接内存访问。传统的模式，是先将磁盘数据通过DMA拷贝到内核空间的read buffer然后再通cpu拷贝到用户空间的应用程序，然后用户空间的应用程序再通过cpu拷贝到socket buffer再通过DMA拷贝发送到网络。零拷贝技术就是一种不经过CPU而直接从内存存取数据的数据交换模式，这样就减少了CPU的两次拷贝，节约了时间。
+
+### 	异步刷盘
+
+​	kafka并不会将数据直接写入到磁盘，而是写入OS的cache，而后由OS实现数据的写入。这样做的好处就是减少kafka源代码更多关于兼容各种厂商类型的磁盘驱动，而是交给更擅长和硬件打交道的操作系统来完成和磁盘的交互。不得不说异步刷盘的确提高了效率，但也意味着带来了数据丢失的风险，假设数据已经写入到OS的cache page，但数据并未落盘之前服务器断电，很可能会导致数据的丢失。
+
+### 	分布式集群
+
+​	kafka可以将一个topic分为多个partition，而partition又分布在不同broker节点，这样就充分利用了各个broker节点的性能，包括但不限于CPU，内存，磁盘，网卡等。
+
+## zookeeper在kafka中的作用
+
+### 1.partition的leader选举
+
+partition的leader选举最简单最直观的方案是：
+        leader在zk上创建一个永久znode，所有Follower对此节点注册监听，当leader宕机时，此时ISR里的所有Follower会选举出新的leader,并更新该znode的数据(这一点可以参考zk的znode的"Data Version"属性)。
+
+实际上的实现思路也是这样，只是优化了下，多了个代理控制管理类（controller）。
+
+引入的原因是，当kafka集群业务很多，partition达到成千上万时，当broker宕机时，造成集群内大量的调整，会造成大量Watch事件被触发，Zookeeper负载会过重。zk是不适合大量写操作的。
+
+### 2.kafka的controller是做什么的
+
+kafka集群中有一个broker会被选举为Controller（这会在zk集群上创建一个临时的znode），这个controller是负责管理和协调kafka集群的，其功能包括但不限于以下几点:
+
+#### UpdateMetadataRequest
+
+​        更新元数据请求。
+​        topic分区状态经常会发生变更(比如leader重新选举了或副本集合变化了等)。由于当前clients只能与分区的leader broker进行交互，那么一旦发生变更，controller会将最新的元数据广播给所有存活的broker。
+​        具体方式就是给所有broker发送UpdateMetadataRequest请求
+
+#### CreateTopics:
+
+​    创建topic请求。
+​    当前不管是通过API方式、脚本方式或是CreateTopics请求方式来创建topic，做法几乎都是在Zookeeper的/brokers/topics下创建znode来触发创建逻辑，而controller会监听该path下的变更来执行真正的"创建topic"逻辑
+
+#### DeleteTopics
+
+​    删除topic请求。
+​    和CreateTopics类似，也是通过创建Zookeeper下的/admin/delete_topics/<topic>节点来触发删除topic，controller执行真正的逻辑。
+​    不信的话,你可以将一个已存在的topic名称创在"/admin/delete_topics/"试试看呗!
+
+#### 分区重分配
+
+​    即kafka-reassign-partitions.sh脚本做的事情。同样是与Zookeeper结合使用，脚本写入/admin/reassign_partitions节点来触发，controller负责按照方案分配分区。
+
+#### Preferred leader分配
+
+​    preferred leader选举当前有两种触发方式：
+​        (1)自动触发(auto.leader.rebalance.enable = true);
+​        (2)kafka-preferred-replica-election脚本触发。两者"玩法"相同，向Zookeeper的/admin/preferred_replica_election写数据，controller提取数据执行preferred leader分配;
+
+#### 分区扩展
+
+​    即增加topic分区数。
+​    标准做法也是通过kafka-reassign-partitions.sh脚本完成，不过用户可直接往Zookeeper中写数据来实现，比如直接把新增分区的副本集合写入到/brokers/topics/<topic>下，然后controller会为你自动地选出leader并增加分区。
+
+#### 集群扩展
+
+​    新增broker时Zookeeper中/brokers/ids下会新增znode，controller自动完成服务发现的工作
+
+#### broker崩溃
+
+​    同样地，controller通过Zookeeper可实时侦测broker状态。一旦有broker挂掉了，controller可立即感知并为受影响分区选举新的leader。
+
+#### ControlledShutdown
+
+​    broker除了崩溃，还能"优雅"地退出。broker一旦自行终止，controller会接收到一个ControlledShudownRequest请求，然后controller会妥善处理该请求并执行各种收尾工作
+
+#### Controller leader选举
+
+​    controller必然要提供自己的leader选举以防这个全局唯一的组件崩溃宕机导致服务中断。这个功能也是通过Zookeeper的帮助实现的。
+
+## kafka事务（了解即可）
+
+### 1.kafka事务概述
+
+```
+    kafka从0.11版本开始引入了事务支持。
+    
+    事务可以保证kafka在Exactly Once语义的基础上，生产和消费可以跨分区的会话，要么全部成功，要么全部失败。
+```
+
+### 2.producer事务
+
+```
+    为了实现跨分区跨会话的事务，需要引入一个全局唯一的Transaction ID，并将Producer获得的PID和Transaction ID绑定。这样当Producer重启后就可以通过正在进行的Transaction ID获得原来的PID。
+
+    为了管理Transaction，Kafka引入了新的组件Transaction Coordinator。Producer就是通过和Transaction Coordinator交互获得Transaction ID对应的任务状态。
+
+    Transaction Coordinator还负责所有写入kafka的内部Topic，这样即使整个服务重启，由于事务状态得到保存，进行中的事务状态可以的得到恢复，从而继续进行。
+
+```
+
+### 3.Consumer事务
+
+```
+    上述事务机制主要从Producer方面考虑，对于Consumer而言，事务的保证就会相对较弱，尤其是无法保证Commit的信息被精确消费。
+
+    这是由于Consumer可以通过offset访问任意信息，而且不同的Segment File生命周期不同，同一事物的消费可能会出现重启后被删除的情况。
+```
+
