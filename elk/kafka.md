@@ -333,8 +333,8 @@ HW之前的数据玫对consumer是可见的
 ​	
 ​	
 ​	        
-	如下图所示，描述了。
-	
+​	如下图所示，描述了。
+​	
 	温馨提示:
 		为什么在kafka 0.9版本之后，"replica.lag.max.messages"参数被移除了呢？
 		举个例子，假设我们设置最大延迟的消息数是100，而生产者在批量写入数据时，很可能所有的follower节点的延迟消息均大于100条消息，而过段时间后，各个节点又逐渐追回消息，这会导致频繁的出现follower节点重新加入或被剔出ISR的现象。
@@ -425,6 +425,41 @@ Range策略(也是官方的默认策略):
 
 温馨提示:
     kafka 0.9版本之前，consumer默认将offset保存在zookeeper中，从0.9版本开始，consumer默认将offset保存在kafka内置的一个topic中，该topic为"__consumer_offsets"。
+
+#### 查看offset
+
+```
+kafka-console-consumer.sh --topic __consumer_offsets --bootstrap-server 192.168.76.114:9092,192.168.76.115:9092,192.168.76.116:9092 --formatter "kafka.coordinator.group.GroupMetadataManager\$OffsetsMessageFormatter" --consumer-property group.id=mycp --from-beginning | grep lala
+
+[mycp,lala,2]::OffsetAndMetadata(offset=0, leaderEpoch=Optional.empty, metadata=, commitTimestamp=1717124199818, expireTimestamp=None)
+[mycp,lala,1]::OffsetAndMetadata(offset=0, leaderEpoch=Optional.empty, metadata=, commitTimestamp=1717124199818, expireTimestamp=None)
+[mycp,lala,0]::OffsetAndMetadata(offset=14, leaderEpoch=Optional[0], metadata=, commitTimestamp=1717124199818, expireTimestamp=None)
+[mycp,lala,2]::OffsetAndMetadata(offset=0, leaderEpoch=Optional.empty, metadata=, commitTimestamp=1717124203901, expireTimestamp=None)
+[mycp,lala,1]::OffsetAndMetadata(offset=0, leaderEpoch=Optional.empty, metadata=, commitTimestamp=1717124203901, expireTimestamp=None)
+[mycp,lala,0]::OffsetAndMetadata(offset=14, leaderEpoch=Optional[0], metadata=, commitTimestamp=1717124203901, expireTimestamp=None)
+
+日志格式如下所示：（可以理解为"Key::Value"格式）
+[Group, Topic, Partition]::OffsetAndMetadata(Offset, leaderEpoch, Metadata, commitTimestamp, expireTimestamp]
+相关字段说明如下:
+Group:
+	对应消费者组的groupid，这条消息要发送到"__consumer_offset"的哪个分区，是由这个字段决定的。
+	值得注意是，此处设置的是消费者组名称，而非消费者组内的某个消费者。这样设计的好处是，当一个消费者组内的消费者数量有所变动时会导致的重新rebalance。
+	而消费者组内的消费者重新分配到新的partition时，它们是知道该partition被消费到哪里的，因为在broker都有对应消费者组关于某个分区以消费的offset。
+Topic:
+	主题名称。
+Partition:
+	主题的分区编号。
+OffsetAndMetadata:
+	偏移量和元数据信息。其包含以下五项内容:
+		offset: 偏移量信息。
+		leaderEpoch: Kafka使用HW值来决定副本备份的进度，而HW值的更新通常需要额外一轮FETCH RPC才能完成，故而这种设计是有问题的。它们可能引起的问题包括：
+ 			备份数据丢失
+ 			备份数据不一致 
+             Kafka 0.11版本之后引入了leader epoch来取代HW值。Leader端多开辟一段内存区域专门保存leader的epoch信息，这样即使出现上面的两个场景也能很好地规避这些问题。
+		Metadata: 自定义元数据信息，通常情况下为空，因为这种场景很少会用到。
+ 		commitTimestamp: 提交到kafka的时间。
+		expireTimestamp: 过期时间, 当数据过期时会有一个定时任务去清理过期的消息。
+```
 
 ### 消费者组
 
@@ -595,5 +630,91 @@ kafka集群中有一个broker会被选举为Controller（这会在zk集群上创
     上述事务机制主要从Producer方面考虑，对于Consumer而言，事务的保证就会相对较弱，尤其是无法保证Commit的信息被精确消费。
 
     这是由于Consumer可以通过offset访问任意信息，而且不同的Segment File生命周期不同，同一事物的消费可能会出现重启后被删除的情况。
+```
+
+## kafka监控
+
+### 启动监控端口
+
+```
+[root@elk101.oldboyedu.com ~]# egrep export /oldboy/softwares/kafka/bin/kafka-server-start.sh 
+    export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$base_dir/../config/log4j.properties"
+    # export KAFKA_HEAP_OPTS="-Xmx1G -Xms1G"
+    export KAFKA_HEAP_OPTS="-Xmx256M -Xms256M"
+[root@elk101.oldboyedu.com ~]# 
+[root@elk101.oldboyedu.com ~]# vim /oldboy/softwares/kafka/bin/kafka-server-start.sh  # 注意前后修改的变化哟~
+[root@elk101.oldboyedu.com ~]# 
+[root@elk101.oldboyedu.com ~]# egrep export /oldboy/softwares/kafka/bin/kafka-server-start.sh 
+    export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$base_dir/../config/log4j.properties"
+    # export KAFKA_HEAP_OPTS="-Xmx1G -Xms1G"
+    # export KAFKA_HEAP_OPTS="-Xmx256M -Xms256M"
+    export KAFKA_HEAP_OPTS="-server -Xmx256M -Xms256M -XX:PermSize=128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:ParallelGCThreads=8 -XX:ConcGCThreads=5 -XX:InitiatingHeapOccupancyPercent=70"    
+    export JMX_PORT="8888"
+[root@elk101.oldboyedu.com ~]# 
+
+相关参数说明：
+    KAFKA_HEAP_OPTS:
+        设置kafka的堆内存大小。以下是本案例中涉及到有关堆内存调优的相关参数:
+            "-Xms256M":
+                表示设置JVM启动内存的最小值为256M，必须以M为单位。
+                kafka项目推荐设置为5-6G即可。因为kafka并不是特别吃内存，它的数据是存储在磁盘上的。
+
+            "-Xmx256M":
+                表示设置JVM启动内存的最大值为256M，必须以M为单位。将-Xmx和-Xms设置为一样可以避免JVM内存自动扩展。
+                kafka项目推荐设置为5-6G即可。因为kafka并不是特别吃内存，它的数据是存储在磁盘上的。
+
+            "-XX:PermSize=128m":
+                表示JVM初始分配的永久代(方法区)的容量，必须以M为单位。
+
+            "-XX:+UseG1GC":
+                表示让JVM使用G1垃圾收集器
+        
+            "-XX:MaxGCPauseMillis=200":
+                设置每次年轻代垃圾回收的最长时间为200ms，如果无法满足此时间，JVM会自动调整年轻代大小，以满足此值。
+
+            "-XX:ParallelGCThreads=8":
+                设置并行垃圾回收的线程数，此值可以设置与机器处理器数量相等。
+
+            "-XX:ConcGCThreads=5":
+                设置Concurrent Mark Sweep(简称"CMS"，CMS处理器关注的是停顿时间。由于CMS处理器较为复杂，因此该收集器参数较多，这里只是冰山一角，感兴趣的小伙伴可自行查阅相关文档)并发线程数。
+
+            "-XX:InitiatingHeapOccupancyPercent=70":
+                该参数可以指定当整个堆使用率达到多少时，触发并发标记周期的执行。默认值是45，即当堆的使用率达到45%，执行并发标记周期，该值一旦设置，始终都不会被G1修改。
+                也就是说，G1就算为了满足MaxGCPauseMillis也不会修改此值。如果该值设置的很大，导致并发周期迟迟得不到启动，那么引起FGC的几率将会变大。如果过小，则会频繁标记，GC线程抢占应用程序CPU资源，性能将会下降。 
+
+    JMX_PORT:
+        设置JMX监控的端口。
+
+温馨提示:
+    "-Xms"和"-Xmx"在实际生产环境中我们通常会设置成相同的值，这是为了避免在生产环境由于heap内存扩大或缩小导致应用停顿，降低延迟，同时避免每次垃圾回收完成后JVM重新分配内存。
+
+```
+
+### 使用mysql创建 kafka_eagle所需的数据库和用户并授权
+
+### 安装kafka_eagle 
+
+下载
+
+https://www.kafka-eagle.org/
+
+解压
+
+环境变量配置
+
+修改配置文件
+
+## 压测
+
+```
+install -d /tmp/kafka-test/
+
+vi oldboyedu-kafka-test.sh 
+inohup kafka-consumer-perf-test.sh --broker-list 10.0.0.106:9092,10.0.0.107:9092,10.0.0.108:9092 --topic oldboyedu-kafka-2021 --messages 100000000 --fetch-size 1048576 --threads 10  &> /tmp/kafka-test/oldboyedu-kafka-consumer.log &
+
+
+nohup kafka-producer-perf-test.sh --num-records 100000000 --record-size 1000 --topic oldboyedu-kafka-2021 --throughput 1000000 --producer-props bootstrap.servers=10.0.0.106:9092,10.0.0.107:9092,10.0.0.108:9092 &> /tmp/kafka-test/oldboyedu-kafka-producer.log &
+
+在生产环境中，一定要弄清楚，哪儿是生产者，哪儿是消费者，再进行脚本的压测
 ```
 
