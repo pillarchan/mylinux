@@ -376,9 +376,152 @@ curl -X POST http://192.168.76.117:9200/_aliases
 	curl -X POST  http://192.168.76.117:9200/indexname/_doc/<_id>
 ```
 
-改
+### 改
+
+```
+	通过工具postman 访问查询 http://192.168.76.117:9200/indexname/_update/<_id>
+	curl -X POST  http://192.168.76.117:9200/indexname/_update/<_id>
+	
+	{
+		"doc":{
+			"feild":"xxx"
+		}
+	}
+```
+
+### 删
+
+```
+	通过工具postman 访问查询 http://192.168.76.117:9200/indexname/_doc/<_id>
+	curl -X DELETE  http://192.168.76.117:9200/indexname/_doc/<_id>
+```
+
+## ES文档管理批量操作
+
+### 增
+
+```
+通过工具postman 访问查询 http://192.168.76.117:9200/_bulk
+curl -X POST http://192.168.76.117:9200/_bulk
+	
+请求体格式
+{"action":{metadata}}\n
+{"feild1":"xxx","feild2":"xxx","feild3":"xxx",...}\n
+{"action":{metadata}}\n
+{"feild1":"xxx","feild2":"xxx","feild3":"xxx",...}\n
+
+例：
+curl -X POST http://192.168.76.117:9200/_bulk
+{"create":{"_index":"company_primary","_type":"_doc","_id":"100001"}}
+{"name":"Michel","age":20,"department":"administrator"}
+{"create":{"_index":"company_primary","_type":"_doc","_id":"100002"}}
+{"name":"Jason","age":21,"department":"developer"}
+
+实际操作中，metadata可以只指定_index。最后一行一定要留空行：
+{"create":{"_index":"company_primary"}}
+{"name":"Michel","age":20,"department":"administrator"}
+{"create":{"_index":"company_primary"}}
+{"name":"Jason","age":21,"department":"developer"}
 
 ```
 
+### 查
+
+```
+通过工具postman 访问查询 http://192.168.76.117:9200/indexname/_mget
+curl -X POST  http://192.168.76.117:9200/indexname/_mget
+
+{
+    "ids":["qlPA448BkL65zOK-H9-x","qVPA448BkL65zOK-H9-x"]
+}
+必须要知道id
+```
+
+### 删
+
+```
+通过工具postman 访问查询 http://192.168.76.117:9200/_bulk
+curl -X POST http://192.168.76.117:9200/_bulk
+	
+请求体格式
+{"action":{metadata}}\n
+{"action":{metadata}}\n
+{"action":{metadata}}\n
+
+例：
+curl -X POST http://192.168.76.117:9200/_bulk
+{"delete":{"_index":"company_primary","_type":"_doc","_id":"100001"}}
+{"delete":{"_index":"company_primary","_type":"_doc","_id":"100002"}}
+{"delete":{"_index":"company_primary","_type":"_doc","_id":"100002"}}
+
+最后一行一定要留空行
+
+```
+
+## ES DSL查询
+
+### 条件查询
+
+```
+curl http://192.168.76.117:9200/indexname/_search
+
+{
+    "query":{
+        "match":{
+            "feild":"xxx"
+        }
+    }
+}
+
+全量查
+{
+    "query":{
+        "match_all":{}
+    }
+}
+```
+
+### 分页查询
+
+```
+curl http://192.168.76.117:9200/indexname/_search
+
+{
+    "query":{
+        "match":{
+            "feild":"xxx"
+        }
+    },
+	"from": 10,
+    "size": 3
+}
+
+全量查
+{
+    "query":{
+        "match_all":{}
+    },
+    "from": 10,
+    "size": 3
+}
+	字段说明：
+        from:
+            指定跳过的数据偏移量大小，默认是0。
+            查询指定页码的from值 = ”(页码 - 1) * 每页数据条数“。
+        size:
+            指定显示的数据条数大小，默认是10。
+
+	在集群系统中深度分页：
+		我们应该当心分页太深或者一次请求太多的结果，结果在返回前会被排序。
+		但是记住一个搜索请求常常涉及多个分片。
+		每个分片生成排好序的结果，它们接着需要集中起来排序以确保整体排序顺序。
+		
+	为了理解为什么深度分页是有问题的，让我们假设在一个有5个主分片的索引中搜索:
+        (1)当我们请求结果的第一页(结果1到10)时，每个分片产生自己最顶端10个结果然后返回它们给请
+        求节点(requesting node)，它在排序这所有的50个结果以筛选出顶端的10个结果；
+        (2)现在假设我们请求第1000页，结果10001到10010，工作方式都相同，不同的时每个分片都必须
+        产生顶端的10010个结果，然后请求节点排序这50050个结果并丢弃50040个;
+        (3)你可以看到在分布式系统中，排序结果的花费随着分页的深入而成倍增长，这也是为什么网络
+        搜索引擎中任何语句返回多余1000个结果的原因；
 ```
 

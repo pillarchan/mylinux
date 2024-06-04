@@ -1,0 +1,64 @@
+{"create":{"_index":"shopping"}}
+{"title":"戴尔（DELL）31.5英寸 4K 曲面 内置音箱 低蓝光 影院级色彩 FreeSync技术 可壁挂 1800R 电脑显示器 S3221QS","price":3399.00 ,"brand": "Dell","weight": "15.25kg","item": "https://item.jd.com/100014940686.html"}
+{"create":{"_index":"shopping"}}
+{"title":"三星（SAMSUNG）28英寸 4K IPS 10.7亿色 90%DCI-P3 Eyecomfort2.0认证 专业设计制图显示器（U28R550UQC）","price":2099.00 ,"brand": "SAMSUNG","weight": "7.55kg","item": "https://item.jd.com/100009558656.html"}
+{"create":{"_index":"shopping"}}
+{"title":"ALIENWARE外星人新品外设高端键鼠套装AW510K机械键盘cherry轴 RGB/AW610M 610M 无线鼠标+510K机械键盘+510H耳机","price":6000.00 ,"brand": "ALIENWARE外星人","weight": "1.0kg","item": "https://item.jd.com/10030370257612.html"}
+{"create":{"_index":"shopping"}}
+{"title":"樱桃CHERRY MX8.0彩光87键游戏机械键盘合金女生樱粉色版 彩光-粉色红轴-粉色箱 官方标配","price":4066.00 ,"brand": "樱桃CHERRY","weight": "1.0kg","item": "https://item.jd.com/10024385308012.html"}
+{"create":{"_index":"shopping"}}
+{"title":"罗技（G）G610机械键盘 有线机械键盘 游戏机械键盘 全尺寸背光机械键盘 吃鸡键盘 Cherry红轴","price":429.00  ,"brand": "罗技","weight": "1.627kg","item": "https://item.jd.com/3378484.html"}
+{"create":{"_index":"shopping"}}
+{"title":"美商海盗船（USCORSAIR）K68机械键盘黑色 防水防尘樱桃轴体 炫彩背光游戏 有线 红光红轴","price": 499.00,"brand": "美商海盗船","weight": "1.41kg","item": "https://item.jd.com/43580479783.html"}
+{"create":{"_index":"shopping"}}
+{"title":"雷蛇(Razer) 蝰蛇标准版 鼠标 有线鼠标 游戏鼠标 人体工程学 电竞 黑色 6400DPI lol吃鸡神器cf","price":109.00 ,"brand": "雷蛇","weight": "185.00g","item": "https://item.jd.com/8141909.html"}
+{"create":{"_index":"shopping"}}
+{"title":"罗技（G）G502 HERO主宰者有线鼠标 游戏鼠标 HERO引擎 RGB鼠标 电竞鼠标 25600DPI","price":299.00 ,"brand": "罗技","weight": "250.00g","item": "https://item.jd.com/100001691967.html"}
+{"create":{"_index":"shopping"}}
+{"title":"武极 i5 10400F/GTX1050Ti/256G游戏台式办公电脑主机DIY组装机","price":4099.00 ,"brand": "武极","weight": "5.0kg","item": "https://item.jd.com/1239166056.html"}
+{"create":{"_index":"shopping"}}
+{"title":"变异者 组装电脑主机DIY台式游戏 i5 9400F/16G/GTX1050Ti 战胜G1","price":4299.00 ,"brand": "变异者","weight": "9.61kg","item": "https://item.jd.com/41842373306.html"}
+{"create":{"_index":"shopping"}}
+{"title":"宏碁(Acer) 暗影骑士·威N50-N92 英特尔酷睿i5游戏台机 吃鸡电脑主机(十一代i5-11400F 16G 256G+1T GTX1650)","price": 5299.00 ,"brand": "宏碁","weight": "7.25kg","item": "https://item.jd.com/100020726324.html"}
+{"create":{"_index":"shopping"}}
+{"title":"京天 酷睿i7 10700F/RTX2060/16G内存 吃鸡游戏台式电脑主机DIY组装机","price":7999.00 ,"brand": "京天","weight": "10.0kg","item": "https://item.jd.com/40808512828.html"}
+{"create":{"_index":"shopping"}}
+{"title":"戴尔（DELL）OptiPlex 3070MFF/3080MFF微型台式机电脑迷你小主机客厅HTPC 标配 i5-10500T/8G/1T+256G 内置WiFi+蓝牙 全国联保 三年上门","price":3999.00  ,"brand": "DELL","weight": "2.85kg","item": "https://item.jd.com/10025304273651.html"}
+{"create":{"_index":"shopping"}}
+{"title":"戴尔（DELL）OptiPlex 3070MFF/3080MFF微型台式机电脑迷你小主机客厅HTPC 标配 i5-10500T/8G/1T+256G 内置WiFi+蓝牙 全国联保 三年上门","price":3999.00  ,"brand": "DELL","weight": "2.85kg","item": "https://item.jd.com/10025304273651.html"}
+{"create":{"_index":"shopping"}}
+{"title":"伊萌纯种英短蓝白猫活体猫咪幼猫活体英国短毛猫矮脚猫英短蓝猫幼体银渐层蓝白活体宠物蓝猫幼崽猫咪宠物猫短 双血统A级 母","price":4000.00 ,"brand": "英短","weight": "1.0kg","item": "https://item.jd.com/10027188382742.html"}
+{"create":{"_index":"shopping"}}
+{"title":"柴墨 金渐层幼猫英短猫宠物猫英短金渐层猫咪活体猫活体纯种小猫银渐层 双血统","price":12000.00,"brand": "英短","weight": "3.0kg","item": "https://item.jd.com/10029312412476.html"}
+{"create":{"_index":"shopping"}}
+{"title":"Redmi Note10 Pro 游戏智能5G手机 小米 红米","price":9999.00,"brand": "小米","weight": "10.00g","item": "https://item.jd.com/100021970002.html"}
+{"create":{"_index":"shopping"}}
+{"title":"【二手99新】小米Max3手机二手手机 大屏安卓 曜石黑 6G+128G 全网通","price":1046.00,"brand": "小米","weight": "0.75kg","item": "https://item.jd.com/35569092038.html"}
+{"create":{"_index":"shopping"}}
+{"title":"现货速发（10天价保）小米11 5G手机 骁龙888 游戏智能手机 PRO店内可选 黑色 套装版 12GB+256GB","price":4699.00,"brand": "小米","weight": "0.7kg","item": "https://item.jd.com/10025836790851.html"}
+{"create":{"_index":"shopping"}}
+{"title":"小米手环6 NFC版 全面彩屏 30种运动模式 24h心率检测 50米防水 智能手环","price":279.00,"brand": "小米","weight": "65.00g","item": "https://item.jd.com/100019867468.html"}
+{"create":{"_index":"shopping"}}
+{"title":"HUAWEI MateView无线原色显示器无线版 28.2英寸 4K+ IPS 98% DCI-P3 10.7亿色 HDR400 TypeC 双扬声器 双MIC","price":4699.00,"brand": "华为","weight": "9.8kg","item": "https://item.jd.com/100021420806.html"}
+{"create":{"_index":"shopping"}}
+{"title":"华为nova7se/nova7 se 5G手机（ 12期免息可选 ）下单享好礼 绮境森林 乐活版 8G+128G（1年碎屏险）","price":2999.00,"brand": "华为","weight": "500.00g","item": "https://item.jd.com/10029312412476.html"}
+{"create":{"_index":"shopping"}}
+{"title":"华为HUAWEI FreeBuds 4i主动降噪 入耳式真无线蓝牙耳机/通话降噪/长续航/小巧舒适 Android&ios通用 陶瓷白","price":479.00,"brand": "华为","weight": "137.00g","item": "https://item.jd.com/100018510746.html"}
+{"create":{"_index":"shopping"}}
+{"title":"HUAWEI WATCH GT2 华为手表 运动智能手表 两周长续航/蓝牙通话/血氧检测/麒麟芯片 华为gt2 46mm 曜石黑","price":1488.00,"brand": "华为","weight": "335.00g","item": "https://item.jd.com/100008492922.html"}
+{"create":{"_index":"shopping"}}
+{"title":"Apple苹果12 mini iPhone 12 mini 5G 手机（现货速发 12期免息可选） 蓝色 5G版 64G","price":4699.00,"brand": "苹果","weight": "280.00g","item": "https://item.jd.com/10026100075337.html"}
+{"create":{"_index":"shopping"}}
+{"title":"Apple iPhone 12 (A2404) 128GB 紫色 支持移动联通电信5G 双卡双待手机","price":6799.00,"brand": "苹果","weight": "330.00g","item": "https://item.jd.com/100011203359.html"}
+{"create":{"_index":"shopping"}}
+{"title":"华硕ROG冰刃双屏 十代英特尔酷睿 15.6英寸液金导热300Hz电竞游戏笔记本电脑 i9-10980H 32G 2T RTX2080S","price":48999.00,"brand": "华硕","weight": "2.5kg","item": "https://item.jd.com/10021558215658.html"}
+{"create":{"_index":"shopping"}}
+{"title":"联想小新Air15 2021超轻薄笔记本电脑 高色域学生办公设计师游戏本 八核锐龙R7-5700U 16G内存 512G固态 升级15.6英寸IPS全面屏【DC调光护眼无闪烁】","price":5499.00,"brand": "苹果","weight": "10.0kg","item": "https://item.jd.com/33950552707.html"}
+{"create":{"_index":"shopping"}}
+{"title":"苹果（Apple）MacBook Air 13.3英寸 笔记本电脑 【2020款商务灰】十代i7 16G 512G 官方标配 19点前付款当天发货","price":10498.00,"brand": "苹果","weight": "1.29kg","item": "https://item.jd.com/10021130510120.html"}
+{"create":{"_index":"shopping"}}
+{"title":"科大讯飞机器人 阿尔法蛋A10智能机器人 专业教育人工智能编程机器人学习机 智能可编程 白色","price":1099.00,"brand": "科大讯飞","weight": "1.7kg","item": "https://item.jd.com/100005324258.html"}
+{"create":{"_index":"shopping"}}
+{"title":"robosen乐森机器人六一儿童节礼物自营孩子玩具星际特工智能编程机器人儿童语音控制陪伴益智变形机器人","price": 2499.00,"brand": "senpowerT9-X","weight": "3.01kg","item": "https://item.jd.com/100006740372.html"}
+{"create":{"_index":"shopping"}}
+{"title":"优必选（UBTECH）悟空智能语音监控对话人形机器人儿童教育陪伴早教学习机玩具","price": 4999.00,"brand":"优必选悟空","weigth":"1.21kg","item":"https://item.jd.com/100000722348.html"}
