@@ -335,11 +335,11 @@ HW之前的数据玫对consumer是可见的
 ​	        
 ​	如下图所示，描述了。
 ​	
-	温馨提示:
-		为什么在kafka 0.9版本之后，"replica.lag.max.messages"参数被移除了呢？
-		举个例子，假设我们设置最大延迟的消息数是100，而生产者在批量写入数据时，很可能所有的follower节点的延迟消息均大于100条消息，而过段时间后，各个节点又逐渐追回消息，这会导致频繁的出现follower节点重新加入或被剔出ISR的现象。
-		一旦修改比较频繁，这些ISR数据都会同步到zookeeper集群中，无疑是增加了成本。
-		而保留的基于时间间隔来判断可以减少频繁被剔出或加入到ISR的现象哟~
+​	温馨提示:
+​		为什么在kafka 0.9版本之后，"replica.lag.max.messages"参数被移除了呢？
+​		举个例子，假设我们设置最大延迟的消息数是100，而生产者在批量写入数据时，很可能所有的follower节点的延迟消息均大于100条消息，而过段时间后，各个节点又逐渐追回消息，这会导致频繁的出现follower节点重新加入或被剔出ISR的现象。
+​		一旦修改比较频繁，这些ISR数据都会同步到zookeeper集群中，无疑是增加了成本。
+​		而保留的基于时间间隔来判断可以减少频繁被剔出或加入到ISR的现象哟~
 
 #### 副本
 
@@ -718,3 +718,317 @@ nohup kafka-producer-perf-test.sh --num-records 100000000 --record-size 1000 --t
 在生产环境中，一定要弄清楚，哪儿是生产者，哪儿是消费者，再进行脚本的压测
 ```
 
+## 调优
+
+### 硬件选型
+
+```
+主要针对CPU,内存,磁盘,网卡这几个维度选择
+CPU:
+核心数多的优于主频高的,尤其是在I/0密集型场景。因为kafka相对而言是I/0密集型，尽管kafka支持SSL加密会消耗一定在CPU资源。但大多数场景下，我们是无需配置SSL加密数据。
+内存:
+(1)kafka并不是将数据存储在内存，尽管生产者将数据写入到05 cache会占用一定在内存，但其本身并不会占用过多的内存空问，生产环境配置5~6G的堆内存大小即可。
+(2)32G内存足以。
+磁盘:
+(1)由于kafka是将数据存储在磁盘上的，对于机械硬盘，建议选择转速较大的，比如15000rpm硬盘转速。如果预算较高，可以购买固态，这样写入速度会更快，但价格也不菲。
+(2)要考忠每日新增的数据至以及缓存到kafka集群的数据生命周期,比如每日新增30T数据,要缓存15天,拿集群最少要450T存储空间，但购买服务器时,要考虑未来3年数据的一个增长量,而后再确定一个合适的存储容量大小,很显然,这不是一件容易的事情,需要和多个部门沟通协作,你懂的,就得各种开会。
+(3)对于磁盘阵列卡建议选择RAID0,或者配置JB0D(无需购买磁盘阵列也可以)
+网卡:
+建议在生产环境中配置bond模式，最低要求得配置一个主从备份的网卡。通常服务器的网卡都是万兆口的。
+```
+
+### 系统调优
+
+```
+(1)禁用selinux,当然,如果你精通selinux,则可以使用它,否则就别给自己添加工作至了
+sed -i 's@SELINUX=.*@SELINUX=disabled@g' /etc/selinux/config
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+grep SELINUX-disabled /etc/selinux/config
+setenforce 0
+getenforce
+(2)暂时关团firewalld防火墙服务
+systemctl stop firewalld
+systemctl disable firewalld
+systemctl status firewalld | grep inactive
+(3)设置系统UTF8字符集,千万别用!用了就后悔!给自己留坑!!!
+cat /etc/locale.conf
+cp /etc/locale.conf /etc/1ocale.conf-`date +%F`或者使用炫技玩法:
+cp /etc/locale.conf{,.`date +%F` }
+echo 'LANG="zh_CN.UTF-8"'>/etc/locale.conf
+source /etc/ocale.conf 
+echo $LANG
+#基础优化探作项:时间同步设置#设置系统时间同步
+yum install ntpdate y
+/usr/sbin/ntpdate ntp3.aliyun.com
+echo '#crond-id-001:time sync by sand'>/var/spool/cron/root
+echo "*/5 * * * * /usr/sbin/ntpdate ntp3.aliyun.com >/dev/null 2>&1">/var/spool/cron/root
+crontab -l
+#加大文件描述(大数据)
+echo "* - nofile 1000000" > /etc/security/limit.conf
+ulimit -a
+ulimit -SHn 1000000
+#优化内核
+net.ipv4.tcp_fin_timeout=2
+net.ipv4.tcp_tw_reuse=l
+net.ipv4.tcp_tw_recycle=1
+net.ipv4.tcp_syncookies=1
+net.ipv4.tcp_keepalive_time=600
+net.ipv4.local_port_range=4000 65000
+net.ipv4.tcp_max_syn_backlog=16384
+net.ipv4.tcp_max_tw_buckets =36000
+net.ipv4.route.gc_timeout=100
+net.ipv4.tcp_syn_retries =1
+net.ipv4.tcp_synack_retries=1
+net.core.somaxconn=16384
+net.core.netdev_max_backlog=16384
+net.ipv4.tcp_max_orphans =16384
+#以下参数是对iptables防火墙的优化，防火不开会提示，可以忽略不理。
+net.nf_conntrack_max=25000000
+net.netfilter.nf_conntrack_max=25000000
+net.netfilter.nf_conntrack_tcp_timeout_established = 180
+net.netfilter.nf_conntrack_tcp_timeout_time_wait =120
+net.netfilter.nf_conntrack_tcp_timeout_close_wait =60
+net.netfilter.nf_conntracktcp_timeout_fin_wait = 120
+#NFS共享存储优化
+net.core.wem_default=8388608
+net.core.rmem_defaut=8388608
+net.core.wmem max=16777216
+net.core.rmem_max=16777216
+#禁用IPV6
+net.ipv6.conf.all.disable_ipv6 = 1
+vm.overcommit_memory=1
+EOF
+cat /etc/sysctl.conf
+sysctl -p
+#清空/etc/issue、/etc/issue.net，去除系统及内核版本登录前的屏幕显示。
+>/etc/issue
+>/etc/issue.net
+```
+
+### JVM调优
+
+```
+vim /oldboy/softwares/kafka/bin/kafka-server-start.sh  # 注意前后修改的变化哟~
+    export KAFKA_HEAP_OPTS="-server -Xmx256M -Xms256M -XX:PermSize=128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:ParallelGCThreads=8 -XX:ConcGCThreads=5 -XX:InitiatingHeapOccupancyPercent=70"    
+    export JMX_PORT="8888"
+
+相关参数说明：
+    KAFKA_HEAP_OPTS:
+        设置kafka的堆内存大小。以下是本案例中涉及到有关堆内存调优的相关参数:
+            "-Xms256M":
+                表示设置JVM启动内存的最小值为256M，必须以M为单位。
+                kafka项目推荐设置为5-6G即可。因为kafka并不是特别吃内存，它的数据是存储在磁盘上的。
+
+            "-Xmx256M":
+                表示设置JVM启动内存的最大值为256M，必须以M为单位。将-Xmx和-Xms设置为一样可以避免JVM内存自动扩展。
+                kafka项目推荐设置为5-6G即可。因为kafka并不是特别吃内存，它的数据是存储在磁盘上的。
+
+            "-XX:PermSize=128m":
+                表示JVM初始分配的永久代(方法区)的容量，必须以M为单位。
+
+            "-XX:+UseG1GC":
+                表示让JVM使用G1垃圾收集器
+        
+            "-XX:MaxGCPauseMillis=200":
+                设置每次年轻代垃圾回收的最长时间为200ms，如果无法满足此时间，JVM会自动调整年轻代大小，以满足此值。
+
+            "-XX:ParallelGCThreads=8":
+                设置并行垃圾回收的线程数，此值可以设置与机器处理器数量相等。
+
+            "-XX:ConcGCThreads=5":
+                设置Concurrent Mark Sweep(简称"CMS"，CMS处理器关注的是停顿时间。由于CMS处理器较为复杂，因此该收集器参数较多，这里只是冰山一角，感兴趣的小伙伴可自行查阅相关文档)并发线程数。
+
+            "-XX:InitiatingHeapOccupancyPercent=70":
+                该参数可以指定当整个堆使用率达到多少时，触发并发标记周期的执行。默认值是45，即当堆的使用率达到45%，执行并发标记周期，该值一旦设置，始终都不会被G1修改。
+                也就是说，G1就算为了满足MaxGCPauseMillis也不会修改此值。如果该值设置的很大，导致并发周期迟迟得不到启动，那么引起FGC的几率将会变大。如果过小，则会频繁标记，GC线程抢占应用程序CPU资源，性能将会下降。 
+
+    JMX_PORT:
+        设置JMX监控的端口。
+
+温馨提示:
+    "-Xms"和"-Xmx"在实际生产环境中我们通常会设置成相同的值，这是为了避免在生产环境由于heap内存扩大或缩小导致应用停顿，降低延迟，同时避免每次垃圾回收完成后JVM重新分配内存。
+```
+
+### broker调优
+
+```
+############################# Server Basics #############################
+#每一个broker在集群中的唯一表示，要求是正数。当该服务器的IP地址发生改变时，broker.id没有变化，则不会影响consumers的消息情况
+broker.id=116
+#这就是说，这条命令其实并不执行删除动作，仅仅是在zookeeper上标记读topic要被删除而已，同时也提醒用户一定要提前打开delete.topic.enable开关，否则删除动作是不会执行的。
+delete.topic.enable=true
+#是否允许自动创建topic，若是fa1se，就需要通过命令创建topic
+auto.create.topics.enable=false
+############################# Socket Server Settings #############################
+# The address the socket server listens on. If not configured, the host name will be equal to the value of
+# java.net.InetAddress.getCanonicalHostName(), with PLAINTEXT listener name, and port 9092.
+#   FORMAT:
+#     listeners = listener_name://host_name:port
+#   EXAMPLE:
+#     listeners = PLAINTEXT://your.host.name:9092
+#listeners=PLAINTEXT://:9092
+#Socket服务器侦听的地址。如果没有配置，它将获得从JaVa.NET.InAddio.GETCANONICALITHAMEMENE()返回的值
+#istenerS=PLAINTEXT://10.1.3.116:9092
+#broker server服务端口
+port=9092
+#broker的主机地址，若是设置了，那么会绑定到这个地址上，若是没有，会绑定到所有的接口上，并将其中之一发送到ZK，一般不设置
+host.name=10.1.3.116
+# Hostname andLport the broker wi1l advertise to producers and consumers. If not settoit, uses the0alue for "listeners" if configured. otherwise, it will use the valuereturned from java.net.InetAddress.getCanonicalHostName().
+#kafka 0.9.x以后的版本新增了advertised,1isteners配置,kafka 0.9.x以后的版本不要使用advertised,host.name 和 advertised.host.port 已经deprecated.如果配置的话，它使用 "1isteners"的值。否则，它将使用从java.net.InetAddress.getcanonicalHostName()返回的值。fadvertised.isteners=PLAINTEXT://your.host.name:9092
+#将侦听器(1istener)名称映射到安全协议，默认情况下它们是相同的。有关详细信息，请参阅配置文档。#listener,security.protoco1,maP=PLAINTEXT:PLAINTEXT,SSL:SSL,SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_SSL:SASL_SSL
+
+# Listener name, hostname and port the broker will advertise to clients.
+# If not set, it uses the value for "listeners".
+#advertised.listeners=PLAINTEXT://your.host.name:9092
+
+# Maps listener names to security protocols, the default is for them to be the same. See the config documentation for more details
+#listener.security.protocol.map=PLAINTEXT:PLAINTEXT,SSL:SSL,SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_SSL:SASL_SSL
+
+# The number of threads that the server uses for receiving requests from the network and sending responses to the network
+num.network.threads=3
+
+# The number of threads that the server uses for processing requests, which may include disk I/O
+num.io.threads=8
+
+# The send buffer (SO_SNDBUF) used by the socket server
+socket.send.buffer.bytes=102400
+
+# The receive buffer (SO_RCVBUF) used by the socket server
+socket.receive.buffer.bytes=102400
+
+# The maximum size of a request that the socket server will accept (protection against OOM)
+socket.request.max.bytes=104857600
+
+#The number of queued requests allowed for data-plane, before blocking the network threads Default:	500
+queued.max.requests = 1000
+
+
+############################# Log Basics #############################
+
+# A comma separated list of directories under which to store log files
+log.dirs=/data/kafka/data
+
+# The default number of log partitions per topic. More partitions allow greater
+# parallelism for consumption, but this will also result in more files across
+# the brokers.
+num.partitions=1
+
+#The default replication factors for automatically created topics. Default:	1,this param depends on auto.create.topics.enable to set true
+default.replication.factor=3
+
+# The number of threads per data directory to be used for log recovery at startup and flushing at shutdown.
+# This value is recommended to be increased for installations with data dirs located in RAID array.
+num.recovery.threads.per.data.dir=1
+
+#The largest record batch size allowed by Kafka (after compression if compression is enabled). If this is increased and there are consumers older than 0.10.2, the consumers' fetch size must also be increased so that they can fetch record batches this large. In the latest message format version, records are always grouped into batches for efficiency. In previous message format versions, uncompressed records are not grouped into batches and this limit only applies to a single record in that case.This can be set per topic with the topic level max.message.bytes config. Default: 1048588
+message.max.bytes = 104857600
+
+
+#Enables auto leader balancing. A background thread checks the distribution of partition leaders at regular intervals, configurable by leader.imbalance.check.interval.seconds. If the leader imbalance exceeds leader.imbalance.per.broker.percentage, leader rebalance to the preferred leader for partitions is triggered. Default:	true
+auto.leader.rebalance.enable = true
+
+############################# Internal Topic Settings  #############################
+# The replication factor for the group metadata internal topics "__consumer_offsets" and "__transaction_state"
+# For anything other than development testing, a value greater than 1 is recommended to ensure availability such as 3.
+offsets.topic.replication.factor=1
+transaction.state.log.replication.factor=1
+transaction.state.log.min.isr=1
+
+############################# Log Flush Policy #############################
+
+# Messages are immediately written to the filesystem but by default we only fsync() to sync
+# the OS cache lazily. The following configurations control the flush of data to disk.
+# There are a few important trade-offs here:
+#    1. Durability: Unflushed data may be lost if you are not using replication.
+#    2. Latency: Very large flush intervals may lead to latency spikes when the flush does occur as there will be a lot of data to flush.
+#    3. Throughput: The flush is generally the most expensive operation, and a small flush interval may lead to excessive seeks.
+# The settings below allow one to configure the flush policy to flush data after a period of time or
+# every N messages (or both). This can be done globally and overridden on a per-topic basis.
+
+# The number of messages to accept before forcing a flush of data to disk
+#log.flush.interval.messages=10000
+
+# The maximum amount of time a message can sit in a log before we force a flush
+#log.flush.interval.ms=1000
+
+############################# Log Retention Policy #############################
+
+# The following configurations control the disposal of log segments. The policy can
+# be set to delete segments after a period of time, or after a given size has accumulated.
+# A segment will be deleted whenever *either* of these criteria are met. Deletion always happens
+# from the end of the log.
+
+# The minimum age of a log file to be eligible for deletion due to age
+log.retention.hours=168
+
+# A size-based retention policy for logs. Segments are pruned from the log unless the remaining
+# segments drop below log.retention.bytes. Functions independently of log.retention.hours.
+#log.retention.bytes=1073741824
+
+# The maximum size of a log segment file. When this size is reached a new log segment will be created.
+#log.segment.bytes=1073741824
+
+# The interval at which log segments are checked to see if they can be deleted according
+# to the retention policies
+log.retention.check.interval.ms=300000
+
+#The maximum time before a new log segment is rolled out (in hours), secondary to log.roll.ms property
+log.roll.hours = 24*7
+
+
+
+############################# Zookeeper #############################
+
+# Zookeeper connection string (see zookeeper docs for details).
+# This is a comma separated host:port pairs, each corresponding to a zk
+# server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002".
+# You can also append an optional chroot string to the urls to specify the
+# root directory for all kafka znodes.
+zookeeper.connect=192.168.76.111:2181,192.168.76.112:2181,192.168.76.113:2181/kafka
+
+# Timeout in ms for connecting to zookeeper
+zookeeper.connection.timeout.ms=18000
+
+#请求的最大大小为字节,请求的最大字节数。这也是对最大记录尺寸的有效覆盖。注意:server具有自己对消息记录尺寸的覆盖，这些只寸和这个设置不同。此顶设置将会限制producer每次批量发送请求的数目，以防发出巨量的请求。
+max.request.size=104857600
+#每次fetch请求中。针对每次fetch消息的最大字节数。这些字节将会督导用于每个partition的内存中。因此。此设置将会控制consumer所使用的memory大小。这个fetch请求尺寸必须至少和server允许的最大消息尺寸相等，否则。producer可能发送的消息尺寸大于consumer所能耗的尺寸。
+fetch.message.max.bytes=104857600
+#ZooKeeper集群中1eader和fo11omer之间的同步时间,换句话说:一个zKfo11ower能落后leader多久。
+#zookeeper.syc.time.ms=2000
+
+################### Replica Basic ###############
+replica.lag.time.max.ms=30000
+
+#The maximum wait time for each fetcher request issued by follower replicas. This value should always be less than the replica.lag.time.max.ms at all times to prevent frequent shrinking of ISR for low throughput topics. Default: 500
+replica.fetch.wait.max.ms=2000
+
+
+#The socket timeout for network requests. Its value should be at least replica.fetch.wait.max.ms
+replica.socket.timeout.ms=30000
+
+############################# Group Coordinator Settings #############################
+
+# The following configuration specifies the time, in milliseconds, that the GroupCoordinator will delay the initial consumer rebalance.
+# The rebalance will be further delayed by the value of group.initial.rebalance.delay.ms as new members join the group, up to a maximum of max.poll.interval.ms.
+# The default value for this is 3 seconds.
+# We override this to 0 here as it makes for a better out-of-the-box experience for development and testing.
+# However, in production environments the default value of 3 seconds is more suitable as this will help to avoid unnecessary, and potentially expensive, rebalances during application startup.
+group.initial.rebalance.delay.ms=0
+
+```
+
+### 其它
+
+```
+生产环境中相对学习环境较为复杂,因此我们需要根据实际的网络架构来做出相应的调整
+对于kafka而言,我们不仅仅要考虑到broker端的调优,还得考虑到客户端的优化,比如producer,consumer等此处要给学员分享一下生产环境关于IDFS数据延迟半小时的场景及当时的解决方案!
+推荐阅读:
+https://www.cnblogs.com/yinzhengjie/p/10018164.html
+https://www.cnblogs.com/yinzhengjie/p/9993719.html
+https://www.cnblogs.com/yinzhengjie/p/9808125.html
+```
+
+调用kafka_server_stop.sh时会执行什么
+
+1. 将os cache的数据落地到磁盘
+2. 要把磁盘对应的partition迁称到其它节点
