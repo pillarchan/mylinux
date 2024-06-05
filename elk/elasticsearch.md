@@ -384,7 +384,7 @@ curl -X POST http://192.168.76.117:9200/_aliases
 	
 	{
 		"doc":{
-			"feild":"xxx"
+			"field":"xxx"
 		}
 	}
 ```
@@ -406,9 +406,9 @@ curl -X POST http://192.168.76.117:9200/_bulk
 	
 请求体格式
 {"action":{metadata}}\n
-{"feild1":"xxx","feild2":"xxx","feild3":"xxx",...}\n
+{"field1":"xxx","field2":"xxx","field3":"xxx",...}\n
 {"action":{metadata}}\n
-{"feild1":"xxx","feild2":"xxx","feild3":"xxx",...}\n
+{"field1":"xxx","field2":"xxx","field3":"xxx",...}\n
 
 例：
 curl -X POST http://192.168.76.117:9200/_bulk
@@ -468,7 +468,7 @@ curl http://192.168.76.117:9200/indexname/_search
 {
     "query":{
         "match":{
-            "feild":"xxx"
+            "field":"xxx"
         }
     }
 }
@@ -489,7 +489,7 @@ curl http://192.168.76.117:9200/indexname/_search
 {
     "query":{
         "match":{
-            "feild":"xxx"
+            "field":"xxx"
         }
     },
 	"from": 10,
@@ -523,5 +523,120 @@ curl http://192.168.76.117:9200/indexname/_search
         产生顶端的10010个结果，然后请求节点排序这50050个结果并丢弃50040个;
         (3)你可以看到在分布式系统中，排序结果的花费随着分页的深入而成倍增长，这也是为什么网络
         搜索引擎中任何语句返回多余1000个结果的原因；
+        
+        
+   客户端请求分页查询时，会先请求到协调节点，如果数据有分片，并且存在不同的分片上，协调节点向其它分片请求数据，此时不同分片上的被请求的数据结果经过升序降序排序后先返回给协调节点，协调节点会再次排序将指定的多少条记录返回给客户端
+```
+
+### 只查看返回数据的指定字段
+
+```
+curl http://192.168.76.117:9200/indexname/_search
+
+{
+    "query":{
+        "match_all":{}
+    },
+	"from": 10,
+    "size": 3,
+    "_source":["title","price"]
+}
+```
+
+### 查看指定字段并排序
+
+```
+curl http://192.168.76.117:9200/indexname/_search
+
+{
+    "query": {
+        "match_all": {}
+    },
+    "from": 9,
+    "size": 3,
+    "sort":{
+        "price":{
+            "order":"asc"
+        }
+    }
+}
+
+desc降序 asc升序
+```
+
+### 多条件查询
+
+```
+    	bool查询可以用来合并多个条件查询结果的布尔逻辑，这些参数可以分别继承一个查询或者一个查询条件的数组。
+    	bool查询包含以下操作符:
+    		must:
+            	多个查询条件的完全匹配，相当于"and"。
+            must_not:
+            	多个查询条件的相反匹配，相当于"not"。
+            should:
+                至少有一个查询条件匹配，相当于"or"。
+{"query":{"bool":{"must":[{"match":{"brand":"DELL"}},{"match":{"price":3999}}]}}}
+{"query":{"bool":{"should":[{"match":{"brand":"DELL"}},{"match":{"price":3999}}],"minimum_should_match":2}}}
+{"query":{"bool":{"should":[{"match":{"brand":"DELL"}},{"match":{"price":3999}}],"minimum_should_match":"65%"}}}
+	评分计算规则：
+		(1)bool查询会为每个文档计算相关度评分"_score"，再将所有匹配的must和should语句的分数"_score"求和，最后除以must和should语句的总数。
+		(2)must_not语句不会影响评分，它的作用只是将不相关的文档排除。
+		(3)默认情况下，should中的内容不是必须匹配的，如果查询语言中没有must，那么就会至少匹配其中一个。当然，也可以通过"minimum_should_match"来指定匹配度，该值可以是数字(例如"2")也可以是百分比(如"65%")。
+```
+
+### 范围查询
+
+```
+{"query":{"bool":{"filter":{"range":{"price":{"lt":1000,"gt":200}}}}}}
+
+关键字段filter
+lt,gt,lte,gte
+```
+
+### 全文检索
+
+```
+{"query":{"match":{"brand":"小苹华"}}}
+
+当使用match匹配时，match查询会在真正查询之前用分词器先分析，会将用户要查询的词汇进行分开匹配，从而查询到结果
+默认的中文分词器并不太适合使用，生产环境建议更换分词器，比如IK分词器等。
+```
+
+### 全文匹配
+
+```
+{"query":{"match_phrase":{"brand":"小苹华"}}}
+
+当使用match_phrase匹配时，match_phrase会将用户要查询的内容进行视为一个整体支查询结果
+```
+
+### 语法高亮
+
+```
+    curl -X GET/POST http://192.168.76.117:9200/shopping/_search
+        {
+            "query":{
+                "match_phrase":{
+                    "brand":"苹果"
+                }
+            },
+            "highlight":{
+                "fields":{
+                    "brand":{}
+                }
+            }
+        }
+ 与query同级，会将以查询条件返回结果的词进行高亮标记       
+```
+
+### 精确匹配查询
+
+```
+curl -X POST http://elk101.oldboyedu.com:9200/shopping/_search	
+{"query":{"term":{"price":9999}}}
+{"query":{"terms":{"price":[250,3999,599,1099]}}}
+温馨提示：
+	term主要用于精确匹配哪些值，比如数字，日期，布尔值或"not_analyzed"(未经分析的文本数据类型)的字符串。
+	terms跟term有点类似，但terms允许指定多个匹配条件，如果某个字段指定了多个值，那么文档需要满足其一条件即可。
 ```
 
