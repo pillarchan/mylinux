@@ -613,7 +613,7 @@ lt,gt,lte,gte
 ### 语法高亮
 
 ```
-    curl -X GET/POST http://192.168.76.117:9200/shopping/_search
+    curl -X GET/POST http://192.168.76.117:9200/indexname/_search
         {
             "query":{
                 "match_phrase":{
@@ -632,11 +632,310 @@ lt,gt,lte,gte
 ### 精确匹配查询
 
 ```
-curl -X POST http://elk101.oldboyedu.com:9200/shopping/_search	
+curl -X POST http://192.168.76.117:9200/indexname/_search	
 {"query":{"term":{"price":9999}}}
 {"query":{"terms":{"price":[250,3999,599,1099]}}}
 温馨提示：
 	term主要用于精确匹配哪些值，比如数字，日期，布尔值或"not_analyzed"(未经分析的文本数据类型)的字符串。
 	terms跟term有点类似，但terms允许指定多个匹配条件，如果某个字段指定了多个值，那么文档需要满足其一条件即可。
+```
+
+### 查询包含指定字段的文档
+
+```
+curl -X POST http://192.168.76.117:9200/indexname/_search
+{"query":{"exists":{"field":"hobby"}}}
+exists查询可以用于查找文档中是否包含指定字段或没有某个字段，这个查询只是针对已经查出一批数据来，但是想区分出某个字段是否存在的时候使用。
+```
+
+### 过滤查询
+
+```
+{"query":{"bool":{"filter":{"term":{"price":9999}}}}}}
+match和filter查询对比:
+(1)一条过滤(filter)语句会询问每个文档的字段值是否包含着特定值;
+(2)查询(match)语句会询问每个文档的字段值与特定值的匹配程序如何:一条查询(match)语句会计算每个文档与查询语句的相关性，会给出一个相关性评分"_score"，并且按照相关性对匹配到的文档进行排序。这种评分方式非常适用于一个没有完全配置结果的全文本搜索。
+(3)一个简单的文档列表，快速匹配运算并存入内存是十分方便的，每个文档仅需要1个字节。这些缓存的过滤结果集与后续请求的结果使用是非常高效的;
+(4)查询(match)语句不仅要查询相匹配的文档，还需要计算每个文档的相关性，所以一般来说查询语句要比过滤语句更好使，并且查询结果也不可缓存。
+
+温馨提示:
+	做精确匹配搜索时，最好用过滤语句，因为过滤语句可以缓存数据。但如果要做全文搜索，需要通过查询语句来完成。
+```
+
+### 多词查询
+
+```
+(1)默认基于"or"操作符对某个字段进行多词搜索
+curl -X GET http://192.168.76.117:9200/indexname/_search
+{
+    "query": {
+        "bool": {
+            "must": {
+                "match": {
+                    "title": {
+                        "query": "曲面设计",
+                        "operator": "or"
+                    }
+                }
+            }
+        }
+    },
+    "highlight":{
+        "fields":{
+            "title":{}
+        }
+    }
+}
+    
+ 
+(2)基于"and"操作符对某个字段进行多词搜索
+curl -X GET http://192.168.76.117:9200/indexname/_search
+    {
+        "query":{
+            "bool":{
+                "must":{
+                    "match":{
+                        "title":{
+                            "query":"曲面显示器",
+                            "operator":"and"
+                        }
+                    }
+                }
+            }
+        },
+        "highlight":{
+            "fields":{
+                "title":{}
+            }
+        }
+    }
+or与and的区别：
+or只要查询的字段中包含有词中的任意一个字就会返回结果
+and查询的字段中包含有词中的所有字才会返回结果
+```
+
+### 权重案例
+
+```
+有些时候，我们可能需要对某些词增加权重来影响这条数据的得分。
+curl -X GET http://192.168.76.117:9200/indexname/_search
+{
+    "query": {
+        "bool": {
+            "must": {
+                "match": {
+                    "brand": {
+                        "query": "小华罗",
+                        "operator": "or"
+                    }
+                }
+            },
+            "should": [
+                {
+                    "match": {
+                        "brand": {
+                            "query": "小米",
+                            "boost": 2
+                        }
+                    }
+                },
+                {
+                    "match": {
+                        "brand": {
+                            "query": "华为",
+                            "boost": 10
+                        }
+                    }
+                },
+                {
+                    "match": {
+                        "title": {
+                            "query": "黑色",
+                            "boost": 20
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "highlight": {
+        "fields": {
+            "title": {},
+            "brand": {}
+        }
+    }
+}
+权重关键字boost，通过增大它的值，就可以把分值提高，让权重较大的排在前面显示
+```
+
+### 聚合查询
+
+```
+可以理解为查询+聚合函数，把查询出来的结果再进行函数运算得到想要的结果，比如：求和、匀值、最大值、最小值等
+
+语法格式：
+        {
+            "aggs": { // 聚合操作
+                "name_of_aggregation": { // 该名称可以自定义，可基于相关字段起名称。
+                    "function_name": { // 函数名
+                        "field": "field_name" // 分组字段
+                    }
+                }
+            },
+            "size": 0 // 设置显示hits数据的大小，当size的值为0时，表示不查看原始数据!如果设置大于0，则显示指定的数据条数。如果设置为-1，则只显示10条，如果设置小于-1则报错!简单来说，就是显示多少行查询结果的详细数据
+        }
+例：
+{
+    "query": {
+        "match_all": {}
+    },
+    "aggs": {
+        "price_avg": {
+            "avg": {
+                "field": "price"
+            }
+        }
+    },
+    "size": 0
+}
+```
+
+### 相关官文
+
+DSL语句:
+https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html
+        
+聚合函数:
+https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations.html
+
+## 自定义数据类型及关系映射(mapping)概述
+
+### ElasticSearch中支持的类型
+
+```
+	创建的索引以及插入数据，都是由Elasticsearch Dynamic Mapping进行自动判断。
+
+	有些时候需要进行明确的字段类型的，否则，自动判断的类型和实际需求是不相符的。
+
+	此处针对字符串类型做一个简单的说明：（因为上面的案例的确用到了）
+        string类型（deprecated，已废弃）:
+            在ElasticSearch旧版本中使用较多，从ElasticSearch 5.x开始不再支持string，由text和keyword类型代替。
+
+        text类型:
+            当一个字段要被全文搜索的，比如Email内容，产品描述，应该使用text类型。
+            设置text类型以后，字段内容会被分析，在生成倒排索引以前，字符串会被分词器分成一个一个词项。
+            text类型的字段不用于排序，很少用于聚合。
+            换句话说，text类型是可拆分的。
+
+        keyword类型:
+            适用于索引结构化的字段，比如email地址，主机名，状态码，标签，IP地址等。
+            如果字段需要进行过滤(比如查找已发布博客中status属性为published的文章)，排序，聚合。keyword类型的字段只能通过精确值搜索到。
+            换句话说，keyword类型是不可拆分的。
+		还有其它更多的类型，不一一叙述
+		常用的:
+boolean
+keyword
+Numbers:
+	byte
+	short
+	integer
+	long
+	double
+date
+    推荐阅读：
+        https://www.elastic.co/guide/en/elasticsearch/reference/7.12/mapping-types.html
+
+```
+
+### 数据类型-自定义映射关系案例1-text-keyword-date-byte
+
+```
+创建index和mapping
+{
+    "settings": {
+        "index": {
+            "number_of_shards": 3,
+            "number_of_replicas": 1
+        }
+    },
+    "mappings": {
+        "properties": {
+            "name": {
+                "type": "text"
+            },
+            "age": {
+                "type": "byte"
+            },
+            "birthday": {
+                "type": "date",
+                "format": "yyyy-MM-DD"
+            },
+            "gender": {
+                "type": "keyword"
+            }
+        }
+    }
+}
+批量添加数据
+{"create":{"_index":"employee"}}
+{"name":"Tom","age":22,"birthday":"1994-09-09","gender":"male"}
+{"create":{"_index":"employee"}}
+{"name":"Jerry","age":21,"birthday":"1995-09-09","gender":"female"}
+{"create":{"_index":"employee"}}
+{"name":"Max","age":23,"birthday":"1993-09-09","gender":"female"}
+{"create":{"_index":"employee"}}
+{"name":"John","age":24,"birthday":"1992-09-09","gender":"male"}
+{"create":{"_index":"employee"}}
+{"name":"Rola","age":20,"birthday":"1996-09-09","gender":"female"}
+
+测试查询
+{
+    "query":{
+        "match":{
+            "gender":"male"
+        }
+    }
+}
+```
+
+### 数据类型-自定义映射关系案例1-ip
+
+```
+创建index和mapping
+{
+    "settings": {
+        "index": {
+            "number_of_shards": 3,
+            "number_of_replicas": 1
+        }
+    },
+    "mappings": {
+        "properties": {
+            "ip_addr": {
+                "type": "ip"
+            }
+        }
+    }
+}
+批量添加数据
+{"create":{"_index":"inner_ip"}}
+{"ip_addr":"192.168.10.111"}
+{"create":{"_index":"inner_ip"}}
+{"ip_addr":"192.168.10.113"}
+{"create":{"_index":"inner_ip"}}
+{"ip_addr":"192.168.10.112"}
+{"create":{"_index":"inner_ip"}}
+{"ip_addr":"127.0.0.1"}
+{"create":{"_index":"inner_ip"}}
+{"ip_addr":"172.16.11.123"}
+
+测试查询
+{
+    "query":{
+        "term":{
+            "ip_addr":"192.168.10.0/24"
+        }
+    }
+}
 ```
 
