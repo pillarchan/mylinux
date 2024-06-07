@@ -939,3 +939,131 @@ date
 }
 ```
 
+## 管理集群常用的API
+
+### 1.查看集群的健康状态信息
+
+```
+curl -X GET  http://192.168.76.117:9200/_cluster/health?wait_for_status=yellow&timeout=50s&pretty
+
+温馨提示:
+	(1)wait_for_status表示等待ES集群达到状态的级别;
+	(2)timeout表示指定等待的超时时间;
+	(3)pretty表示美观的输出响应体，尤其是在浏览器输入;
+
+以下是对响应结果进行简单的说明:
+    cluster_name
+        集群的名称。
+    status
+        集群的运行状况，基于其主要和副本分片的状态。
+        常见的状态为：
+            green：
+                所有分片均已分配。
+            yellow：
+                所有主分片均已分配，但未分配一个或多个副本分片。如果群集中的节点发生故障，则在修复该节点之前，某些数据可能不可用。
+            red：
+                未分配一个或多个主分片，因此某些数据不可用。在集群启动期间，这可能会短暂发生，因为已分配了主要分片。
+    timed_out：
+        如果false响应在timeout参数指定的时间段内返回（30s默认情况下）。
+    number_of_nodes：
+        集群中的节点数。
+    number_of_data_nodes：
+        作为专用数据节点的节点数。
+    active_primary_shards：
+        活动主分区的数量。
+    active_shards：
+        活动主分区和副本分区的总数。
+    relocating_shards：
+        正在重定位的分片的数量。
+    initializing_shards：
+        正在初始化的分片数。
+    unassigned_shards：
+        未分配的分片数。
+    delayed_unassigned_shards：
+        其分配因超时设置而延迟的分片数。
+    number_of_pending_tasks：
+        尚未执行的集群级别更改的数量。
+    number_of_in_flight_fetch：
+        未完成的访存次数。
+    task_max_waiting_in_queue_millis：
+        自最早的初始化任务等待执行以来的时间（以毫秒为单位）。
+    active_shards_percent_as_number：
+        群集中活动碎片的比率，以百分比表示。
+
+```
+
+### 2.获取集群的配置信息
+
+```
+http://192.168.76.117:9200/_cluster/settings?include_defaults
+
+修改
+http://192.168.76.117:9200/_cluster/settings
+{
+    "persistent": {
+        "cluster.routing.allocation.enable": "all"
+        //"cluster.routing.allocation.enable": "primaries"
+        //"cluster.routing.allocation.enable": "none"
+    }
+}
+shard分配策略
+	集群分片分配是指将索引的shard分配到其他节点的过程，会在如下情况下触发：
+		(1)集群内有节点宕机，需要故障恢复；
+		(2)增加副本；
+		(3)索引的动态均衡，包括集群内部节点数量调整、删除索引副本、删除索引等情况；
+	上述策略开关，可以动态调整，由参数cluster.routing.allocation.enable控制，启用或者禁用特定分片的分配。该参数的可选参数有：
+		all(默认值):
+			允许为所有类型分片分配分片；
+        primaries:
+            仅允许分配主分片的分片；
+        new_primaries :
+            仅允许为新索引的主分片分配分片；
+        none:
+            任何索引都不允许任何类型的分片；
+温馨提示:
+	(1)默认情况下，此API调用仅返回已显式定义的设置，包括"persistent"(持久设置)和"transient"(临时设置);
+	(2)其中include_defaults表示的是默认设置；
+```
+
+### 3.查看集群的统计信息
+
+```
+curl -X GET http://elk101.oldboyedu.com:9200/_cluster/stats
+curl -X GET http://elk101.oldboyedu.com:9200/_cluster/stats/nodes/<node_filter>
+_all
+_master
+_local
+
+路径参数说明:
+https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster.html#cluster-nodes
+
+返回参数说明:
+	https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html#cluster-stats-api-response-body
+```
+
+### 4.查看集群shard分配的分配情况
+
+```
+http://192.168.76.117:9200/_cluster/allocation/explain
+查看主分片
+{
+    "index":"indexname",
+    "shard":0,
+    "primary":true
+}
+查看副本分片
+{
+    "index":"indexname",
+    "shard":0,
+    "primary":false
+}
+温馨提示:
+	当您试图诊断shard未分配的原因，此API非常有用。
+```
+
+### 5.其他操作
+
+```
+推荐阅读: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster.html
+```
+
