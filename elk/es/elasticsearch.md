@@ -1028,8 +1028,8 @@ shard分配策略
 ### 3.查看集群的统计信息
 
 ```
-curl -X GET http://elk101.oldboyedu.com:9200/_cluster/stats
-curl -X GET http://elk101.oldboyedu.com:9200/_cluster/stats/nodes/<node_filter>
+curl -X GET http://192.168.76.117:9200/_cluster/stats
+curl -X GET http://192.168.76.117:9200/_cluster/stats/nodes/<node_filter>
 _all
 _master
 _local
@@ -1065,5 +1065,271 @@ http://192.168.76.117:9200/_cluster/allocation/explain
 
 ```
 推荐阅读: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster.html
+```
+
+# 文档分词器及自定义分词案例
+
+## 1.文档分析
+
+```
+	文档分析包含下面的过程:
+		(1)将一块文本分成适合于倒排索引的独立的词条;
+		(2)将这些词条统一化为标准格式以提高它们的"可搜索性"，或者recall分词器执行上面的工作。分析器实际上是将三个功能封装到了一个package里:
+			字符过滤器:
+				首先，字符串按顺序通过每个字符过滤器。他们的任务是在分词前整理字符串。一个字符过滤器可以用来去掉HTML，或者将&转化成and。
+			分词器:
+				其次，字符串被分词器分为单个的词条。一个简单的分词器遇到空格和标点的时候，可能会将文本拆分成词条。
+			Token过滤器:
+				最后，词条按照顺序通过每个token过滤器。这个过程可能会改变词条(例如，小写化，Quick)，删除词条(例如，像a,and,the等无用词)，或者增加词条(例如，像jump和leap这种同义词)。
+```
+
+## 2.内置分析器
+
+
+	内置分析器:
+		ES还附带了可以直接使用的预包装的分析器。接下来我们会列出最重要的分析器。为了证明它们的差异，我们看看每个分析器会从下面的字符串得到哪些词条。
+		"Set the shape to semi-transparent by calling set_trans(5)"
+	
+	标准分析器:
+		标准分析器是ES默认使用的分词器。它是分析各种语言文本最常用的选择。它根据Unicode联盟定义的单词边界划分文本。删除部分标点。最后将词条小写。所以它会分析出以下词条:
+		set,the,shape,to,semi,transparent,by,calling,set_trans,5
+		
+	简单分析器:
+		简单分析器在任何不是字母的地方分隔文本，将词条小写。所以它会产生以下词条:
+		set,the,shape,to,semi,transparent,by,calling,set,trans
+		
+	空格分析器:
+		空格分析器在空格的地方划分文本，所以它会产生以下词条:
+		Set,the,shape,to,semi-transparent,by,calling,set_trans(5)
+		
+	语言分析器:
+		特定语言分析器可用于很多语言。它们可以考虑指定语言的特点。例如，英语分析器还附带了无用词(常用单词，例如and或者the，它们对相关性没有多少影响)，它们会被删除。由于理解英语语法的规则，这个分词器可以提取英语单词的词干。所以英语分词器会产生下面的词条:
+		set,shape,semi,transpar,call,set_tran,5
+		注意看"transparent","calling"和"set_trans"已经变成词根格式。
+
+
+## 3.分析器使用场景
+
+```
+	当我们索引一个文档，它的全文域被分析成词条以用来创建倒排索引。但是，当我们在全文域搜索的时候，我们需要将字符串通过相同的分析过程，以保证我们搜索的词条格式与索引中的词条格式一致。
+	
+```
+
+## 4.测试分析器-标准分析器("standard")
+
+```
+有些时候很难理解分词的过程和实际被存储到索引的词条，特别是你刚接触ES。为了理解发生了上面，你可以使用analyze API来看文本时如何被分析的。
+
+在消息体里，指定分析器和要分析的文本:
+curl -X GET/POST http://192.168.76.117:9200/_analyze
+    {
+        "analyzer": "standard",
+        "text":"My name is Jason Yin and I'm 18 years old!"
+    }
+```
+
+## 5.ES内置的中文分词并不友好
+
+```
+在消息体里，指定分析器和要分析的文本:
+curl -X GET/POST http://192.168.76.117:9200/_analyze
+    {
+        "text":"我爱北京天安门"
+    }
+```
+
+## 6.中文分词器概述
+
+```
+	中文分词的难点在于，在汉语中没有明显的词汇分界点，如在英语中，空格可以作为分隔符，如果分隔符不正确就会造成歧义。常用中文分词器有IK，jieba，THULAC等，推荐使用IK分词器。
+
+	"IK Analyzer"是一个开源的，基于Java语言开发的轻量级的中文分词工具包。从2006年12月推出1.0版本开始，IK Analyzer已经推出了3个大版本。最初，它是以开源项目Luence为应用主体的，结合词典分词和文法分析算法的中文分词组件。
+
+	新版本的IK Analyzer 3.0则发展为面向Java的公用分词组件，独立于Lucene项目，同时提供对Lucene的默认优化实现。采用了特有的"正向迭代最新力度切分算法"，具有"80万字/秒"的高速处理能力。
+	
+	采用了多子处理器分析模式，支持: 英文字母(IP地址，Email，URL)，数字(日期，常用中文数量词，罗马数字，科学计数法)，中文词汇()姓名，地名处理等分词处理。优化的词典存储，更小的内存占用。
+
+	IK分词器Elasticsearch插件地址:
+		https://github.com/medcl/elasticsearch-analysis-ik
+```
+
+## 7.安装IK分词器插件
+
+```
+解压分词器到集群节点的插件目录即可 unzip -d
+修改权限 chown -R
+重启服务使得配置生效 kill -9 && su user -c "elasticsearch -d"
+```
+
+## 8.测试IK分词器
+
+```
+curl -X GET/POST http://192.168.76.117:9200/_analyze	
+    {
+        "analyzer": "ik_max_word",
+        "text":"我爱北京天安门"
+    }
+curl -X GET/POST http://192.168.76.117:9200/_analyze
+    {
+        "analyzer": "ik_smart",  // 会将文本做最粗粒度的拆分。
+        "text":"我爱北京天安门"
+    }
+IK分词器说明:
+	"ik_max_word":
+		会将文本做最细粒度的拆分。
+	"ik_smart":
+		会将文本做最粗粒度的拆分。
+温馨提示：
+	由于我将IK分词器只安装在了elk103节点上，因此我这里指定的ES节点就是按照的结点，生产环境中建议大家同步到所有节点。
+
+```
+
+## 9.自定义词汇
+
+```
+自定义词汇，文件名称可自行定义:
+ vim /elasticsearch/plugins/ik/config/oldboy_custom.dic
+艾欧里亚
+德玛西亚
+ cat /elasticsearch/plugins/ik/config/oldboy_custom.dic
+
+将上面自定义词汇的文件名称写入IK分词器的配置文件中:
+ cat /elasticsearch/plugins/ik/config/IKAnalyzer.cfg.xml 
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+	<comment>IK Analyzer 扩展配置</comment>
+	<!--用户可以在这里配置自己的扩展字典 -->
+	<entry key="ext_dict">
+		xxx
+	</entry>
+	 <!--用户可以在这里配置自己的扩展停止词字典-->
+	<entry key="ext_stopwords"></entry>
+	<!--用户可以在这里配置远程扩展字典 -->
+	<!-- <entry key="remote_ext_dict">words_location</entry> -->
+	<!--用户可以在这里配置远程扩展停止词字典-->
+	<!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+</properties>
+
+重启ES服务使得配置生效
+温馨提示:
+	(1)建议将IK分词器同步到集群的所有节点;
+	(2)修改"IKAnalyzer.cfg.xml"的配置文件时，我只修改了key="ext_dict"这一行配置项目，如下所示:
+	"<entry key="ext_dict">custom.dic</entry>"
+```
+
+## 10.测试自定义词汇是否生效
+
+```
+curl -X GET/POST http://192.168.76.117:9200/_analyze
+    {
+        "analyzer":"ik_smart",
+        "text": "嗨，兄弟，你LOL哪个区的，我艾欧里亚和德玛西亚都有号"
+    }
+```
+
+# 索引模板
+
+## 1.索引模板的作用
+
+```
+	索引模板是创建索引的一种方式。将数据写入指定索引时，如果该索引不存在，则根据索引名称能匹配相应索引模板话，会根据模板的配置建立索引。
+	
+	推荐阅读:
+		https://www.elastic.co/guide/en/elasticsearch/reference/master/index-templates.html
+```
+
+## 2.查看内置的索引板
+
+```
+	查看所有的索引模板信息:
+		curl -X GET http://192.168.76.117:9200/_template?pretty
+	查看某个索引模板信息:
+		curl -X GET http://192.168.76.117:9200/_template/indexname?pretty
+```
+
+## 3.创建索引模板
+
+```
+curl -X PUT http://192.168.76.117:9200/_template/indexname
+    {
+        "index_patterns": [
+            "indexname*"
+        ],
+        "settings": {
+            "index": {
+                "number_of_shards": 5,
+                "number_of_replicas": 0,
+                "refresh_interval": "30s"
+            }
+        },
+        "mappings": {
+            "properties": {
+                "@timestamp": {
+                    "type": "date"
+                },
+                "name": {
+                    "type": "keyword"
+                },
+                "address": {
+                    "type": "text"
+                }
+            }
+        }
+    }
+```
+
+## 4.删除索引模板
+
+```
+curl -X DELETE http://192.168.76.117:9200/_template/indexname
+```
+
+## 5.修改索引模板(注意修改是覆盖修改哟~)
+
+```
+curl -X PUT http://192.168.76.117:9200/_template/indexname
+    {
+        "index_patterns": [
+            "indexname*"
+        ],
+        "settings": {
+            "index": {
+                "number_of_shards": 10,
+                "number_of_replicas": 0,
+                "refresh_interval": "30s"
+            }
+        },
+        "mappings": {
+            "properties": {
+                "id": {
+                    "type": "keyword"
+                },
+                "name": {
+                    "type": "keyword"
+                },
+                "gender": {
+                    "type": "keyword"
+                }
+            }
+        }
+    }
+```
+
+## 6.创建索引进行测试
+
+```
+不指定副本和分片创建索引：
+	curl -X PUT  http://192.168.76.117:9200/indexname	
+指定副本和分片创建索引:
+	curl -X PUT  http://192.168.76.117:9200/indexname
+        {
+            "settings":{
+                "index":{
+                    "number_of_replicas":1,
+                    "number_of_shards":3
+                }
+            }
+        }     
 ```
 
