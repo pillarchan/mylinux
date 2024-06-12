@@ -153,15 +153,15 @@ filebeat.inputs:
 - type: log
   paths:
     - /opt/logs/*.log 
-    - /opt/logs/*.txt 
-  include_lines: ["everywhere"]
-  exclude_lines: ["^anywhere"]
-  fields:{
-  	province: SiChuan
-  	city: MianYang
-  	streets:["Cuihua","Yanjiang"]
+#    - /opt/logs/*.txt 
+#  include_lines: ["everywhere"]
+#  exclude_lines: ["^anywhere"]
+  fields: {
+    province: "SiChuan",
+    city: "MianYang",
+    streets: ["Cuihua","Yanjiang"]
   }
-  tags:["tech city","two bombs city"]
+  tags: ["tech city","two bombs city"]
 #  fields_under_root: true
 output.console:
   pretty: true
