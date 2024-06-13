@@ -173,6 +173,91 @@ output.console:
   fields_under_root：是否将自定义字段合并于根下
 ```
 
+## 3.从tcp类型读取数据
+
+```
+filebeat.inputs:
+- type: tcp
+  max_message_size: 10MiB
+  host: "10.0.0.106:7777"
+  timeout: 10
+
+output.console:
+  pretty: true
+  bulk_max_size: 10MiB
+
+推荐阅读:
+	https://www.elastic.co/guide/en/beats/filebeat/current/filebeat-input-tcp.html
+```
+
+## 4.从kafka类型读取数据
+
+```
+filebeat.inputs:
+- type: kafka
+  hosts:
+    - 192.168.76.114:9092
+    - 192.168.76.115:9092
+    - 192.168.76.116:9092
+  topics: ["mydemo"]
+  group_id: "mydemo_consumer" 
+output.console:
+  pretty: true
+```
+
+# 五、filebeat的输出源配置
+
+## 1.将数据输出到kafka:star:
+
+```
+filebeat.inputs:
+  - type: tcp
+    host: "192.168.76.120:8888"
+    max_message_size: 10MiB
+output.kafka:
+  hosts: ["192.168.76.114:9092","192.168.76.115:9092","192.168.76.116:9092"]
+  topic: "mydemo"
+
+还需启动kafka消费者
+```
+
+## 2.将数据输出到file
+
+```
+filebeat.inputs:
+  - type: tcp
+    host: "192.168.76.120:8888"
+    max_message_size: 10MiB
+output.file:
+  path: "/tmp/filetest"
+  filename: filetest.log
+```
+
+## 3.将数据输出到redis
+
+```
+(1)编写配置文件并启动filebeat
+filebeat.inputs:
+- type: tcp
+  max_message_size: 10MiB
+  host: "10.0.0.106:7777"
+
+output.redis:
+  hosts: ["10.0.0.108:16379"]
+  password: "oldboyedu_linux77"
+  key: "oldboyedu-filebeat"
+  db: 10
+  timeout: 5
+
+
+(2)查看数据的内容
+redis-cli -h 10.0.0.108 -p 16379 -a oldboyedu_linux77 --raw -n 10 LRANGE oldboyedu-filebeat 0 -1
+
+
+推荐阅读:
+	https://www.elastic.co/guide/en/beats/filebeat/current/redis-output.html
+```
+
 
 
 # 企业实战
