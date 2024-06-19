@@ -315,28 +315,35 @@ filebeat.config.modules:
 
 # 七.nginx日志收集案例
 
-1.配置json格式日志
+## 1.配置json格式日志
 
 ```
  # 自定义nginx的日志格式为json格式
-    log_format my_json '{"@timestamp":"$time_iso8601",' 
-                              '"host":"$server_addr",' 
-                              '"clientip":"$remote_addr",' 
-                              '"size":$body_bytes_sent,' 
-                              '"responsetime":$request_time,' 
-                              '"upstreamtime":"$upstream_response_time",' 
-                              '"upstreamhost":"$upstream_addr",' 
-                              '"http_host":"$host",' 
-                              '"uri":"$uri",' 
-                              '"domain":"$host",' 
-                              '"xff":"$http_x_forwarded_for",' 
-                              '"referer":"$http_referer",' 
-                              '"tcp_xff":"$proxy_protocol_addr",' 
-                              '"http_user_agent":"$http_user_agent",' 
-                              '"status":"$status"}';
+    log_format my_json '{"time":"$time_local","server_addr":"$server_addr","client_ip":"$remote_addr",'
+#                 'country_code:$geoip2_country_code city_name:"$geoip2_city_name_en" '
+                 '"uri":"$scheme://$host:$remote_port$request_uri","status":"$status","request_method":"$request_method",'
+                 '"request_length":"$request_length","request_body":"$request_body","host":"$host","request_uri":"$request_uri",'
+                 '"query_string":"$query_string","request_time":"$request_time","connection_time":"$connection_time",'
+                 '"body_bytes_sent":"$body_bytes_sent","bytes_sent":"$bytes_sent",'
+                 '"upstream_time":"$upstream_response_time","upstream_host":"$upstream_addr","upstream_status":"$upstream_status",'
+                 '"http_referer":"$http_referer","http_user_agent":"$http_user_agent",'
+                 '"http_x_forwarded_for":"$http_x_forwarded_for","proxy_add_x_forwarded_for":"$proxy_add_x_forwarded_for"}';
 
 
     access_log  /var/log/nginx/access.log  my_json;
+```
+
+## 2.配置filebeat文件
+
+```
+filebeat.inputs:
+  - type: log
+    paths: 
+      - /var/log/nginx/access.log
+    tags: "nginx"
+    json.keys_under_root: true
+output.console:
+  pretty: true
 ```
 
 
