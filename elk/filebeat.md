@@ -258,6 +258,34 @@ redis-cli -h 10.0.0.108 -p 16379 -a oldboyedu_linux77 --raw -n 10 LRANGE oldboye
 	https://www.elastic.co/guide/en/beats/filebeat/current/redis-output.html
 ```
 
+## 4.将数据输出到es:star:
+
+```
+filebeat.inputs:
+- type: tcp
+  max_message_size: 10MiB
+  host: "192.168.76.120:11111"
+output.elasticsearch:
+  hosts:
+    - 192.168.76.117:9200
+    - 192.168.76.118:9200
+    - 192.168.76.119:9200
+  index: "mydemo_fbes_%{+yyyy.MM.dd}"
+setup.ilm.enable: false
+setup.template.name: "mydemo_fbes"
+setup.template.pattern: "mydemo_fbes_*"
+setup.template.overwrite: false
+setup.template.settings:
+  index.number_of_shards: 3
+  index.number_of_replicas: 1
+
+注意：使用输出到es时 须加上
+setup.ilm.enable: false
+setup.template 模板参数
+```
+
+
+
 
 
 # 企业实战
