@@ -284,7 +284,60 @@ setup.ilm.enable: false
 setup.template 模板参数
 ```
 
+# 六.模块使用
 
+## 1.modules目录
+
+```
+ls /usr/local/filebeat-7.15.0-linux-x86_64/modules.d/
+如：cyberark.yml.disabled infoblox.yml.disabled nginx.yml sonicwall.yml.disabled
+disabled代表被禁用
+```
+
+## 2.启用禁用模块
+
+```
+filebeat modules [command]
+Available Commands:
+  disable     Disable one or more given modules
+  enable      Enable one or more given modules
+  list        List modules
+```
+
+## 3.配置文件中使用模块
+
+```
+# 启用modules
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: false
+```
+
+# 七.nginx日志收集案例
+
+1.配置json格式日志
+
+```
+ # 自定义nginx的日志格式为json格式
+    log_format my_json '{"@timestamp":"$time_iso8601",' 
+                              '"host":"$server_addr",' 
+                              '"clientip":"$remote_addr",' 
+                              '"size":$body_bytes_sent,' 
+                              '"responsetime":$request_time,' 
+                              '"upstreamtime":"$upstream_response_time",' 
+                              '"upstreamhost":"$upstream_addr",' 
+                              '"http_host":"$host",' 
+                              '"uri":"$uri",' 
+                              '"domain":"$host",' 
+                              '"xff":"$http_x_forwarded_for",' 
+                              '"referer":"$http_referer",' 
+                              '"tcp_xff":"$proxy_protocol_addr",' 
+                              '"http_user_agent":"$http_user_agent",' 
+                              '"status":"$status"}';
+
+
+    access_log  /var/log/nginx/access.log  my_json;
+```
 
 
 
