@@ -341,9 +341,34 @@ filebeat.inputs:
     paths: 
       - /var/log/nginx/access.log
     tags: "nginx"
-    json.keys_under_root: true
-output.console:
-  pretty: true
+    json.keys_under_root: false
+output.elasticsearch:
+  hosts:
+    - 192.168.76.117:9200
+    - 192.168.76.118:9200
+    - 192.168.76.119:9200
+  index: "mynginx_access_%{+yyyy.MM.dd}"
+
+setup.ilm.enabled: false
+setup.template.name: "mynginx_access"
+setup.template.pattern: "mynginx_access_*"
+setup.template.overwrite: false
+setup.template.settings:
+  index.number_of_shards: 3
+  index.number_of_replicas: 1
+
+```
+
+## 3.错误日志收集
+
+```
+
+```
+
+## 4.nginx多日志收集
+
+```
+
 ```
 
 
