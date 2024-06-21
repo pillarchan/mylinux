@@ -31,7 +31,7 @@ sudo alias docker-compose='docker compose'
 mkdir -pv /etc/docker
 cat > /etc/docker/daemon.json <<EOF
  {
-    "registry-mirrors":["https://docker.mirrors.ustc.edu.cn","https://registry.docker-cn.com"]
+    "registry-mirrors":["https://hub-mirror.c.163.com","https://mirror.baidubce.com"]
 
  }
 EOF
