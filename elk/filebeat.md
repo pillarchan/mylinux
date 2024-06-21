@@ -341,7 +341,7 @@ filebeat.inputs:
     paths: 
       - /var/log/nginx/access.log
     tags: "nginx"
-    json.keys_under_root: false
+    json.keys_under_root: true
 output.elasticsearch:
   hosts:
     - 192.168.76.117:9200
@@ -362,12 +362,71 @@ setup.template.settings:
 ## 3.错误日志收集
 
 ```
+filebeat.inputs:
+  - type: log
+    paths: 
+      - /var/log/nginx/access.log
+    tags: "nginx_access"
+    json.keys_under_root: true
+  - type: log
+    paths: 
+      - /var/log/nginx/error.log
+    tags: "nginx_error"
+output.elasticsearch:
+  hosts:
+    - 192.168.76.117:9200
+    - 192.168.76.118:9200
+    - 192.168.76.119:9200
+   indices:
+     - index: "mynginx_logs_access_%{+yyyy.MM.dd}"
+       when.contains:
+         tags: "nginx_access"
+     - index: "mynginx_logs_access_%{+yyyy.MM.dd}"
+       when.contains:
+         tags: "nginx_error"     
+setup.ilm.enabled: false
+setup.template.name: "mynginx_logs"
+setup.template.pattern: "mynginx_logs_*"
+setup.template.overwrite: false
+setup.template.settings:
+  index.number_of_shards: 3
+  index.number_of_replicas: 1
 
 ```
 
 ## 4.nginx多日志收集
 
 ```
+filebeat.inputs:
+  - type: log
+    paths: 
+      - /var/log/nginx/demo.log
+    tags: "nginx_demo"
+    json.keys_under_root: true
+  - type: log
+    paths: 
+      - /var/log/nginx/blog.log
+    tags: "nginx_blog"
+    json.keys_under_root: true
+output.elasticsearch:
+  hosts:
+    - 192.168.76.117:9200
+    - 192.168.76.118:9200
+    - 192.168.76.119:9200
+   indices:
+     - index: "mynginx_logs_demo_%{+yyyy.MM.dd}"
+       when.contains:
+         tags: "nginx_demo"
+     - index: "mynginx_logs_blog_%{+yyyy.MM.dd}"
+       when.contains:
+         tags: "nginx_blog"     
+setup.ilm.enabled: false
+setup.template.name: "mynginx_logs"
+setup.template.pattern: "mynginx_logs_*"
+setup.template.overwrite: false
+setup.template.settings:
+  index.number_of_shards: 3
+  index.number_of_replicas: 1
 
 ```
 
