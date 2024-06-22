@@ -181,9 +181,10 @@ yum -y install docker-ce-20.10.24 docker-ce-cli-20.10.24
 #### 修改配置文件
 
 ```
+mkdir -pv /etc/docker
 cat > /etc/docker/daemon.json << EOF
  {
-    "registry-mirrors":["https://docker.mirrors.ustc.edu.cn","https://tuv7rqqq.mirror.aliyuncs.com"],
+    "registry-mirrors":["https://hub-mirror.c.163.com","https://mirror.baidubce.com"],
     "exec-opts": ["native.cgroupdriver=systemd"]
  }
 EOF
@@ -299,8 +300,6 @@ kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/
 image 的镜像版本及地址
 
 ```
-
-
 
 ### 7.添加kubectl的自动补全功能
 

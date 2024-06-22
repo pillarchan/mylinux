@@ -28,7 +28,7 @@ cd certs
 openssl genrsa -out ca/ca.key 4096
 #根据私钥创建ca自签证书
 openssl req -new -nodes -x509 -sha512 -days 3650 \
--subj "/C=CN/ST=Beijing/L=Beijing/O=example/OU=Personal/CN=myharbor.com"
+-subj "/C=CN/ST=Beijing/L=Beijing/O=example/OU=Personal/CN=myharbor.com" \
 -key ca/ca.key -out ca/ca.crt
 
 server
@@ -62,7 +62,7 @@ openssl x509 -inform PEM -in server/harbor.myharbor.com.crt -out server/harbor.m
 
 client
 cp server/harbor.myharbor.com.{cert,key} client/
-cp ca/ca.crt
+cp ca/ca.crt client/
 ```
 
 
@@ -88,7 +88,7 @@ harbor_admin_password: 1
 ```
 准备myharbor docker 证书
 mkdir -pv /etc/docker/certs.d/harbor.myharbor.com
-cp -r /oldboyedu/softwares/harbor/certs/client/* /etc/docker/certs.d/harbor.myharbor.com
+cp -r /usr/local/harbor/certs/client/* /etc/docker/certs.d/harbor.myharbor.com
 
 配置/etc/hosts
 ip harbor.myharbor.com
