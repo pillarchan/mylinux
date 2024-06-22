@@ -184,7 +184,7 @@ yum -y install docker-ce-20.10.24 docker-ce-cli-20.10.24
 mkdir -pv /etc/docker
 cat > /etc/docker/daemon.json << EOF
  {
-    "registry-mirrors":["https://hub-mirror.c.163.com","https://mirror.baidubce.com"],
+    "registry-mirrors":["https://docker.gs","https://60lgfq0t.mirror.aliyuncs.com","https://dockerproxy.com"],
     "exec-opts": ["native.cgroupdriver=systemd"]
  }
 EOF
@@ -305,5 +305,54 @@ image 的镜像版本及地址
 
 ```
 echo "source <(kubectl completion bash)" >> ~/.bashrc && source ~/.bashrc
+```
+
+# 总结
+
+```
+	- harbor基于https的部署
+		- 自建CA证书
+		- 基于自建证书创建docker engine的证书
+		- 创建harbor客户端证书
+		- 修改配置文件并启动服务
+	
+	- kubernetes的架构
+		- Control Plane:
+			控制K8S集群的组件。
+			- Api Server:
+				集群的访问入口。
+			- etcd:
+				存储集群的数据。一般情况下，只有API-SERVER会访问.
+			- Control Manager:
+				维护集群的状态。
+			- Scheduler:
+				负责Pod的调度功能。
+
+		- Worker Node:
+			实际运行业务的组件。
+			- kubelet:
+				管理Pod的生命周期，并上报Pod和节点的状态。
+			- kube-proxy:
+				对K8S集群外部提供访问路由。底层可以基于iptables或者ipvs实现。
+				
+	- Kubernetes的常见术语
+		- CNI：
+			Container Network Interface
+			容器网络插件，主要用于跨节点的容器进行通信的组件。
+		- CRI:
+			Container Runtime Interface
+			容器运行接口，主要用于kubelet调用容器的生命周期管理相关即可。
+			docker-shim ---&gt; cir-dockerd，在K8S 1.24已经弃用！
+			若更高版本想要使用docker，需要单独部署docker-shim组件即可。
+
+	- Kubernetes部署方式
+		- kubeadm:
+			快速构建K8S集群，需要单独安装docker,kubectl,kubeadm,kubelet。
+			基于容器快速部署K8S集群。
+		
+		- 二进制部署:
+			需要去官方下载最新的二进制软件包，编写启动脚本。
+			
+	- kubernetes的高可用架构设计
 ```
 
