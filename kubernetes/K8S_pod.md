@@ -23,6 +23,8 @@
 
 ## 实战案例:
 
+### K8S的Pod资源运行单个容器案例
+
 ```
 (1)创建工作目录
  mkdir -pv /manifests/pods/ && cd /manifests/pods/
@@ -74,13 +76,12 @@ curl -I 10.100.2.5
 ```
 
 
-​	
+​	K8S的Pod资源运行多个容器案例
 
+```
 
-
-K8S的Pod资源运行多个容器案例
-	(1)编写资源清单
- cat 02-nginx-tomcat.yaml
+(1)编写资源清单
+cat 02-nginx-tomcat.yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -91,22 +92,26 @@ spec:
     image: nginx:1.23.4-alpine
   - name: tomcat
     image: tomcat:jre8-alpine
-     
-     kubectl create -f 02-nginx-tomcat.yaml
 
-
-​	(2)查看Pod状态
+kubectl create -f 02-nginx-tomcat.yaml
+(2)查看Pod状态
  kubectl get pod
+ kubectl describe pod linux85-nginx-tomcat 	
+(3)删除Pod
+kubectl delete pod linux85-nginx-tomcat 
 
- kubectl describe pod linux85-nginx-tomcat 
-	
-	
-	(3)删除Pod
- kubectl delete pod linux85-nginx-tomcat 
-pod "linux85-nginx-tomcat" deleted
- 
-	
-	
+```
+
+## 	k8s启动一个pod的流程
+
+```
+当k8s启动一个pod
+1.启动pause容器，用于给业务容器分配网络名称空间
+2.启动业务容器
+
+业务容器故障挂掉，则会立即重启容器，但是IP地址不会发生变化
+如果pause容器故障挂掉，所乘载的和业务容器也会同时挂掉，然后会重启pause容器和业务容器，此时IP地址就会发生改变
+```
 
 
 故障排查案例
@@ -136,13 +141,13 @@ spec:
     args:
     - "-f"
     - "/etc/hosts"
-     
+    
 
 
 ​	(3)创建Pod
  kubectl apply -f 03-nginx-alpine.yaml 
 pod/linux85-nginx-alpine created
- 
+
 
 
 ​	
@@ -185,7 +190,7 @@ spec:
   containers:
   - name: game
     image: harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1
-     
+    
 
  
 
@@ -194,7 +199,7 @@ spec:
  kubectl get pods
 NAME               READY   STATUS    RESTARTS   AGE
 linux85-game-008   1/1     Running   0          4m15s
- 
+
  kubectl cp linux85-game-008:/start.sh /tmp/start.sh
 
 
@@ -202,7 +207,7 @@ linux85-game-008   1/1     Running   0          4m15s
  kubectl get pods
 NAME               READY   STATUS    RESTARTS   AGE
 linux85-game-008   1/1     Running   0          4m15s
- 
+
  kubectl exec -it linux85-game-008 -- sh
 
 
@@ -221,7 +226,7 @@ Q1: 当一个Pod有多个容器时，如果连接到指定的容器？
  kubectl get pods
 NAME                   READY   STATUS    RESTARTS   AGE
 linux85-nginx-tomcat   2/2     Running   0          63s
- 
+
  kubectl exec -it linux85-nginx-tomcat -- sh  # 默认连接到第一个容器
 Defaulted container "nginx" out of: nginx, tomcat
 / # 
