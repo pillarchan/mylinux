@@ -75,8 +75,7 @@ curl -I 10.100.2.5
  kubectl delete -f 01-nginx.yaml 
 ```
 
-
-​	K8S的Pod资源运行多个容器案例
+### 	K8S的Pod资源运行多个容器案例
 
 ```
 
@@ -113,22 +112,20 @@ kubectl delete pod linux85-nginx-tomcat
 如果pause容器故障挂掉，所乘载的和业务容器也会同时挂掉，然后会重启pause容器和业务容器，此时IP地址就会发生改变
 ```
 
+## k8s删除一个pod的流程
 
-故障排查案例
-	(1)资源清单
- cat 03-nginx-alpine.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-nginx-alpine
-spec:
-  # 使用宿主机网络,相当于"docker run --network host"
-  hostNetwork: true
-  containers:
-  - name: nginx
-    image: nginx:1.23.4-alpine
-  - name: linux
-    image: alpine
+```
+1. 在etcd里标记为删除
+2. worker节点发送心跳给master节点，master节点发送回应时，将删除的动作发送给worker节点
+3. worker节点回收删除pod后再上报给 api server
+```
+
+
+
+## 故障排查案例
+
+```
+(1)资源清单
     # 给容器分配一个标准输入，默认值为false
     # stdin: true
     # 给容器分配一个启动命令，修改Dockerfile的CMD指令
@@ -136,138 +133,199 @@ spec:
     # 也可以修改command字段，相当于修改Dockerfile的ENTRYPOINT指令
     # command: ["sleep","15"]
     # args也可以和command命令搭配使用，和Dockfile的ENTRYPOINT和CMD效果类似
-    command:
+    # --- pod 隔离符可以在一个文件中启动多个pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-web-01
+spec:
+  hostNetwork: true
+  nodeName: centos79k8s2
+  containers:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-web-01
+spec:
+  hostNetwork: true
+  nodeName: centos79k8s2
+  containers:
+  - name: nginx01
+    image: nginx:1.24-alpine
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-web-02
+spec:
+  hostNetwork: true
+  nodeName: centos79k8s2
+  containers:
+  - name: nginx02
+    image: nginx:1.24-alpine
+    command: 
     - "tail"
     args:
     - "-f"
-    - "/etc/hosts"
-    
+    - "/etc/hosts"   
+(2)创建Pod
+kubectl apply -f 03-nginx-alpine.yaml 
+(3)使用kubectl exec pod linux -it -- sh 进入容器内排查具体故障
 
 
-​	(3)创建Pod
- kubectl apply -f 03-nginx-alpine.yaml 
-pod/linux85-nginx-alpine created
+排查总结：
+当指定使用宿主机IP和指定分配到同一节点造成端口冲突导致，虽然使用了字段理想可以自定义port，但实际还是按镜像中端口启动
+ports:
+- containerPort: 
 
-
-
-​	
-​	
-​	
-​	
-- 环境准备
-	(1)下载镜像
-	docker pull jasonyin2020/oldboyedu-games:v0.4 
-	docker pull jasonyin2020/oldboyedu-games:v0.1
-	
-	(2)将镜像打包
-	docker tag jasonyin2020/oldboyedu-games:v0.1 harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1
-
-docker tag jasonyin2020/oldboyedu-games:v0.4 harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.4
-
-​	(3)将镜像推送到harbor仓库
-docker push harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1
-docker push harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.4
-
-
-
-
-课堂练习:
-	将"harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1"镜像使用Pod部署，并在浏览器中可以访问。
-
-​	
+强制删除状态为terminating的pod
+kubectl delete pod <pod_name> --grace-period=0 --force
+```
 
 
 参考案例：
- cat 04-ketanglianxi.yaml 
+```
+cat 04-ketanglianxi.yaml 
 apiVersion: v1
 kind: Pod
 metadata:
   name: linux85-game-001
 spec:
   hostNetwork: true
-  # 将Pod调度到指定节点，注意，该node名称必须和etcd的数据保持一致
-  nodeName: k8s232.oldboyedu.com
+
+  ### 将Pod调度到指定节点，注意，该node名称必须和etcd的数据保持一致
+ nodeName: k8s232.harbor.com
   containers:
+
   - name: game
-    image: harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1
-    
+    image: harbor.harbor.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1
+```
 
- 
+## 故障常用命令：
 
-故障常用命令：
-	(1)将Pod容器的文件拷贝到宿主机
+## 	(1)将Pod容器的文件拷贝到宿主机
+
+```
  kubectl get pods
 NAME               READY   STATUS    RESTARTS   AGE
 linux85-game-008   1/1     Running   0          4m15s
 
  kubectl cp linux85-game-008:/start.sh /tmp/start.sh
+```
 
+## 	(2)连接到Pod的容器
 
-​	(2)连接到Pod的容器
+```
  kubectl get pods
 NAME               READY   STATUS    RESTARTS   AGE
 linux85-game-008   1/1     Running   0          4m15s
 
  kubectl exec -it linux85-game-008 -- sh
+```
 
+## 	(3)查看某个Pod的日志。
 
-​	(3)查看某个Pod的日志。
-[root@k8s231.oldboyedu.com games]# kubectl get pods
+```
+kubectl get pods
 NAME               READY   STATUS    RESTARTS   AGE
 linux85-game-013   1/1     Running   0          6m15s
 linux85-web        1/1     Running   0          119s
-[root@k8s231.oldboyedu.com games]# 
-[root@k8s231.oldboyedu.com games]# kubectl logs -f linux85-web 
 
+kubectl logs -f linux85-web 
+```
 
-​	
------
-Q1: 当一个Pod有多个容器时，如果连接到指定的容器？
+# 面试题
+
+## Q1: 当一个Pod有多个容器时，如果连接到指定的容器？
+
+```
  kubectl get pods
 NAME                   READY   STATUS    RESTARTS   AGE
 linux85-nginx-tomcat   2/2     Running   0          63s
 
  kubectl exec -it linux85-nginx-tomcat -- sh  # 默认连接到第一个容器
-Defaulted container "nginx" out of: nginx, tomcat
-/ # 
-/ # 
+Defaulted container "nginx" out of: nginx, tomcat 
 / # 
  kubectl exec -it linux85-nginx-tomcat -c nginx -- sh  # 连接nginx容器
 / # 
-
  kubectl exec -it linux85-nginx-tomcat -c tomcat -- sh  # 连接tomcat容器
 /usr/local/tomcat # 
 
-
-
-
-​	早期版本中，可能没有提示Pod容器的名称，可以采用以下三种方式查看容器名称。
+早期版本中，可能没有提示Pod容器的名称，可以采用以下三种方式查看容器名称。
 # cat 02-nginx-tomcat.yaml 
 # kubectl describe pod linux85-nginx-tomcat 
 # kubectl get pods linux85-nginx-tomcat -o yaml
+```
 
+## Q2: 如果查看一个Pod最近20分钟的日志?
 
-
-
-
-Q2: 如果查看一个Pod最近20分钟的日志?
+```
  kubectl logs -c nginx -f  --timestamps --since=20m linux85-nginx-tomcat 
-
  -c:
 	指定要查看的容器名称。
-
  -f:
 	实时查看日志。
-
  --timestamps :
 	显示时间戳相关信息。
-
-
  --since=20m 
 	查看最近20分钟内的日志。
+```
+
+## Q3: 如果查看一个Pod上一个容器的日志，上一个挂掉的容器
+
+```
+kubectl logs -c tomcat -f  --timestamps -p  linux85-nginx-tomcat 
+```
+
+## Q4: 使用kubectl logs无法查看日志是什么原因，如何让其能够查看呢?
+
+```
+使用"kubectl logs"查看的是容器的标准输出或错误输出日志，如果想要使用该方式查看，需要将日志重定向到/dev/stdout或者/dev/stderr。
+
+可以使用Dockerfile来操作
+```
+
+## Q5: 如何实现Pod的容器的文件和宿主机之间相互拷贝?
 
 
+	- 将Pod的的文件拷贝到宿主机
+	kubectl get pods
+	NAME               READY   STATUS    RESTARTS   AGE
+	linux85-game-014   1/1     Running   0          3m10s
+	kubectl cp linux85-game-014:/start.sh /tmp/1.sh  # 拷贝文件
+	kubectl cp linux85-game-014:/etc /tmp/2222  # 拷贝目录
+	
+	- 将宿主机的文件拷贝到Pod的容器中
+	kubectl cp 01-nginx.yaml linux85-game-014:/ 
+	kubectl cp /tmp/2222/ linux85-game-014:/ 
+	kubectl exec linux85-game-014 -- ls -l /
+	total 24
+	-rw-r--r--    1 root     root           301 Apr 13 09:03 01-nginx.yaml
+	drwxr-xr-x   20 root     root          4096 Apr 13 09:04 2222
+	...
+## Q6: 镜像下载策略有哪些？请分别说明？
 
+```
+cat 06-nginx-imagePullPolicy.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-web-imagepullpolicy-001
+spec:
+  nodeName: k8s233.myharbor.com
+  containers:
+  - name: nginx
+    image: harbor.myharbor.com/web/linux85-web:v0.1
+    # 指定镜像的下载策略，有效值为: Always, Never, IfNotPresent
+    #    Always:
+    #       默认值，表示始终拉取最新的镜像。
+    #    IfNotPresent:
+    #       如果本地有镜像，则不去远程仓库拉取镜像，若本地没有，才会去远程仓库拉取镜像。
+    #    Never:
+    #       如果本地有镜像则尝试启动，若本地没有镜像，也不会去远程仓库拉取镜像。
+    #imagePullPolicy: Always
+    # imagePullPolicy: IfNotPresent
+    imagePullPolicy: Never
+```
 
-
-Q3: 如果查看一个Pod上一个容器的日志，上一个挂掉的容器
+## Q7: 容器的重启策略有哪些？请分别说?

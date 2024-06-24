@@ -28,7 +28,7 @@ ldconfig
 
 yum install gcc perl-devel pcre-devel zlib-devel openssl-devel libmaxminddb libmaxminddb-devel -y
 
-apt install libpcre3-dev  libssl-dev perl make build-essential curl libncurses5-dev libmaxminddb-dev zlib1g-dev -y
+apt install libpcre2-dev libpcre3-dev  libssl-dev perl make build-essential curl libncurses5-dev libmaxminddb-dev zlib1g-dev -y
 
 cd /usr/local/src/openresty/
 ./configure --add-module=/usr/local/src/ngx_http_geoip2_module-3.4 --with-http_realip_module --with-http_v2_module
