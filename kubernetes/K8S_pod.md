@@ -329,3 +329,22 @@ spec:
 ```
 
 ## Q7: 容器的重启策略有哪些？请分别说?
+
+```
+cat 06-nginx-restartPolicy.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-web-restart-policy-001
+spec:
+  nodeName: k8s233.myharbor.com
+  containers:
+  - name: nginx
+    image: harbor.myharbor.com/web/linux85-web:v0.1
+#restartPolicy is either OnFailure or Always:
+#Always: Automatically restarts the container after any termination.
+#OnFailure: Only restarts the container if it exits with an error (non-zero exit status).
+#Never: Does not automatically restart the terminated container.
+    # restartPolicy: Always
+    restartPolicy: OnFailure
+```
