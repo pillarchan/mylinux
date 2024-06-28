@@ -60,10 +60,64 @@
 
 # 部署DNS服务器
 
+## bind
+
+### 	安装
+
 ```
-可直接使用bind-utils进行安装
+1.可直接使用bind,bind-utils进行安装
+2.查看防火墙和selinux是否关闭
+3.修改配置文件 可以使用rpm -ql bind 查看文件目录
+  配置文件一般存在于 
+  /etc/named.conf
+  /etc/named.rfc1912.zones
+  
+```
+
+### 	配置
+
+```
+/etc/named.conf 配置文件中
+options 选项中
+	listen-on port 53 { 127.0.0.1; any;};
+	allow-query     { localhost; any; };
+/etc/named.rfc1912.zones 配置文件中
+添加自定义域名的对象
+zone "lao6.cn" IN {
+	type master;
+	file "lao6.cn.zone";
+	allow-update { none; };
+};
+
+创建该自定义域名 主机域名记录配置文件 且必须存放在 bind指定的数据目录下
+如果拷贝/var/named 下的模板如：named.locahost文件 请加 -p 参数
+如果自己创建注意文件权限
+
+修改配置文件或文件权限后，记得重启named服务
+```
+
+## dnsmasq
+
+一个轻量化的dns服务器
+
+### 安装
+
+```
+yum install dnsmasq -y
+```
+
+### 配置
+
+```
+/etc/dnsmasq.conf
+
+resolv-file=/etc/resolv.dnsmasq.conf
+listen-address=192.168.76.111
+addn-hosts=/etc/dnsmasq.hosts
+conf-dir=/etc/dnsmasq.d,.rpmnew,.rpmsave,.rpmorig
 
 
+创建
 ```
 
 
