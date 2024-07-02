@@ -188,6 +188,12 @@ cat > /etc/docker/daemon.json << EOF
     "exec-opts": ["native.cgroupdriver=systemd"]
  }
 EOF
+
+
+
+E0702 14:02:50.646345   15911 server.go:302] "Failed to run kubelet" err="failed to run Kubelet: misconfiguration: kubelet cgroup driver: \"systemd\" is different from docker cgroup driver: \"cgroupfs\""
+
+如果未配置 "exec-opts": ["native.cgroupdriver=systemd"] 就会报以上错误，10248端口无法启动
 ```
 
 #### 拷贝证书
@@ -306,6 +312,21 @@ image 的镜像版本及地址
 ```
 echo "source <(kubectl completion bash)" >> ~/.bashrc && source ~/.bashrc
 ```
+
+### 8.删除从节点(重置节点)
+
+```
+kubeadm reset
+The reset process does not clean CNI configuration. To do so, you must remove /etc/cni/net.d
+
+The reset process does not reset or clean up iptables rules or IPVS tables.
+If you wish to reset iptables, you must do so manually by using the "iptables" command.
+
+If your cluster was setup to utilize IPVS, run ipvsadm --clear (or similar)
+to reset your system's IPVS tables.
+```
+
+
 
 # 总结
 

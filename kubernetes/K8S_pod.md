@@ -37,6 +37,9 @@ spec:
   hostNetwork: string
   nodeName: string
   restartPolicy: string
+  volumns:
+  - name: string
+    type: <object>
   containers: [array]
   - name: string
     image: string
@@ -48,6 +51,9 @@ spec:
       valueFrom: 
         fieldRef:
           fieldPath: string
+    volumnMounts:
+    - name: string
+      mountPath: string
 ```
 
 ​	
@@ -474,6 +480,112 @@ spec:
 
 ## Q9: 同一个Pod如何实现数据持久化？如何实现数据共享？跨节点的Pod如何实现数据共享呢？
 
+### 数据持久化之emptyDir实战案例
+
+```
+cat 09_nginx_volumns_empty_dir.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-volumns-empty
+spec:
+  hostNetwork: false
+#  nodeName: centos79k8s2
+  restartPolicy: OnFailure
+  volumes:   # 定义存储卷
+  - name: data01 # 指定存储卷的名称
+    # 指定存储卷类型为emptyDir类型
+    # 当Pod被删除时，数据会被随时删除，其有以下两个作用:
+    #    - 对容器的数据进行持久化，当删除容器时数据不会丢失;
+    #    - 可以实现同一个Pod内不同容器之间数据共享;
+    emptyDir: {}
+  containers:
+  - name: nginx-volumns-empty
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data01 # 指定存储卷的名称
+      mountPath: /usr/share/nginx/html #指定容器的挂载目录
+
+```
+
+### 数据持久化之hostPath实战案例
+
+```
+cat 10_nginx_volumns_host_path.yml 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-volumes-host-path
+spec:
+  hostNetwork: false
+#  nodeName: centos79k8s2
+  restartPolicy: OnFailure
+  volumes:
+  - name: data01
+    hostPath: # 指定类型为宿主机存储卷，该存储卷只要用于容器访问宿主机路径的需求。 
+      path: /data/nginx/html # 指定存储卷的路径
+  containers:
+  - name: nginx-volumes-host-path
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data01
+      mountPath: /usr/share/nginx/html
+
+当pod被删除时，宿主机指定存储卷的路径中的数据不会被删除
+```
+
+### 数据持久化之nfs实战案例
+
+```
+部署nfs server
+	(1)所有节点安装nfs相关软件包
+yum -y install nfs-utils
+
+	(2)k8s231节点设置共享目录
+mkdir -pv /oldboyedu/data/kubernetes
+cat &gt; /etc/exports &lt;&lt;'EOF'
+/data/kubernetes *(rw,no_root_squash)
+EOF
+
+	(3)配置nfs服务开机自启动
+systemctl enable --now nfs
+
+	(4)服务端检查NFS挂载信息
+exportfs
+
+	(5)客户端节点手动挂载测试
+mount -t nfs centos79habor:/data/kubernets /mnt/
+umount /mnt 
+
+
+数据持久化之nfs
+cat 11_nginx_volumns_nfs.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-volumes-nfs
+spec:
+  hostNetwork: false
+#  nodeName: centos79k8s2
+  restartPolicy: OnFailure
+  volumes:
+  - name: data01
+    nfs: # 指定存储卷类型是nfs
+      server: 192.168.76.141 # 指定nfs服务器的地址
+      path: /data/kubernets/nginx/html # 指定nfs对外暴露的挂载路径
+  containers:
+  - name: nginx-volumes-nfs
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data01
+      mountPath: /usr/share/nginx/html     
+```
+
 
 
 ```
@@ -487,155 +599,7 @@ Q6: Pod如何实现健康检查？
 
 
 
-数据持久化之emptyDir实战案例:
-[root@k8s231.oldboyedu.com pods]# cat 09-games-volumes-emptyDir.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-volume-emptydir-001
-spec:
-  # 定义存储卷
-  volumes:
-    # 指定存储卷的名称
-  - name: data01
-    # 指定存储卷类型为emptyDir类型
-    # 当Pod被删除时，数据会被随时删除，其有以下两个作用:
-    #    - 对容器的数据进行持久化，当删除容器时数据不会丢失;
-    #    - 可以实现同一个Pod内不同容器之间数据共享;
-    emptyDir: {} 
-  containers:
-  - name: web
-    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
-    # 指定挂载点
-    volumeMounts:
-      # 指定存储卷的名称
-    - name: data01
-      # 指定容器的挂载目录
-      mountPath: /usr/share/nginx/html
-  - name: linux
-    image: harbor.oldboyedu.com/linux/alpine:latest
-    stdin: true
-    volumeMounts:
-    - name: data01
-      mountPath: /oldboyedu-data
-[root@k8s231.oldboyedu.com pods]# 
 
-
-
-
-
-数据持久化之hostPath实战案例:
-[root@k8s231.oldboyedu.com pods]# cat 10-games-volumes-hostPath.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-volume-hostpath-001
-spec:
-  nodeName: k8s232.oldboyedu.com
-  volumes:
-  - name: data01
-    emptyDir: {} 
-  - name: data02
-    # 指定类型为宿主机存储卷，该存储卷只要用于容器访问宿主机路径的需求。 
-    hostPath:
-      # 指定存储卷的路径
-      path: /oldboyedu-data
-  containers:
-  - name: web
-    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
-    volumeMounts:
-    - name: data02
-      mountPath: /usr/share/nginx/html
-
----
-
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-volume-hostpath-002
-spec:
-  nodeName: k8s232.oldboyedu.com
-  volumes:
-  - name: linux85-data
-    hostPath:
-      path: /oldboyedu-data
-  containers:
-  - name: linux
-    image: harbor.oldboyedu.com/linux/alpine:latest
-    stdin: true
-    volumeMounts:
-    - name: linux85-data
-      mountPath: /oldboyedu-data-linux85
-[root@k8s231.oldboyedu.com pods]# 
-
-
-
-
-- 部署nfs server
-	(1)所有节点安装nfs相关软件包
-yum -y install nfs-utils
-
-	(2)k8s231节点设置共享目录
-mkdir -pv /oldboyedu/data/kubernetes
-cat &gt; /etc/exports &lt;&lt;'EOF'
-/oldboyedu/data/kubernetes *(rw,no_root_squash)
-EOF
-
-	(3)配置nfs服务开机自启动
-systemctl enable --now nfs
-
-	(4)服务端检查NFS挂载信息
-exportfs
-
-	(5)客户端节点手动挂载测试
-mount -t nfs k8s231.oldboyedu.com:/oldboyedu/data/kubernetes /mnt/
-umount /mnt 
-
-
-- 数据持久化之nfs实战案例
-[root@k8s231.oldboyedu.com pods]# cat 11-nginx-alpine-volumes-nfs.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-volume-nfs-web
-spec:
-  nodeName: k8s232.oldboyedu.com
-  volumes:
-  - name: data
-    # 指定存储卷类型是nfs
-    nfs:
-      # 指定nfs服务器的地址
-      server: 10.0.0.231
-      # 指定nfs对外暴露的挂载路径
-      path: /oldboyedu/data/kubernetes/volume-nfs
-  containers:
-  - name: web
-    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
-    volumeMounts:
-    - name: data
-      mountPath: /usr/share/nginx/html
-
----
-
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-volume-nfs-linux
-spec:
-  nodeName: k8s233.oldboyedu.com
-  volumes:
-  - name: data
-    nfs:
-      server: 10.0.0.231
-      path: /oldboyedu/data/kubernetes/volume-nfs
-  containers:
-  - name: linux
-    image: harbor.oldboyedu.com/linux/alpine:latest
-    stdin: true
-    volumeMounts:
-    - name: data
-      mountPath: /oldboyedu-data-linux85
-[root@k8s231.oldboyedu.com pods]# 
 
 
 
