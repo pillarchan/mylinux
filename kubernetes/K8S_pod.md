@@ -1,27 +1,58 @@
 # K8S资源清单
 
-## 	apiVersion:
+## 	apiVersion
 
 ​		指的是Api的版本。
 
-## 	kind:
+## 	kind
 
 ​		资源的类型。
 
-## 	metadata:
+## 	metadata
 
 ​		资源的元数据。比如资源的名称，标签，名称空间，注解等信息。
 
-## 	spec:
+## 	spec
 
 ​		用户期望资源的运行状态。
 
-## 	staus:
+## 	staus
 
 ​		资源实际的运行状态，由K8S集群内部维护。
+
+## 资源清单帮助文档查看
+
+```
+kubectl explain pod[.object][.object]...
+```
+
+## 资源清单样例
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: string
+spec:
+  hostNetwork: string
+  nodeName: string
+  restartPolicy: string
+  containers: [array]
+  - name: string
+    image: string
+    imagePullPolicy: string
+    env: [array]
+    - name: string
+      value: string
+    - name: string
+      valueFrom: 
+        fieldRef:
+          fieldPath: string
+```
+
 ​	
 
-## 实战案例:
+## 实战案例
 
 ### K8S的Pod资源运行单个容器案例
 
@@ -151,7 +182,7 @@ spec:
   nodeName: centos79k8s2
   containers:
   - name: nginx01
-    image: nginx:1.24-alpine
+    image: nginx:1.24.0-alpine
 ---
 apiVersion: v1
 kind: Pod
@@ -162,7 +193,7 @@ spec:
   nodeName: centos79k8s2
   containers:
   - name: nginx02
-    image: nginx:1.24-alpine
+    image: nginx:1.24.0-alpine
     command: 
     - "tail"
     args:
@@ -201,37 +232,57 @@ spec:
     image: harbor.harbor.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1
 ```
 
-## 故障常用命令：
+## 故障常用命令
 
-## 	(1)将Pod容器的文件拷贝到宿主机
+### 	(1)将Pod容器的文件拷贝到宿主机
 
 ```
- kubectl get pods
-NAME               READY   STATUS    RESTARTS   AGE
-linux85-game-008   1/1     Running   0          4m15s
-
  kubectl cp linux85-game-008:/start.sh /tmp/start.sh
 ```
 
-## 	(2)连接到Pod的容器
+### 	(2)连接到Pod的容器
 
 ```
- kubectl get pods
-NAME               READY   STATUS    RESTARTS   AGE
-linux85-game-008   1/1     Running   0          4m15s
-
  kubectl exec -it linux85-game-008 -- sh
 ```
 
-## 	(3)查看某个Pod的日志。
+### 	(3)查看某个Pod的日志。
 
 ```
-kubectl get pods
-NAME               READY   STATUS    RESTARTS   AGE
-linux85-game-013   1/1     Running   0          6m15s
-linux85-web        1/1     Running   0          119s
-
 kubectl logs -f linux85-web 
+```
+
+### (4)查看某个pod的详情
+
+```
+kubectl describe pod nginx-web
+```
+
+## POD管理常用命令
+
+### 创建
+
+```
+kubectl create
+kubectl apply
+```
+
+### 删除
+
+```
+kubectl delete
+```
+
+### 查看
+
+```
+kubectl get
+```
+
+### 修改
+
+```
+kubectl apply
 ```
 
 # 面试题
@@ -331,20 +382,337 @@ spec:
 ## Q7: 容器的重启策略有哪些？请分别说?
 
 ```
-cat 06-nginx-restartPolicy.yaml 
+#restartPolicy is either OnFailure or Always:
+#Always: Automatically restarts the container after any termination.  容器退出就重启
+#OnFailure: Only restarts the container if it exits with an error (non-zero exit status). 容器因错误退出就重启
+#Never: Does not automatically restart the terminated container. 容器退出不重启
+Pod的容器的三种重启策略:（注意， K8S所谓的容器指的是重新创建容器。） 
+
 apiVersion: v1
 kind: Pod
 metadata:
-  name: linux85-web-restart-policy-001
+  name: nginx-web-restart-policy-always
 spec:
-  nodeName: k8s233.myharbor.com
+  hostNetwork: false
+  nodeName: centos7k8s2
+  restartPolicy: Always
   containers:
-  - name: nginx
-    image: harbor.myharbor.com/web/linux85-web:v0.1
-#restartPolicy is either OnFailure or Always:
-#Always: Automatically restarts the container after any termination.
-#OnFailure: Only restarts the container if it exits with an error (non-zero exit status).
-#Never: Does not automatically restart the terminated container.
-    # restartPolicy: Always
-    restartPolicy: OnFailure
+  - name: nginx-web
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    command:
+    - "sleep"
+    - "10"
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-web-restart-policy-onfailure
+spec:
+  hostNetwork: false
+  nodeName: centos7k8s2
+  restartPolicy: OnFailure
+  containers:
+  - name: nginx-web
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    command:
+    - "sleep"
+    - "10"
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-web-restart-policy-never
+spec:
+  hostNetwork: false
+  nodeName: centos7k8s2
+  restartPolicy: Never
+  containers:
+  - name: nginx-web
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    command:
+    - "sleep"
+    - "10"  
+```
+
+## Q8: 如何向Pod的指定容器传递环境变量？有哪些方式，请简要说明？
+
+```
+向容器传递环境变量的两种方式:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-web
+spec:
+  hostNetwork: false
+  nodeName: centos7k8s3
+  restartPolicy: OnFailure
+  containers:
+  - name: nginx-web
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+# env字段使用    
+    env:
+    #自定义变量
+    - name: MYNAME #变量名
+      value: "yoyo" #值
+    - name: HANAME
+      value: "haha"
+    - name:  HAPOD_NAME
+      valueFrom: #变量引用
+        fieldRef: #字段引用
+          fieldPath: "metadata.name" #引用的路径
+    - name:  HANODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: "spec.nodeName"
+```
+
+## Q9: 同一个Pod如何实现数据持久化？如何实现数据共享？跨节点的Pod如何实现数据共享呢？
+
+
+
+```
+
+
+Q4: 多个Pod如何实现使用同一个配置文件?
+
+Q5: 如何下载habor的私有项目镜像？
+
+Q6: Pod如何实现健康检查？
+
+
+
+数据持久化之emptyDir实战案例:
+[root@k8s231.oldboyedu.com pods]# cat 09-games-volumes-emptyDir.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-volume-emptydir-001
+spec:
+  # 定义存储卷
+  volumes:
+    # 指定存储卷的名称
+  - name: data01
+    # 指定存储卷类型为emptyDir类型
+    # 当Pod被删除时，数据会被随时删除，其有以下两个作用:
+    #    - 对容器的数据进行持久化，当删除容器时数据不会丢失;
+    #    - 可以实现同一个Pod内不同容器之间数据共享;
+    emptyDir: {} 
+  containers:
+  - name: web
+    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
+    # 指定挂载点
+    volumeMounts:
+      # 指定存储卷的名称
+    - name: data01
+      # 指定容器的挂载目录
+      mountPath: /usr/share/nginx/html
+  - name: linux
+    image: harbor.oldboyedu.com/linux/alpine:latest
+    stdin: true
+    volumeMounts:
+    - name: data01
+      mountPath: /oldboyedu-data
+[root@k8s231.oldboyedu.com pods]# 
+
+
+
+
+
+数据持久化之hostPath实战案例:
+[root@k8s231.oldboyedu.com pods]# cat 10-games-volumes-hostPath.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-volume-hostpath-001
+spec:
+  nodeName: k8s232.oldboyedu.com
+  volumes:
+  - name: data01
+    emptyDir: {} 
+  - name: data02
+    # 指定类型为宿主机存储卷，该存储卷只要用于容器访问宿主机路径的需求。 
+    hostPath:
+      # 指定存储卷的路径
+      path: /oldboyedu-data
+  containers:
+  - name: web
+    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
+    volumeMounts:
+    - name: data02
+      mountPath: /usr/share/nginx/html
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-volume-hostpath-002
+spec:
+  nodeName: k8s232.oldboyedu.com
+  volumes:
+  - name: linux85-data
+    hostPath:
+      path: /oldboyedu-data
+  containers:
+  - name: linux
+    image: harbor.oldboyedu.com/linux/alpine:latest
+    stdin: true
+    volumeMounts:
+    - name: linux85-data
+      mountPath: /oldboyedu-data-linux85
+[root@k8s231.oldboyedu.com pods]# 
+
+
+
+
+- 部署nfs server
+	(1)所有节点安装nfs相关软件包
+yum -y install nfs-utils
+
+	(2)k8s231节点设置共享目录
+mkdir -pv /oldboyedu/data/kubernetes
+cat &gt; /etc/exports &lt;&lt;'EOF'
+/oldboyedu/data/kubernetes *(rw,no_root_squash)
+EOF
+
+	(3)配置nfs服务开机自启动
+systemctl enable --now nfs
+
+	(4)服务端检查NFS挂载信息
+exportfs
+
+	(5)客户端节点手动挂载测试
+mount -t nfs k8s231.oldboyedu.com:/oldboyedu/data/kubernetes /mnt/
+umount /mnt 
+
+
+- 数据持久化之nfs实战案例
+[root@k8s231.oldboyedu.com pods]# cat 11-nginx-alpine-volumes-nfs.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-volume-nfs-web
+spec:
+  nodeName: k8s232.oldboyedu.com
+  volumes:
+  - name: data
+    # 指定存储卷类型是nfs
+    nfs:
+      # 指定nfs服务器的地址
+      server: 10.0.0.231
+      # 指定nfs对外暴露的挂载路径
+      path: /oldboyedu/data/kubernetes/volume-nfs
+  containers:
+  - name: web
+    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
+    volumeMounts:
+    - name: data
+      mountPath: /usr/share/nginx/html
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-volume-nfs-linux
+spec:
+  nodeName: k8s233.oldboyedu.com
+  volumes:
+  - name: data
+    nfs:
+      server: 10.0.0.231
+      path: /oldboyedu/data/kubernetes/volume-nfs
+  containers:
+  - name: linux
+    image: harbor.oldboyedu.com/linux/alpine:latest
+    stdin: true
+    volumeMounts:
+    - name: data
+      mountPath: /oldboyedu-data-linux85
+[root@k8s231.oldboyedu.com pods]# 
+
+
+
+容器的资源限制实战案例:
+[root@k8s231.oldboyedu.com pods]# cat 12-stress.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-stress-003
+spec:
+  nodeName: k8s233.oldboyedu.com
+  containers:
+  - name: stress
+    image: jasonyin2020/oldboyedu-linux-tools:v0.1
+    args:
+    - "tail"
+    - "-f"
+    - "/etc/hosts"
+    # 对容器进行资源限制
+    resources:
+      # 期望目标节点有的资源大小，若不满足，则无法调度，Pod处于Pedding状态。
+      # 若满足调度需求，调度到节点后也不会立刻使用requests字段的定义的资源。
+      requests:
+        # 要求目标节点有10G的可用内存.
+        # memory: 10G
+        memory: 256M
+        # 指定CPU的核心数，固定单位: 1core=1000m
+        cpu: 500m
+      # 配置资源的使用上限
+      limits:
+        memory: 500M
+        cpu: 1.5
+[root@k8s231.oldboyedu.com pods]# 
+
+
+
+
+
+configMap概述:
+
+configmap数据会存储在etcd数据库，其应用场景主要在于应用程序配置。
+
+configMap支持的数据类型:
+	(1)键值对;
+	(2)多行数据;
+	
+Pod使用configmap资源有两种常见的方式:
+	(1)变量注入;
+	(2)数据卷挂载
+	
+推荐阅读:
+	https://kubernetes.io/docs/concepts/storage/volumes/#configmap	
+	https://kubernetes.io/docs/concepts/configuration/configmap/
+
+
+
+定义configMap(简称"cm")资源:
+[root@k8s231.oldboyedu.com configMap]# cat 01-config-demo.yaml 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linux85-config
+# 定义cm资源的数据
+data:
+   # 定义单行数据
+   school: oldboyedu
+   class: linux85
+
+   # 定义多行数据
+   my.cfg: |
+     datadir: "/var/lib/mysql"
+     basedir: "/usr/share/mysql"
+     socket: "/tmp/mysql.sock"
+
+   student.info: |
+     pengbing: "大长腿，熬夜，六味地黄丸"
+     wumingkun: "彭斌,Linux"
+     qinhongbin: "欧美,日韩,国产"
+     liwenxua
 ```

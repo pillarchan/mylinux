@@ -117,7 +117,11 @@ addn-hosts=/etc/dnsmasq.hosts
 conf-dir=/etc/dnsmasq.d,.rpmnew,.rpmsave,.rpmorig
 
 
-创建
+创建目录
+/etc/resolv.dnsmasq.conf
+/etc/dnsmasq.hosts
+
+开启服务
 ```
 
 
