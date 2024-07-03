@@ -634,49 +634,339 @@ spec:
         cpu: 1.5
 [root@k8s231.oldboyedu.com pods]# 
 
+   
+     
+     
 
 
 
 
-configMap概述:
+pod基于存储卷的方式引入cm资源:
+[root@k8s231.oldboyedu.com configMap]# cat 03-cm-volumes.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-volume-cm-008
+spec:
+  nodeName: k8s232.oldboyedu.com
+  volumes:
+  - name: data
+    # 指定存储卷的类型为configMap
+    configMap:
+      # 指定configMap的名称
+      name: linux85-config
+      # 引用configMap的key
+      items:
+        # 指定key的名称
+      - key: student.info
+        # 可以暂时理解为指定文件的名称
+        path: oldboyedu-linux85-student.info
+  containers:
+  - name: web
+    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
+    command: ["tail","-f","/etc/hosts"]
+    volumeMounts:
+    - name: data
+      mountPath: /etc/nginx/nginx.conf
+      # 当subPath的值和configMap.items.path相同时，mountPath的挂载点是一个文件而非目录!
+      subPath: oldboyedu-linux85-student.info
+[root@k8s231.oldboyedu.com configMap]# 
+[root@k8s231.oldboyedu.com configMap]# kubectl apply -f 03-cm-volumes.yaml 
 
-configmap数据会存储在etcd数据库，其应用场景主要在于应用程序配置。
+ 
 
-configMap支持的数据类型:
-	(1)键值对;
-	(2)多行数据;
+课堂练习:
+	请将"harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1"的nginx的配置文件使用cm资源创建并挂载！
 	
-Pod使用configmap资源有两种常见的方式:
-	(1)变量注入;
-	(2)数据卷挂载
 	
-推荐阅读:
-	https://kubernetes.io/docs/concepts/storage/volumes/#configmap	
-	https://kubernetes.io/docs/concepts/configuration/configmap/
+课堂练习及prots的端口映射案例
+[root@k8s231.oldboyedu.com configMap]# cat 04-cm-ketanglianxi.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-games-ketanglianxi-002
+spec:
+  # hostNetwork: true
+  nodeName: k8s232.oldboyedu.com
+  volumes:
+  - name: data
+    configMap:
+      name: oldboyedu-linux85-games
+      items:
+      - key: nginx.conf
+        path: nginx.conf
+  containers:
+  - name: game
+    image: harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1
+    volumeMounts:
+    - name: data
+      mountPath: /usr/local/nginx/conf/nginx.conf
+      subPath: nginx.conf
+    # 指定容器的端口映射相关字段
+    ports:
+      # 指定容器的端口号
+    - containerPort: 80
+      # 绑定主机的IP地址
+      hostIP: "0.0.0.0"
+      # 指定绑定的端口号
+      hostPort: 88
+      # 给该端口起一个别名，要求唯一
+      name: game
+      # 指定容器的协议
+      protocol: TCP
 
+---
 
-
-定义configMap(简称"cm")资源:
-[root@k8s231.oldboyedu.com configMap]# cat 01-config-demo.yaml 
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: linux85-config
-# 定义cm资源的数据
+  name: oldboyedu-linux85-games
 data:
-   # 定义单行数据
-   school: oldboyedu
-   class: linux85
+  nginx.conf: |
+      worker_processes  1;
+      events {
+          worker_connections  1024;
+      }
+      http {
+          include       mime.types;
+          default_type  application/octet-stream;
+          sendfile        on;
+          keepalive_timeout  65;
+          server {
+              listen       80;
+              root        /usr/local/nginx/html/bird/;
+              server_name   game01.oldboyedu.com;
+          }
+          server {
+              listen       80;
+              root        /usr/local/nginx/html/pinshu/;
+              server_name   game03.oldboyedu.com;
+          }
+          server {
+              listen       80;
+              root        /usr/local/nginx/html/tanke/;
+              server_name   game05.oldboyedu.com;
+          }
+          server {
+              listen       80;
+              root        /usr/local/nginx/html/pingtai/;
+              server_name   game02.oldboyedu.com;
+          }
+          server {
+              listen       80;
+              root        /usr/local/nginx/html/chengbao/;
+              server_name   game04.oldboyedu.com;
+          }
+      }
+      
+[root@k8s231.oldboyedu.com configMap]#
 
-   # 定义多行数据
-   my.cfg: |
-     datadir: "/var/lib/mysql"
-     basedir: "/usr/share/mysql"
-     socket: "/tmp/mysql.sock"
 
-   student.info: |
-     pengbing: "大长腿，熬夜，六味地黄丸"
-     wumingkun: "彭斌,Linux"
-     qinhongbin: "欧美,日韩,国产"
-     liwenxua
+
+secret资源的增删改查实战:
+[root@k8s231.oldboyedu.com secret]# kubectl get secrets  es-https 
+NAME       TYPE     DATA   AGE
+es-https   Opaque   2      44s
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# kubectl apply -f 01-secret-demo.yaml 
+secret/es-https configured
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# kubectl get secrets  es-https 
+NAME       TYPE     DATA   AGE
+es-https   Opaque   3      49s
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# cat 01-secret-demo.yaml 
+apiVersion: v1
+kind: Secret
+metadata:
+  name: es-https
+data:
+  username: ZWxhc3RpYwo=
+  password: b2xkYm95ZWR1Cg==
+  hostip: MTAuMC4wLjI1MAo=
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# kubectl delete -f 01-secret-demo.yaml 
+secret "es-https" deleted
+[root@k8s231.oldboyedu.com secret]# 
+
+
+
+Pod基于env引用secret资源案例:
+[root@k8s231.oldboyedu.com secret]# cat 02-secret-env.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-game-secret-001
+spec:
+  nodeName: k8s232.oldboyedu.com
+  containers:
+  - name: game
+    image: harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.7
+    env:
+    - name: OLDBOYEDU_LINUX85_USERNAME
+      valueFrom:
+        # 指定引用的secret资源
+        secretKeyRef:
+          # 指定secret的名称
+          name: es-https
+          # 指定secret的KEY
+          key: username
+    - name: OLDBOYEDU_LINUX85_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: es-https
+          key: password
+    - name: OLDBOYEDU_LINUX85_HOSTIP
+      valueFrom:
+        secretKeyRef:
+          name: es-https
+          key: hostip
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# kubectl apply -f 02-secret-env.yaml 
+pod/linux85-game-secret-001 created
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# kubectl get pods
+NAME                                 READY   STATUS                       RESTARTS         AGE
+linux85-game-secret-001              1/1     Running                      0                2s
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# kubectl exec linux85-game-secret-001 -- env
+
+
+Pod基于存储卷引用secret资源案例
+[root@k8s231.oldboyedu.com secret]# cat 03-secret-volumes.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-volume-secret-003
+spec:
+  nodeName: k8s232.oldboyedu.com
+  volumes:
+  - name: data
+    # 指定存储卷的类型为secret
+    secret:
+      # 指定secret的名称
+      secretName: es-https
+      items:
+      - key: username
+        path: username.info
+      - key: password
+        path: password.info
+      - key: hostip
+        path: hostip.info
+  containers:
+  - name: web
+    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
+    command: ["tail","-f","/etc/hosts"]
+    volumeMounts:
+    - name: data
+      # mountPath: /oldboyedu-data
+      mountPath: /etc/nginx/nginx.conf
+      subPath: username.info
+    - name: data
+      mountPath: /etc/nginx/password.conf
+      subPath: password.info
+    - name: data
+      mountPath: /etc/nginx/hostip.conf
+      subPath: hostip.info
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# kubectl apply -f 03-secret-volumes.yaml 
+pod/linux85-volume-secret-003 configured
+[root@k8s231.oldboyedu.com secret]# 
+
+
+
+
+
+harbor用户信息:
+	username: linux85
+	password: Linux85@2023
+	
+
+
+基于命令行的方式创建harbor认证信息:
+kubectl create secret docker-registry  linux85 --docker-username=linux85 --docker-password=Linux85@2023 --docker-email=linux85@oldboyedu.com --docker-server=harbor.oldboyedu.com
+
+
+
+获取habor认证信息的资源清单
+kubectl get secrets linux85 -o yaml
+
+
+
+编写资源清单拉取私有项目镜像案例：（温馨提示，不要直接复制，小心你的环境跟我不一样哟~）
+[root@k8s231.oldboyedu.com secret]# cat 04-imagePullSecret.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: linux85-imagepullsecret-002
+spec:
+  nodeName: k8s232.oldboyedu.com
+  # 指定拉取镜像的secret验证信息
+  imagePullSecrets:
+  - name: linux85
+  containers:
+  - name: linux
+    image: harbor.oldboyedu.com/linux85/jasonyin2020/oldboyedu-linux-tools:v0.1
+    stdin: true
+
+---
+
+apiVersion: v1
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJoYXJib3Iub2xkYm95ZWR1LmNvbSI6eyJ1c2VybmFtZSI6ImxpbnV4ODUiLCJwYXNzd29yZCI6IkxpbnV4ODVAMjAyMyIsImVtYWlsIjoibGludXg4NUBvbGRib3llZHUuY29tIiwiYXV0aCI6ImJHbHVkWGc0TlRwTWFXNTFlRGcxUURJd01qTT0ifX19
+kind: Secret
+metadata:
+  name: linux85
+type: kubernetes.io/dockerconfigjson
+[root@k8s231.oldboyedu.com secret]# 
+[root@k8s231.oldboyedu.com secret]# 
+
+
+
+周末作业:
+	(1)完成课堂的所有练习并完善思维导图;
+	(2)将"harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1"镜像拆分成5个游戏镜像，要求如下:
+		- 创建habor私有仓库:
+			仓库名称: homework
+			用户名: linux85-homework
+			密码: Linux85@2023
+	
+		- 镜像名称:
+			harbor.oldboyedu.com/homework/oldboyedu-games:bird
+			harbor.oldboyedu.com/homework/oldboyedu-games:pinshu
+			harbor.oldboyedu.com/homework/oldboyedu-games:tanke
+			harbor.oldboyedu.com/homework/oldboyedu-games:pingtai
+			harbor.oldboyedu.com/homework/oldboyedu-games:chengbao
+
+		- 将镜像批量推送到harbor仓库，如果可以的话请使用docker-compose实现批量编译并批量推送。
+		
+		- 将上述5个镜像使用同一个文件实现5个Pod的部署，要求对每个容器的内存资源限制为200M，CPU为0.5核心。
+		
+		
+		作业提示: 本案例会使用到Pod,secret，configMap等资源。
+		
+	
+		
+扩展作业:
+	(1)各组用以下方式部署K8S集群;
+		kind： 
+			一组。
+		minikube: 
+			二组。
+		KubeSphere: 
+			三组。
+		rancher: 
+			四组。
+		kuboard: 
+			五组。
+		kubeasz: 
+			六组。
+			
+	(2)将上面的基础作业使用各组自己搭建的K8S环境在实现一次。
+	
+	(3)使用kubeadm部署K8S 1.27版本。在将上面的基础作业使用各组自己搭建的K8S环境在实现一次。
+     
 ```
