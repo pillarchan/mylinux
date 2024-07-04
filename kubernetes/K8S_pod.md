@@ -586,295 +586,104 @@ spec:
       mountPath: /usr/share/nginx/html     
 ```
 
+## 容器的资源限制
 
+```
+cat 12_nginx_resource.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-resource-limits
+spec:
+  hostNetwork: false
+  nodeName: centos79k8s2
+  restartPolicy: OnFailure
+  volumes:
+  - name: data01
+    nfs:
+      server: 192.168.76.141
+      path: /data/kubernets/nginx/html
+  containers:
+  - name: nginx-volumes-nfs
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data01
+      mountPath: /usr/share/nginx/html
+    resources:     # 对容器进行资源限制
+      # 期望目标节点有的资源大小，若不满足，则无法调度，Pod处于Pedding状态。
+      # 若满足调度需求，调度到节点后也不会立刻使用requests字段的定义的资源。
+      requests:
+        cpu: 0.5      # 指定CPU的核心数，固定单位: 1core=1000m
+        memory: 256M  # 要求目标节点有256M的可用内存.
+      limits:
+        cpu: 1        # 指定CPU的核心数，固定单位: 1core=1000m
+        memory: 1G    # 指定目标节点有1G的上限内存.    
+```
 
+## prots的端口映射案例
+
+```
+cat 14_nginx_nfs_cm_ports.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-nfs-cm-02
+spec:
+  hostNetwork: false
+#  nodeName: centos79k8s2
+  restartPolicy: OnFailure
+  volumes:
+  - name: data01
+    nfs:
+      server: 192.168.76.141
+      path: /data/kubernets/nginx
+  - name: conf01
+    configMap:
+      name: nginx-conf-01
+      items:
+      - key: nginx.conf
+        path: nginx.conf
+  containers:
+  - name: nginx-nfs-cm-01
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data01
+      mountPath: /data/websites
+    - name: conf01
+      mountPath: /etc/nginx/nginx.conf
+      subPath: nginx.conf
+    ports: #端口映射名对象
+    - name: default  #端口映射名
+      containerPort: 80 #容器中的端口
+      hostIP: "0.0.0.0" #端口映射的IP
+      hostPort: 58888   #端口映射到外部的端口
+      protocol: TCP     #端口映射的IP协议，默认为TCP
+    - name: html1
+      containerPort: 8001
+      hostIP: "0.0.0.0"
+      hostPort: 58889
+      protocol: TCP
+      
+ 当然端口映射后，使用ss -tnl是无法查看到端口的，因为它是通过iptables nat表进行的转发，可以通过 iptables -t nat -vnL过滤进行查看是否有转发规则，然后通过对应的IP和端口就可以在外部访问了 
+      
 ```
 
 
-Q4: 多个Pod如何实现使用同一个配置文件?
 
+
+
+
+
+```
 Q5: 如何下载habor的私有项目镜像？
 
 Q6: Pod如何实现健康检查？
 
 
 
-
-
-
-
-容器的资源限制实战案例:
-[root@k8s231.oldboyedu.com pods]# cat 12-stress.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-stress-003
-spec:
-  nodeName: k8s233.oldboyedu.com
-  containers:
-  - name: stress
-    image: jasonyin2020/oldboyedu-linux-tools:v0.1
-    args:
-    - "tail"
-    - "-f"
-    - "/etc/hosts"
-    # 对容器进行资源限制
-    resources:
-      # 期望目标节点有的资源大小，若不满足，则无法调度，Pod处于Pedding状态。
-      # 若满足调度需求，调度到节点后也不会立刻使用requests字段的定义的资源。
-      requests:
-        # 要求目标节点有10G的可用内存.
-        # memory: 10G
-        memory: 256M
-        # 指定CPU的核心数，固定单位: 1core=1000m
-        cpu: 500m
-      # 配置资源的使用上限
-      limits:
-        memory: 500M
-        cpu: 1.5
-[root@k8s231.oldboyedu.com pods]# 
-
-   
-     
-     
-
-
-
-
-pod基于存储卷的方式引入cm资源:
-[root@k8s231.oldboyedu.com configMap]# cat 03-cm-volumes.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-volume-cm-008
-spec:
-  nodeName: k8s232.oldboyedu.com
-  volumes:
-  - name: data
-    # 指定存储卷的类型为configMap
-    configMap:
-      # 指定configMap的名称
-      name: linux85-config
-      # 引用configMap的key
-      items:
-        # 指定key的名称
-      - key: student.info
-        # 可以暂时理解为指定文件的名称
-        path: oldboyedu-linux85-student.info
-  containers:
-  - name: web
-    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
-    command: ["tail","-f","/etc/hosts"]
-    volumeMounts:
-    - name: data
-      mountPath: /etc/nginx/nginx.conf
-      # 当subPath的值和configMap.items.path相同时，mountPath的挂载点是一个文件而非目录!
-      subPath: oldboyedu-linux85-student.info
-[root@k8s231.oldboyedu.com configMap]# 
-[root@k8s231.oldboyedu.com configMap]# kubectl apply -f 03-cm-volumes.yaml 
-
  
-
-课堂练习:
-	请将"harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1"的nginx的配置文件使用cm资源创建并挂载！
-	
-	
-课堂练习及prots的端口映射案例
-[root@k8s231.oldboyedu.com configMap]# cat 04-cm-ketanglianxi.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-games-ketanglianxi-002
-spec:
-  # hostNetwork: true
-  nodeName: k8s232.oldboyedu.com
-  volumes:
-  - name: data
-    configMap:
-      name: oldboyedu-linux85-games
-      items:
-      - key: nginx.conf
-        path: nginx.conf
-  containers:
-  - name: game
-    image: harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1
-    volumeMounts:
-    - name: data
-      mountPath: /usr/local/nginx/conf/nginx.conf
-      subPath: nginx.conf
-    # 指定容器的端口映射相关字段
-    ports:
-      # 指定容器的端口号
-    - containerPort: 80
-      # 绑定主机的IP地址
-      hostIP: "0.0.0.0"
-      # 指定绑定的端口号
-      hostPort: 88
-      # 给该端口起一个别名，要求唯一
-      name: game
-      # 指定容器的协议
-      protocol: TCP
-
----
-
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: oldboyedu-linux85-games
-data:
-  nginx.conf: |
-      worker_processes  1;
-      events {
-          worker_connections  1024;
-      }
-      http {
-          include       mime.types;
-          default_type  application/octet-stream;
-          sendfile        on;
-          keepalive_timeout  65;
-          server {
-              listen       80;
-              root        /usr/local/nginx/html/bird/;
-              server_name   game01.oldboyedu.com;
-          }
-          server {
-              listen       80;
-              root        /usr/local/nginx/html/pinshu/;
-              server_name   game03.oldboyedu.com;
-          }
-          server {
-              listen       80;
-              root        /usr/local/nginx/html/tanke/;
-              server_name   game05.oldboyedu.com;
-          }
-          server {
-              listen       80;
-              root        /usr/local/nginx/html/pingtai/;
-              server_name   game02.oldboyedu.com;
-          }
-          server {
-              listen       80;
-              root        /usr/local/nginx/html/chengbao/;
-              server_name   game04.oldboyedu.com;
-          }
-      }
-      
-[root@k8s231.oldboyedu.com configMap]#
-
-
-
-secret资源的增删改查实战:
-[root@k8s231.oldboyedu.com secret]# kubectl get secrets  es-https 
-NAME       TYPE     DATA   AGE
-es-https   Opaque   2      44s
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl apply -f 01-secret-demo.yaml 
-secret/es-https configured
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl get secrets  es-https 
-NAME       TYPE     DATA   AGE
-es-https   Opaque   3      49s
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# cat 01-secret-demo.yaml 
-apiVersion: v1
-kind: Secret
-metadata:
-  name: es-https
-data:
-  username: ZWxhc3RpYwo=
-  password: b2xkYm95ZWR1Cg==
-  hostip: MTAuMC4wLjI1MAo=
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl delete -f 01-secret-demo.yaml 
-secret "es-https" deleted
-[root@k8s231.oldboyedu.com secret]# 
-
-
-
-Pod基于env引用secret资源案例:
-[root@k8s231.oldboyedu.com secret]# cat 02-secret-env.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-game-secret-001
-spec:
-  nodeName: k8s232.oldboyedu.com
-  containers:
-  - name: game
-    image: harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.7
-    env:
-    - name: OLDBOYEDU_LINUX85_USERNAME
-      valueFrom:
-        # 指定引用的secret资源
-        secretKeyRef:
-          # 指定secret的名称
-          name: es-https
-          # 指定secret的KEY
-          key: username
-    - name: OLDBOYEDU_LINUX85_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: es-https
-          key: password
-    - name: OLDBOYEDU_LINUX85_HOSTIP
-      valueFrom:
-        secretKeyRef:
-          name: es-https
-          key: hostip
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl apply -f 02-secret-env.yaml 
-pod/linux85-game-secret-001 created
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl get pods
-NAME                                 READY   STATUS                       RESTARTS         AGE
-linux85-game-secret-001              1/1     Running                      0                2s
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl exec linux85-game-secret-001 -- env
-
-
-Pod基于存储卷引用secret资源案例
-[root@k8s231.oldboyedu.com secret]# cat 03-secret-volumes.yaml 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: linux85-volume-secret-003
-spec:
-  nodeName: k8s232.oldboyedu.com
-  volumes:
-  - name: data
-    # 指定存储卷的类型为secret
-    secret:
-      # 指定secret的名称
-      secretName: es-https
-      items:
-      - key: username
-        path: username.info
-      - key: password
-        path: password.info
-      - key: hostip
-        path: hostip.info
-  containers:
-  - name: web
-    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
-    command: ["tail","-f","/etc/hosts"]
-    volumeMounts:
-    - name: data
-      # mountPath: /oldboyedu-data
-      mountPath: /etc/nginx/nginx.conf
-      subPath: username.info
-    - name: data
-      mountPath: /etc/nginx/password.conf
-      subPath: password.info
-    - name: data
-      mountPath: /etc/nginx/hostip.conf
-      subPath: hostip.info
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl apply -f 03-secret-volumes.yaml 
-pod/linux85-volume-secret-003 configured
-[root@k8s231.oldboyedu.com secret]# 
 
 
 

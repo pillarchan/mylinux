@@ -1,3 +1,5 @@
+# 多个Pod如何实现使用同一个配置文件?
+
 # configMap概述
 
 configmap数据会存储在etcd数据库，其应用场景主要在于应用程序配置。
@@ -98,5 +100,40 @@ spec:
       mountPath: /data/nginx
     - name: conf
       mountPath: /etc/nginx/conf.d #挂载点必须是空目录
+```
+
+# pod基于存储卷挂载cm资源，多行资源挂载为文件
+
+```
+cat 13_nginx_hostpath_cm.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-nfs-cm-01
+spec:
+  hostNetwork: false
+  nodeName: centos79k8s2
+  restartPolicy: OnFailure
+  volumes:
+  - name: data01
+    hostPath:
+      path: /data/websites
+  - name: conf01
+    configMap:
+      name: nginx-conf-01  # 绑定cm挂载名
+      items:               # 指定cm挂载的具体对象
+      - key: nginx.conf    # 指定cm挂载的具体对象名
+        path: nginx-conf-01-nginx.conf   # 对外使用的文件名称
+  containers:
+  - name: nginx-nfs-cm-01
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data01
+      mountPath: /data/websites
+    - name: conf01
+      mountPath: /etc/nginx/nginx.conf
+      # 当subPath的值和configMap.items.path相同时，mountPath的挂载点是一个文件而非目录!
+      subPath: nginx-conf-01-nginx.conf 
 ```
 
