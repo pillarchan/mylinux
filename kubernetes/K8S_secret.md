@@ -1,116 +1,121 @@
+# secret资源
+
+##  如何下载habor的私有项目镜像？
+
+## secret资源的增删改查实战
+
 ```
-secret资源的增删改查实战:
-[root@k8s231.oldboyedu.com secret]# kubectl get secrets  es-https 
-NAME       TYPE     DATA   AGE
-es-https   Opaque   2      44s
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl apply -f 01-secret-demo.yaml 
-secret/es-https configured
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl get secrets  es-https 
-NAME       TYPE     DATA   AGE
-es-https   Opaque   3      49s
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# cat 01-secret-demo.yaml 
+cat 01_nginx_secret.yml
 apiVersion: v1
 kind: Secret
-metadata:
-  name: es-https
+metadata: 
+  name: nginx-secret-01
 data:
-  username: ZWxhc3RpYwo=
-  password: b2xkYm95ZWR1Cg==
-  hostip: MTAuMC4wLjI1MAo=
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl delete -f 01-secret-demo.yaml 
-secret "es-https" deleted
-[root@k8s231.oldboyedu.com secret]# 
+  username: ZWxhc3RpY3VzZXIK
+  password: MTIzNDU2Cg==
+  hostIP: MTkyLjE2OC43Ni4xNDEK
+```
 
+## Pod基于env引用secret资源案例
 
-
-Pod基于env引用secret资源案例:
-[root@k8s231.oldboyedu.com secret]# cat 02-secret-env.yaml 
+```
+cat 11_pod_secret_env.yml 
 apiVersion: v1
 kind: Pod
-metadata:
-  name: linux85-game-secret-001
+metadata: 
+  name: nginx-secret-env-01
 spec:
-  nodeName: k8s232.oldboyedu.com
+  hostNetwork: false
+  nodeName: centos7k8s2
+  restartPolicy: OnFailure
   containers:
-  - name: game
-    image: harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.7
+  - name: nginx-secret-env
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
     env:
-    - name: OLDBOYEDU_LINUX85_USERNAME
-      valueFrom:
-        # 指定引用的secret资源
+    - name: ELASTICUSER
+      valueFrom: 
         secretKeyRef:
-          # 指定secret的名称
-          name: es-https
-          # 指定secret的KEY
+          name: nginx-secret-01
           key: username
-    - name: OLDBOYEDU_LINUX85_PASSWORD
-      valueFrom:
+    - name: PASSWORD
+      valueFrom: 
+        secretKeyRef:  # 指定引用的secret资源
+          name: nginx-secret-01  # 指定secret的名称
+          key: password # 指定secret的key
+    - name: HOSTIP
+      valueFrom: 
         secretKeyRef:
-          name: es-https
-          key: password
-    - name: OLDBOYEDU_LINUX85_HOSTIP
-      valueFrom:
-        secretKeyRef:
-          name: es-https
-          key: hostip
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl apply -f 02-secret-env.yaml 
-pod/linux85-game-secret-001 created
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl get pods
-NAME                                 READY   STATUS                       RESTARTS         AGE
-linux85-game-secret-001              1/1     Running                      0                2s
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl exec linux85-game-secret-001 -- env
+          name: nginx-secret-01
+          key: hostIP
+```
 
+## Pod基于存储卷引用secret资源案例
 
-Pod基于存储卷引用secret资源案例
-[root@k8s231.oldboyedu.com secret]# cat 03-secret-volumes.yaml 
+```
 apiVersion: v1
 kind: Pod
-metadata:
-  name: linux85-volume-secret-003
+metadata: 
+  name: nginx-secret-volumes-01
 spec:
-  nodeName: k8s232.oldboyedu.com
+  hostNetwork: false
+  nodeName: centos7k8s2
+  restartPolicy: OnFailure
   volumes:
   - name: data
-    # 指定存储卷的类型为secret
     secret:
-      # 指定secret的名称
-      secretName: es-https
+      secretName: nginx-secret-01
       items:
       - key: username
         path: username.info
       - key: password
         path: password.info
-      - key: hostip
-        path: hostip.info
+      - key: hostIP
+        path: hostIP.info
   containers:
-  - name: web
-    image: harbor.oldboyedu.com/web/nginx:1.20.1-alpine
+  - name: nginx-secret-volume
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
     command: ["tail","-f","/etc/hosts"]
     volumeMounts:
     - name: data
-      # mountPath: /oldboyedu-data
-      mountPath: /etc/nginx/nginx.conf
+      mountPath: /data/secret/username.conf
       subPath: username.info
     - name: data
-      mountPath: /etc/nginx/password.conf
+      mountPath: /data/secret/password.conf
       subPath: password.info
     - name: data
-      mountPath: /etc/nginx/hostip.conf
-      subPath: hostip.info
-[root@k8s231.oldboyedu.com secret]# 
-[root@k8s231.oldboyedu.com secret]# kubectl apply -f 03-secret-volumes.yaml 
-pod/linux85-volume-secret-003 configured
-[root@k8s231.oldboyedu.com secret]#
+      mountPath: /data/secret/hostIp.conf
+      subPath: hostIP.info
 ```
 
-# secret资源
+## 私有库secret
+
+```
+kubectl create secret docker-registry mytest --docker-username=mytest --docker-password=Mytest123 --docker-email=mytest@mytest.com --docker-server=harbor.myharbor.com
+secret/mytest created
+
+kubectl get secrets mytest -o yaml
+
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: nginx-secret-harbor-01
+spec:
+  hostNetwork: false
+  nodeName: centos7k8s3
+  restartPolicy: OnFailure
+  containers:
+  - name: nginx-secret-volume
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+
+---
+
+apiVersion: v1
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJoYXJib3IubXloYXJib3IuY29tIjp7InVzZXJuYW1lIjoibXl0ZXN0IiwicGFzc3dvcmQiOiJNeXRlc3QxMjMiLCJlbWFpbCI6Im15dGVzdEBteXRlc3QuY29tIiwiYXV0aCI6ImJYbDBaWE4wT2sxNWRHVnpkREV5TXc9PSJ9fX0=
+kind: Secret
+metadata:
+  name: mytest
+```
+
