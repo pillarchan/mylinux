@@ -136,7 +136,7 @@ systemctl disable --now firewalld
 #### 禁用selinux
 
 ```
-sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config 
+sed -ri 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config 
 grep ^SELINUX= /etc/selinux/config
 ```
 
@@ -206,7 +206,7 @@ scp /etc/docker/certs.d/harbor.myharbor.com/* 192.168.76.142:/etc/docker/certs.d
 #### 验证登录harbor
 
 ```
-docker login -u admin -p Harbor12345 harbor.myharbor.com
+docker login -u admin https://harbor.myharbor.com
 ```
 
 #### 启动docker
@@ -220,6 +220,7 @@ systemctl enable --now docker
 #### (1)配置软件源
 
 ```
+国内
 cat  > /etc/yum.repos.d/kubernetes.repo <<EOF
 [kubernetes]
 name=Kubernetes
@@ -228,6 +229,8 @@ enabled=1
 gpgcheck=0
 repo_gpgcheck=0
 EOF
+
+https://kubernetes.io/zh-cn/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 ```
 
 #### 查看版本

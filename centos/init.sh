@@ -23,3 +23,7 @@ yum install vim bash-completion epel-release yum-utils -y
 #bash-completion-extras需要先安装epel
 yum install bash-completion-extras
 sed -ri "$ a set ts=4\nset paste\nset expandtab" /etc/vimrc
+
+hostnamectl set-hostname centos7harbor
+nmcli connection modify ens33 ipv4.addresses 192.168.76.141/24
+nmcli device reapply ens33

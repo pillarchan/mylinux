@@ -40,7 +40,7 @@ openssl req -sha512 -new \
     -key server/harbor.myharbor.com.key \
     -out server/harbor.myharbor.com.csr
 #生成x509 v3扩展文件
-cat > v3.ext <<-EOF
+cat > v3.ext << EOF
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
