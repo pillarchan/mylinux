@@ -97,5 +97,14 @@ docker login -u xxx -p xxx https://harbor.myharbor.com
 
 显示successful则成功
 不用时需要 docker logout 安全退出
+
+验证是否登录文件
+cat /root/.docker/config.json
+{
+	"auths": {
+		"harbor.myharbor.com": {
+			"auth": "YWRtaW46MTIzNDU="
+		}
+	}
 ```
 
