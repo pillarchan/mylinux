@@ -508,6 +508,10 @@ spec:
     - name: data01 # 指定存储卷的名称
       mountPath: /usr/share/nginx/html #指定容器的挂载目录
 
+可以作为测试使用，emptyDir指定启动挂载为空目录，实际数据则存储在
+/var/lib/kubelet/pods/对应容器/volumes/kubernetes.io~empty-dir/空目录名。如：
+/var/lib/kubelet/pods/b61ad8f8-77f8-4bb0-beab-54ea4aadee4c/volumes/kubernetes.io~empty-dir/data-01
+
 ```
 
 ### 数据持久化之hostPath实战案例
@@ -550,6 +554,26 @@ mkdir -pv /oldboyedu/data/kubernetes
 cat &gt; /etc/exports &lt;&lt;'EOF'
 /data/kubernetes *(rw,no_root_squash)
 EOF
+
+(1) Ro 该主机对该共享目录有只读权限
+(2) Rw 该主机对该共享目录有读写权限
+(3) Root_squash 客户机用root用户访问该共享文件夹时，将root用户映射成匿名用户
+(4) No_root_squash 客户机用root访问该共享文件夹时，不映射root用户
+(5) All_squash 客户机上的任何用户访问该共享目录时都映射成匿名用户
+(6) Anonuid 将客户机上的用户映射成指定的本地用户ID的用户
+(7) Anongid 将客户机上的用户映射成属于指定的本地用户组ID
+(8) Sync 资料同步写入到内存与硬盘中
+(9) Async 资料会先暂存于内存中，而非直接写入硬盘
+(10) Insecure 允许从这台机器过来的非授权访问　
+(11) subtree_check 如果共享/usr/bin之类的子目录时，强制NFS检查父目录的权限（默认）
+(12) no_subtree_check 和上面相对，不检查父目录权限
+(13) wdelay 如果多个用户要写入NFS目录，则归组写入（默认）
+(14 )no_wdelay 如果多个用户要写入NFS目录，则立即写入，当使用async时，无需此设置。
+(15) hide 在NFS共享目录中不共享其子目录
+(16) no_hide 共享NFS目录的子目录
+(17) secure NFS通过1024以下的安全TCP/IP端口发送
+(18) insecure NFS通过1024以上的端口发送
+
 
 	(3)配置nfs服务开机自启动
 systemctl enable --now nfs

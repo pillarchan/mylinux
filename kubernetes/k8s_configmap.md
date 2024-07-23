@@ -137,3 +137,160 @@ spec:
       subPath: nginx-conf-01-nginx.conf 
 ```
 
+# 综合 CM POD 案例
+
+```
+cat 01_nginx_volumes_nfs_cm.yml 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf-cm
+  labels:
+    app: nginx-conf-cm
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    
+    error_log  /var/log/nginx/error.log notice;
+    pid        /var/run/nginx.pid;
+    
+    events {
+        use epoll;
+        worker_connections  1024;
+    }
+    
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+    
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+    
+        access_log  /var/log/nginx/access.log  main;
+    
+        sendfile       on;
+        tcp_nopush     on;
+        tcp_nodelay    on;
+        keepalive_timeout  65;
+    
+        #gzip  on;
+        
+        include /etc/nginx/vhost/*.conf;
+    }
+  html.conf: |
+    server {
+        listen 58881;
+        server_name _;
+        location / {
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+        } 
+    }
+
+
+
+cat 02_nginx_volumes_nfs_cm_multi_files.yml 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf-cm-multi
+  labels:
+    app: nginx-conf-cm-multi
+data:
+  html.conf: |
+    server {
+        listen 58881;
+        server_name _;
+        location / {
+            root /opt/nginx/html;
+            index index.html index.htm;
+        } 
+    }
+  html1.conf: |
+    server {
+        listen 58882;
+        server_name _;
+        location / {
+            root /opt/nginx/html1;
+            index index.html index.htm;
+        }
+    }
+  html2.conf: |
+    server {
+        listen 58883;
+        server_name _;
+        location / {
+            root /opt/nginx/html2;
+            index index.html index.htm;
+        }
+    }
+  html3.conf: |
+    server {
+        listen 58884;
+        server_name _;
+        location / {
+            root /opt/nginx/html3;
+            index index.html index.htm;
+        }
+    }
+  html4.conf: |
+    server {
+        listen 58885;
+        server_name _;
+        location / {
+            root /opt/nginx/html4;
+            index index.html index.htm;
+        }
+    }
+  html5.conf: |
+    server {
+        listen 58886;
+        server_name _;
+        location / {
+            root /opt/nginx/html5;
+            index index.html index.htm;
+        }
+    }
+
+
+cat 06_nginx_volumes_nfs_cm_multi.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-demo-volumes-nfs-cm-multi
+  labels:
+    app: volumes-nfs-cm-multi
+spec:
+  hostNetwork: true
+  nodeName: centos7k8s2
+  restartPolicy: OnFailure
+  volumes:
+  - name: data-01
+    nfs: 
+      server: 192.168.76.141
+      path: /data/haha
+  - name: conf-01
+    configMap:
+      name: nginx-conf-cm
+      items:
+      - key: nginx.conf
+        path: nginx-conf-01.conf
+  - name: conf-02
+    configMap:
+      name: nginx-conf-cm-multi
+  containers:
+  - name: nginx-demo
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data-01
+      mountPath: /opt/nginx
+    - name: conf-01
+      mountPath: /etc/nginx/nginx.conf
+      subPath: nginx-conf-01.conf
+    - name: conf-02
+      mountPath: /etc/nginx/vhost
+```
+
