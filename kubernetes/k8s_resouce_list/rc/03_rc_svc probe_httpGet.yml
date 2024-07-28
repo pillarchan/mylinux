@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx-rc-svc-demo-2
+  labels:
+    item: haha
+spec:
+  replicas: 2
+  selector:
+    version: v1.0
+    app: haha-1
+  template:
+    metadata:
+      labels:
+        version: v1.0
+        app: haha-1
+    spec:
+      containers:
+        - name: nginx-demo-2
+          image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+          imagePullPolicy: IfNotPresent
+          startupProbe:
+            httpGet:
+              port: 80
+              path: /start.html
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 1
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            httpGet:
+              port: 80
+              path: /readiness.html
+            failureThreshold: 3
+            initialDelaySeconds: 25
+            periodSeconds: 1
+            successThreshold: 1
+            timeoutSeconds: 1
+          liveinessProbe:
+            httpGet:
+              port: 80
+              path: /liveness.html
+            failureThreshold: 3
+            initialDelaySeconds: 15
+            periodSeconds: 1
+            successThreshold: 1
+            timeoutSeconds: 1  
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc-2
+  labels:
+    item: haha
+spec:
+  selector:
+    version: v1.0
+    app: haha-1
+  type: ClusterIP
+  ports:
+    - port: 58888
+      targetPort: 80
+      protocol: TCP
+  clusterIP: 10.200.111.101

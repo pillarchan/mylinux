@@ -37,3 +37,59 @@ spec:
         
 ```
 
+## 副本与svc clusterIP 的综合案例
+
+```
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx-rc-svc-demo-1
+  labels:
+    item: haha
+spec:
+  replicas: 2
+  selector:
+    version: v1.0
+    app: haha-1
+  template:
+    metadata:
+      labels:
+        version: v1.0
+        app: haha-1
+    spec:
+      containers:
+        - name: nginx-demo-1
+          image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+          imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc-1
+  labels:
+    item: haha
+spec:
+  selector:
+    version: v1.0
+    app: haha-1
+  type: ClusterIP
+  ports:
+    - port: 58888
+      targetPort: 80
+      protocol: TCP
+  clusterIP: 10.200.111.101
+```
+
+## 总结
+
+### 功能
+
+当pod被删除时，会自动重新拉起pod
+
+### 关键字段
+
+replicas 创建副本数的数量
+
+selector 副本绑定选择器，主要使用标签选择
+
+template 创建pod的模板
