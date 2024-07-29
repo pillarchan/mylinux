@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-demo-volumes-nfs-cm
+  labels:
+    app: volumes-nfs-cm
+spec:
+  hostNetwork: true
+  nodeName: centos7k8s2
+  restartPolicy: OnFailure
+  volumes:
+  - name: data-01
+    nfs: 
+      server: 192.168.76.141
+      path: /data/haha/html
+  - name: conf-01
+    configMap:
+      name: nginx-conf-cm
+      items:
+      - key: nginx.conf
+        path: nginx-conf-01.conf
+      - key: html.conf
+        path: nginx-conf-html-01.conf  
+  containers:
+  - name: nginx-demo
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data-01
+      mountPath: /usr/share/nginx/html
+    - name: conf-01
+      mountPath: /etc/nginx/nginx.conf
+      subPath: nginx-conf-01.conf
+    - name: conf-01
+      mountPath: /etc/nginx/vhost/html.conf
+      subPath: nginx-conf-html-01.conf

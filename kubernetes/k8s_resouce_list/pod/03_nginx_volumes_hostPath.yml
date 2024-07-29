@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-demo-volumes-hostpath
+  labels:
+    app: host-path
+spec:
+  hostNetwork: true
+  nodeName: centos7k8s2
+  restartPolicy: OnFailure
+  volumes:
+  - name: data-01
+    hostPath: 
+      path: /data/haha/html 
+  containers:
+  - name: nginx-demo
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: data-01
+      mountPath: /usr/share/nginx/html 

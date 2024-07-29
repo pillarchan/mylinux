@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-demo-1
+spec:
+  #hostNetwork: true
+  #nodeName: centosk8s2
+  containers:
+  - name: nginx-demo
+    image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
