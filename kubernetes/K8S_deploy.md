@@ -6,15 +6,33 @@
 
 更名为Control Plan
 
-监听端口 api server 组件 用于集群的访问入口
+监听端口 
 
-​	认证 权限检验 配置文件解析
+### api server 组件 
 
-​    基于etcd存储数据   api-server->etcd 
+用于集群的访问入口,认证 权限检验 配置文件解析
 
-   control manager 控制管理集群 维护服务的状态 api-server<->control manager 
+### ETCD
 
-   scheduler 用于调度任务 api-server <-> scheduler 
+基于etcd存储数据
+
+api-server->etcd 
+
+### controller manager 
+
+*是集群*内部的管理控制中心，负责统一管理与运行不同的Controller ，*实现*对*集群*内的Node、Pod 等所有资源的管理 
+
+api-server<->controller manager
+
+1. Controller manager与api-server的通信主要通过两种方式：List 和 Watch。
+2. List是短连接实现，用于获取该资源的所有object；
+3. Watch是长连接实现，用于监听在List中获取的资源的变换。
+4. api-server检测到资源产生变更时，会主动通知到Controller manager（利用分块传输编码）。
+5. 也可以说，List获取的是全量数据，Watch获取的是增量数据。
+
+### scheduler 
+
+用于调度任务 api-server <-> scheduler 
 
 
 

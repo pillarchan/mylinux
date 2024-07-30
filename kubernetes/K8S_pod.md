@@ -138,7 +138,7 @@ kubectl delete pod linux85-nginx-tomcat
 
 ```
 
-## 	k8s启动一个pod的流程
+## 	k8s启动一个pod的流程和kubelet启动的一个容器
 
 ```
 当k8s启动一个pod
@@ -147,6 +147,28 @@ kubectl delete pod linux85-nginx-tomcat
 
 业务容器故障挂掉，则会立即重启容器，但是IP地址不会发生变化
 如果pause容器故障挂掉，所乘载的和业务容器也会同时挂掉，然后会重启pause容器和业务容器，此时IP地址就会发生改变
+
+首先回顾一下架构
+master: apiServer,etcd,control manager,scheduler
+node: kubelet,kube-proxy
+
+当要启动一个pod时，不管是通过命令式还是声明式的方式
+1. apiServer 对创建请求要进行格式解析，认证、权限验证
+2. 创建请求通过后，就会将数据写入ETCD
+3. controller manager通过WATCH监听到LIST中资源的变换，比如：pod副本数的增减
+4. scheduler 根据用户的请求类型、节点的打分机制进行pod的调度
+5. 完成调度后将数据写入ETCD
+6. kubelet上报各个worker节点状态信息和pod状态信息给apiServer
+7. apiServer接受并更新各节点状态信息存储到ETCD
+8. 并将scheduler调度的pod的结果返回给对应的worker节点
+
+kubelet启动的一个容器
+1. kubelet 通过 cri(containerd runtime interface)调用pod去创建容器
+2. 如果使用的是docker 那就要使用docker-shim去创建dockerd的守护进程
+3. docker或者contaninerd 调用runc的机制去创建容器
+4. 启动pause容器提供网络基础
+5. 启动初始化容器提供基础环境
+6. 启动业务容器，这里还会涉及到生命周期和探针，postStart容器启动后做什么，preStop容器启动前做什么，startupProbe检测，readinessProbe检测，livenessProbe检测
 ```
 
 ## k8s删除一个pod的流程
@@ -693,3 +715,138 @@ spec:
  当然端口映射后，使用ss -tnl是无法查看到端口的，因为它是通过iptables nat表进行的转发，可以通过 iptables -t nat -vnL过滤进行查看是否有转发规则，然后通过对应的IP和端口就可以在外部访问了 
       
 ```
+
+## 静态Pod
+
+```
+静态Pod（了解即可）:
+vim  /var/lib/kubelet/config.yaml 
+...
+staticPodPath: /etc/kubernetes/manifests
+
+
+温馨提示:
+	(1)静态Pod是由kubelet启动时通过"staticPodPath"配置参数指定路径
+	(2)静态Pod创建的Pod名称会自动加上kubelet节点的主机名，比如"test-pod-static"，会忽略"nodeName"字段哟;
+	(3)静态Pod的创建并不依赖API-Server，而是直接基于kubelet所在节点来启动Pod;
+	(4)静态Pod的删除只需要将其从staticPodPath指定的路径移除即可;
+	(5)静态Pod路径仅对Pod资源类型有效，其他类型资源将不被创建;
+	(6)咱们的kubeadm部署方式就是基于静态Pod部署的
+```
+
+## Pod的安全上下文securityContext
+
+```
+kubectl explain po.spec.containers.securityContext
+kubectl explain po.spec.securityContext
+	
+参考案例:
+(1)编写dockerfile
+[root@k8s231.myharbor.com securityContext]# ll
+total 8
+-rwxr-xr-x 1 root root 235 Apr 18 15:27 build.sh
+-rw-r--r-- 1 root root 497 Apr 18 15:25 Dockerfile
+[root@k8s231.myharbor.com securityContext]# 
+[root@k8s231.myharbor.com securityContext]# cat Dockerfile 
+FROM centos:7
+LABEL school=mytest \
+# RUN sed -e 's|^mirrorlist=|#mirrorlist=|g' \
+#         -e 's|^#baseurl=http://mirror.centos.org|baseurl=https://mirrors.tuna.tsinghua.edu.cn|g' \
+#         -i.bak \
+#         /etc/yum.repos.d/CentOS-*.repo
+RUN curl  -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo \
+	&&  yum -y install iptables-services net-tools && rm -rf /var/cache/yum \
+    && useradd -u 666 wahaha
+CMD ["tail","-f","/etc/hosts"]
+
+[root@k8s231.myharbor.com securityContext]# cat build.sh 
+#!/bin/bash
+docker image build -t harbor.myharbor.com/tools/centos7-iptabls:v0.1 .
+docker login -u admin -p 1 harbor.myharbor.com
+docker image push harbor.myharbor.com/tools/centos7-iptabls:v0.1
+docker logout harbor.myharbor.com	
+	
+(2)部署pod测试
+[root@k8s231.myharbor.com pods]# cat 18-pod-securityContext.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+   name: centos-securitycontext-004
+spec:
+  containers:
+  - name: c1
+    image: harbor.myharbor.com/tools/centos7-iptabls:v0.1
+    # args:
+    # - tail
+    # - -f
+    # - /etc/hosts
+    # 配置Pod的安全相关属性
+    securityContext:
+      # 配置容器为特权容器，若配置了特权容器，可能对capabilities测试有影响哟!
+      #privileged: true
+      # 自定义LINUX内核特性
+      # 推荐阅读:
+      #   https://man7.org/linux/man-pages/man7/capabilities.7.html
+      #   https://docs.docker.com/compose/compose-file/compose-file-v3/#cap_add-cap_drop
+      capabilities:
+        # 添加所有的Linux内核功能
+        add:
+        - ALL
+        # 移除指定Linux内核特性
+        drop:
+        # 代表禁用网络管理的配置,
+        # - NET_ADMIN
+        # 代表禁用UID和GID，表示你无法使用chown命令哟
+        # 比如执行"useradd oldboyedu"时会创建"/home/oldboyedu"目录，并执行chown修改目录权限为"oldboyedu"用户，此时你会发现可以创建用户成功，但无法修改"/home/oldboyedu"目录的属主和属组。
+        - CHOWN
+        # # 代表禁用chroot命令
+        - SYS_CHROOT
+      # 如果容器的进程以root身份运行，则禁止容器启动!
+      # runAsNonRoot: true
+      # 指定运行程序的用户UID，注意，该用户的UID必须存在!
+      # runAsUser: 666
+```
+
+## Pod的生命周期优雅的终止
+
+```
+案例:
+[root@k8s231. pods]# cat 19-pods-lifecycle-postStart-preStop.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: oldboyedu-linux85-lifecycle-001
+spec:
+  nodeName: k8s232.
+  volumes:
+  - name: data
+    hostPath:
+      path: /oldboyedu-linux85
+  # 在pod优雅终止时，定义延迟发送kill信号的时间，此时间可用于pod处理完未处理的请求等状况。
+  # 默认单位是秒，若不设置默认值为30s。
+  terminationGracePeriodSeconds: 60
+  containers:
+  - name: myweb
+    image: harbor.myharbor.com/tools/centos7-iptabls:v0.1
+    stdin: true
+    volumeMounts:
+    - name: data
+      mountPath: /data
+    # 定义Pod的生命周期。
+    lifecycle:
+      # Pod启动之后做的事情
+      postStart:
+        exec:
+          command: 
+          - "/bin/bash"
+          - "-c"
+          - "echo \"postStart at $(date +%F_%T)\" >> /data/postStart.log"
+      # Pod停止之前做的事情
+      preStop:
+        exec:
+         command: 
+         - "/bin/bash"
+         - "-c"
+         - "echo \"preStop at $(date +%F_%T)\" >> /data/preStop.log"
+```
+
