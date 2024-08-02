@@ -80,6 +80,29 @@ spec:
   clusterIP: 10.200.111.101
 ```
 
+## RC的升级与回滚
+
+旧版本中可以使用kubectl rollout命令进行，而新版本中，就直接换一种思路了
+
+当准备好了新的镜像去更新的时候，以声明式为例，image要修改为新的镜像地址，然后使用kubectl apply调用一下，而这时是不会更新的，可以利用rc中pod被删除会自动重新拉起新pod的特性，kubectl delete pod，此时需要注意，最好是逐个删除来达到滚动更新的效果
+
+```
+
+#上传镜像
+[root@centos7k8s1 ~]# cat /opt/web/code/code_build.sh 
+#!/bin/bash
+docker build -t harbor.myharbor.com/myharbor/nginx:v1.0-my -f /opt/web/code/v1/Dockerfile /opt/web/code/v1
+docker build -t harbor.myharbor.com/myharbor/nginx:v2.0-my -f /opt/web/code/v2/Dockerfile /opt/web/code/v2
+docker build -t harbor.myharbor.com/myharbor/nginx:v3.0-my -f /opt/web/code/v3/Dockerfile /opt/web/code/v3
+docker login -u admin -p 12345 harbor.myharbor.com
+docker push harbor.myharbor.com/myharbor/nginx:v1.0-my
+docker push harbor.myharbor.com/myharbor/nginx:v2.0-my
+docker push harbor.myharbor.com/myharbor/nginx:v3.0-my
+
+```
+
+
+
 ## 总结
 
 ### 功能
