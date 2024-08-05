@@ -933,3 +933,160 @@ replicaset.apps/nginx-rs-deploy-demo-1-cf86b89d7    0         0         0       
 当创建pod的时候就是依据这些标签去创建的
 ```
 
+## deploy资源的升级策略
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oldboyedu-linux85-deploy-update-strategy
+spec:
+  # replicas: 3
+  # replicas: 5
+  replicas: 10
+  selector:
+    matchExpressions:
+    - key: apps
+      operator: Exists
+  # 定义升级策略
+  strategy:
+    # 升级的类型,"Recreate" or "RollingUpdate"
+    # Recreate:
+    #   先停止所有的Pod运行，然后在批量创建更新。
+    #   生产环节中不推荐使用这种策略，因为升级过程中用户将无法访问服务!
+    # RollingUpdate:
+    #   滚动更新，即先实现部分更新，逐步替换原有的pod，是默认策略。
+    # type: Recreate
+    type: RollingUpdate
+    # 自定义滚动更新的策略
+    rollingUpdate:
+      # 在原有Pod的副本基础上，多启动Pod的数量。
+      # maxSurge: 2
+      maxSurge: 3
+      # 在升级过程中最大不可访问的Pod数量.
+      # maxUnavailable: 1
+      maxUnavailable: 2
+  template:
+    metadata:
+      labels:
+        apps: linux85-web
+    spec:
+      containers:
+      - name: web
+        # image: harbor.oldboyedu.com/update/apps:v1
+        #image: harbor.oldboyedu.com/update/apps:v2
+        # image: harbor.oldboyedu.com/update/apps:v3
+        # image: nginx:1.16
+        image: nginx:1.18
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: oldboyedu-linux85-web-deploy-update-strategy
+spec:
+  selector:
+    apps: linux85-web
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+```
+
+## 交互式升级
+
+```
+kubectl edit -f 02_nginx_deploy_update_strategy_demo.yml
+A copy of your changes has been stored to "/tmp/kubectl-edit-1549340794.yaml"
+error: the namespace from the provided object "haha" does not match the namespace "default". You must pass '--namespace=haha' to perform this operation.
+报错原因：未指定名称空间
+
+---------------------------------------------
+
+kubectl edit -f 02_nginx_deploy_update_strategy_demo.yml -n haha
+deployment.apps/nginx-rs-deploy-strategy-demo-1 edited
+service/nginx-rs-svc skipped
+
+------------------------------------------------
+
+[root@centos7k8s1 deployment]# kubectl edit -n haha deployments.apps nginx-rs-deploy-strategy-demo-1 
+deployment.apps/nginx-rs-deploy-strategy-demo-1 edited
+
+通过 kubectl edit 命令对资源文件进行编辑升级有两种方式
+1. 对资源文件进行编辑升级
+2. 对资源对象进行编辑升级
+```
+
+## 非交互式升级
+
+```
+[root@centos7k8s1 deployment]#  kubectl set image -f 02_nginx_deploy_update_strategy_demo.yml -n haha nginx-deploy-demo-1=harbor.myharbor.com/myharbor/nginx:v2.0-my
+deployment.apps/nginx-rs-deploy-strategy-demo-1 image updated
+error: services/nginx-rs-svc the object is not a pod or does not have a pod template: *v1.Service
+# 报错是因为资源清单文件中，包含了service控制器，但是pod会正常更新
+-----------------------------------------
+kubectl set image deploy nginx-rs-deploy-strategy-demo-1 -n haha nginx-deploy-demo-1=harbor.myharbor.com/myharbor/nginx:v3.0-my
+deployment.apps/nginx-rs-deploy-strategy-demo-1 image updated
+
+# 生产中常用的一种升级回滚方式，有利于自动化更新
+通过 kubectl set image 命令对资源文件进行编辑升级有两种方式
+1. 对资源文件进行编辑升级
+2. 对资源对象进行编辑升级
+```
+
+## redis部署案例
+
+```
+cat 03_redis_demo.yml 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-update-demo
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 1
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - wahaha1-redis
+      operator: In
+#  strategy:
+#    type: RollingUpdate
+#    rollingUpdate:
+#      maxSurge: 3
+#      maxUnavailable: 2
+  template:
+    metadata:
+      labels:
+        app: wahaha1-redis
+    spec:
+      containers:
+      - name: redis-update-demo-1 
+        image: redis:6.2.14
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: '0.5'
+            memory: '0.5G'
+          limits:
+            cpu: '1'
+            memory: '1G'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-svc
+  namespace: haha
+spec:
+  selector:
+    app: wahaha1-redis
+#  type: NodePort
+  ports:
+  - port: 6379
+    targetPort: 6379
+```
+
