@@ -1090,3 +1090,122 @@ spec:
     targetPort: 6379
 ```
 
+## deployment实现蓝绿发布
+
+蓝绿部署(Blue/Green)部署简介：
+	蓝绿部署特点:
+		不需要停止老版本代码(不影响上一版本访问)，而是在另外一套环境部署新版本然后进行测试。
+		测试通过后将用户流量切换到新版本，其特点为业务无中断，升级风险相对较小。		
+
+	- 实现机制:
+		- 1.部署当前版本
+		- 2.部署service
+		- 3.部署新版本(使用新的deployment名称，新的label标签)
+		- 4.切换service标签到新的pod
+
+```
+准备一个蓝版本
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-blue-demo
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 2
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - blue
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: blue
+    spec:
+      containers:
+      - name: nginx-deploy-blue-demo-1  
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: IfNotPresent
+     
+  准备一个绿版本
+  apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-green-demo
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 2
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - green
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: green
+    spec:
+      containers:
+      - name: nginx-deploy-green-demo-1  
+        #image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: IfNotPresent
+        
+准备一个service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-blue-green-svc
+  namespace: haha
+spec:
+  selector:
+    app: blue
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30001
+    
+    
+当两个版本pod成功启动后，通过修改 svc seletor 切换标签达到版本切换，实现蓝绿部署
+有三种方式
+1.修改资源清单
+2. kubectl edit 控制器 名称 [-n 名称空间]
+kubectl edit svc nginx-blue-green-svc -n haha
+3. kubectl set selector 控制器 名称 标签名=值  [-n 名称空间]
+kubectl set selector svc nginx-blue-green-svc app=green -n haha
+```
+
+
+
+## deployment实现灰度发布
+
+灰度/金丝雀(Canary)部署简介:
+	金丝雀发布也叫灰度发布，是指在黑与白之间，能够平滑度过的一种发布方式，恢复发布是增量发布的一种类型，灰度发布是在原有版本可用的情况下，同时部署一个新版本应用作为"金丝雀"(小白鼠)，测试新版本的性能和表现，以保障整个体系稳定的情况下，尽早发现，调整问题。
+	"金丝雀"的由来: 17世纪，英国矿工工人发现，金丝雀对瓦斯这种气体十分敏感，空气哪怕有极其微量的瓦斯，金丝雀也会停止歌唱，而当瓦斯超过一定限度时，虽然人类毫无察觉，金丝雀却早已毒发身亡，当时在采矿设备相对简陋的条件下，工人们每次下井都会带上一只金丝雀作为"瓦斯检测指标"，以便在危险情况下紧急撤离。
+
+实现机制:
+
+1.部署当前版本，使用多副本;(最开始是3个副本)
+
+2.部署service，匹配一个label标签;
+
+3.部署新版本(使用deployment名称，但是label标签和之前保持一致)，新版本runing之后service会自动匹配label并将pod添加service的endpoints接收客户端请求;(最开始)
+
+4.灰度版本测试没有问题，将灰度版本的pod副本数逐渐增加为生产数量;
+
+5.将旧版本pod逐渐调低至为0，此时数流量将全部转发至新版本;
+
+```
+
+```
+
