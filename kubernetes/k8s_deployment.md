@@ -1206,6 +1206,69 @@ kubectl set selector svc nginx-blue-green-svc app=green -n haha
 5.将旧版本pod逐渐调低至为0，此时数流量将全部转发至新版本;
 
 ```
+旧版
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-canary-demo-1
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: canary
+  template:
+    metadata:
+      labels:
+        app: canary
+    spec:
+      containers:
+      - name: nginx-deploy-demo-1  
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: IfNotPresent
+新版
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-canary-demo-2
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: canary
+  template:
+    metadata:
+      labels:
+        app: canary
+    spec:
+      containers:
+      - name: nginx-deploy-demo-2  
+        #image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: IfNotPresent
+svc
+apiVersion: v1
+kind: Service
+metadata:   
+  name: nginx-canary-svc
+  namespace: haha
+spec:       
+  selector:
+    app: canary
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30088
 
+kubectl edit deployments.apps/nginx-deploy-canary-demo-2 -n haha
 ```
 
