@@ -60,7 +60,7 @@
 故障案例2:
 	k8s232节点可以正常运行Pod，k8s233无法正常运行pod，报错是挂载失败。
 		- 手动挂载:
-			mount -t nfs 10.0.0.231:/oldboyedu/data/kubernetes /mnt
+			mount -t nfs 10.0.0.231:/myharbor/data/kubernetes /mnt
 		
 		- 安装nfs依赖:
 			yum -y install nfs-utils
@@ -71,540 +71,41 @@
 		- svc的标签选择器有6个。
 		- Pod仅包含了1个。
 		综上所述: Pod的标签数必须包含svc所关联的标签，只能多不能少。
-
-
-
-Q1: 影响pod调度的因素有哪些?
-	- nodeName
-	- resources
-	- hostNetwork
-	...
-	- 污点
-	- 污点容忍
-	- Pod亲和性
-	- Pod反亲和性
-	- 节点亲和性
-	- 
-		
-		
 		
 
 
-污点概述:
-	污点通常情况下是作用在worker节点上，其可以影响Pod的调度。
-
-	污点的语法格式如下:
-		key[=value]:effect
-		
-	相关字段说明:
-		key:
-			字母或数字开头，可以包含字母、数字、连字符(-)、点(.)和下划线(_)，最多253个字符。
-			也可以以DNS子域前缀和单个"/"开头
-		
-		value:
-			该值是可选的。如果给定，它必须以字母或数字开头，可以包含字母、数字、连字符、点和下划线，最多63个字符。
-		
-		effect:[ɪˈfekt]
-			effect必须是NoSchedule、PreferNoSchedule或NoExecute。
-				NoSchedule: [noʊ,ˈskedʒuːl]
-					该节点不再接收新的Pod调度，但不会驱赶已经调度到该节点的Pod。
-				PreferNoSchedule: [prɪˈfɜːr,noʊ,ˈskedʒuː] 
-					该节点可以接受调度，但会尽可能将Pod调度到其他节点，换句话说，让该节点的调度优先级降低啦。
-				NoExecute:[ˈnoʊ,eksɪkjuːt] 
-					该节点不再接收新的Pod调度，与此同时，会立刻驱逐已经调度到该节点的Pod。
-					
-					
-NoExecute污点实战:
-	(1)创建资源清单
-[root@k8s231.oldboyedu.com taints]# cat 01-deploy-web.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: oldboyedu-linux85-taints
-spec:
-  replicas: 10
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-        # image: harbor.oldboyedu.com/update/apps:v2
-        # image: harbor.oldboyedu.com/update/apps:v3
-[root@k8s231.oldboyedu.com taints]# 
-
-	
-	(2)查看Pod调度节点
-[root@k8s231.oldboyedu.com taints]# kubectl get pods -o wide | awk '{print $7}'
-NODE
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s233.oldboyedu.com
-k8s232.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s233.oldboyedu.com
-[root@k8s231.oldboyedu.com taints]# 
-	
-	
-	(3)打污点
-[root@k8s231.oldboyedu.com taints]# kubectl taint node k8s232.oldboyedu.com school=oldboyedu:NoExecute
-node/k8s232.oldboyedu.com tainted
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(4)打污点后
-[root@k8s231.oldboyedu.com taints]# kubectl get pods -o wide | awk '{print $7}'
-NODE
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-[root@k8s231.oldboyedu.com taints]#  
-
-
-	(5)查看污点
-[root@k8s231.oldboyedu.com taints]# kubectl describe nodes | grep Taints -A 2
-Taints:             node-role.kubernetes.io/master:NoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             school=oldboyedu:NoExecute
-Unschedulable:      false
-Lease:
---
-Taints:             <none>
-Unschedulable:      false
-Lease:
-[root@k8s231.oldboyedu.com taints]# 
-
-	
-	(6)清除污点
-[root@k8s231.oldboyedu.com taints]# kubectl taint node k8s232.oldboyedu.com school-
-node/k8s232.oldboyedu.com untainted
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(7)再次修改Pod副本数量
-[root@k8s231.oldboyedu.com taints]# kubectl get pods -o wide | awk '{print $7}'
-NODE
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s232.oldboyedu.com
-k8s233.oldboyedu.com
-k8s232.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-[root@k8s231.oldboyedu.com taints]# 
-
-
-
-
-
-PreferNoSchedule污点实战案例
-	(1)添加PreferNoSchedule污点
-[root@k8s231.oldboyedu.com taints]# kubectl taint node k8s232.oldboyedu.com school=oldboyedu:PreferNoSchedule
-node/k8s232.oldboyedu.com tainted
-[root@k8s231.oldboyedu.com taints]# 
-[root@k8s231.oldboyedu.com taints]# kubectl describe nodes  | grep Taints -A 2
-Taints:             node-role.kubernetes.io/master:NoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             school=oldboyedu:PreferNoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             <none>
-Unschedulable:      false
-Lease:
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(2)创建资源清单
-[root@k8s231.oldboyedu.com taints]# cat 01-deploy-web.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: oldboyedu-linux85-taints
-spec:
-  # replicas: 3
-  replicas: 5
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-        # image: harbor.oldboyedu.com/update/apps:v2
-        # image: harbor.oldboyedu.com/update/apps:v3
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(3)查看调度节点
-[root@k8s231.oldboyedu.com taints]# kubectl get pods -o wide | awk '{print $7}'
-NODE
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-k8s233.oldboyedu.com
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(4)添加NoExecute污点
-[root@k8s231.oldboyedu.com taints]# kubectl taint node k8s233.oldboyedu.com class=linux85:NoExecute
-node/k8s233.oldboyedu.com tainted
-[root@k8s231.oldboyedu.com taints]# 
-[root@k8s231.oldboyedu.com taints]# kubectl describe nodes  | grep Taints -A 2
-Taints:             node-role.kubernetes.io/master:NoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             school=oldboyedu:PreferNoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             class=linux85:NoExecute
-Unschedulable:      false
-Lease:
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(5)再次查看Pod调度节点
-[root@k8s231.oldboyedu.com taints]# kubectl get pods -o wide | awk '{print $7}'
-NODE
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-[root@k8s231.oldboyedu.com taints]# 
-
-
-
-
-
-NoSchedule污点实战案例
-	(1)查看现有污点状态
-[root@k8s231.oldboyedu.com taints]# kubectl describe nodes  | grep Taints -A 2
-Taints:             node-role.kubernetes.io/master:NoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             school=oldboyedu:PreferNoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             class=linux85:NoExecute
-Unschedulable:      false
-Lease:
-[root@k8s231.oldboyedu.com taints]# 
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(2)添加污点
-[root@k8s231.oldboyedu.com taints]# kubectl taint node k8s232.oldboyedu.com school=oldboyedu:NoSchedule
-node/k8s232.oldboyedu.com tainted
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(3)再次查看节点的污点状态
-[root@k8s231.oldboyedu.com taints]# kubectl describe nodes  | grep Taints -A 2
-Taints:             node-role.kubernetes.io/master:NoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             school=oldboyedu:NoSchedule
-                    school=oldboyedu:PreferNoSchedule
-Unschedulable:      false
---
-Taints:             class=linux85:NoExecute
-Unschedulable:      false
-Lease:
-[root@k8s231.oldboyedu.com taints]# 
-
-
-	(4)查看现有的Pod调度
-[root@k8s231.oldboyedu.com taints]# kubectl get pods -o wide | awk '{print $7}'
-NODE
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-[root@k8s231.oldboyedu.com taints]# 
-
-	
-	
-	(5)调大副本数量，观察是否能完成调度，比如增加5个Pod副本，会出现如下的Pending状态哟！
-[root@k8s231.oldboyedu.com taints]#  kubectl get pods -o wide | awk '{print $7}'
-NODE
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-<none>
-k8s232.oldboyedu.com
-<none>
-k8s232.oldboyedu.com
-k8s232.oldboyedu.com
-<none>
-<none>
-<none>
-[root@k8s231.oldboyedu.com taints]# 
-[root@k8s231.oldboyedu.com taints]#  kubectl get pods -o wide 
-NAME                                       READY   STATUS    RESTARTS   AGE     IP             NODE                   NOMINATED NODE   READINESS GATES
-oldboyedu-linux85-taints-84786df79-2cqv6   1/1     Running   0          8m16s   10.100.1.167   k8s232.oldboyedu.com   <none>           <none>
-oldboyedu-linux85-taints-84786df79-2dh2d   1/1     Running   0          8m16s   10.100.1.164   k8s232.oldboyedu.com   <none>           <none>
-oldboyedu-linux85-taints-84786df79-4kczk   0/1     Pending   0          2m32s   <none>         <none>                 <none>           <none>
-oldboyedu-linux85-taints-84786df79-4vtzm   1/1     Running   0          8m16s   10.100.1.165   k8s232.oldboyedu.com   <none>           <none>
-oldboyedu-linux85-taints-84786df79-6jgw4   0/1     Pending   0          2m32s   <none>         <none>                 <none>           <none>
-oldboyedu-linux85-taints-84786df79-8b5jf   1/1     Running   0          8m16s   10.100.1.166   k8s232.oldboyedu.com   <none>           <none>
-oldboyedu-linux85-taints-84786df79-mg9nm   1/1     Running   0          8m16s   10.100.1.168   k8s232.oldboyedu.com   <none>           <none>
-oldboyedu-linux85-taints-84786df79-r2f8f   0/1     Pending   0          2m32s   <none>         <none>                 <none>           <none>
-oldboyedu-linux85-taints-84786df79-v52rr   0/1     Pending   0          2m32s   <none>         <none>                 <none>           <none>
-oldboyedu-linux85-taints-84786df79-v9vw6   0/1     Pending   0          2m32s   <none>         <none>                 <none>           <none>
-[root@k8s231.oldboyedu.com taints]# 
 
 
 
 
 
 
-配置污点容忍实战案例:
-	(1)修改污点
-[root@k8s231.oldboyedu.com tolerations]# kubectl taint node k8s232.oldboyedu.com school=laonanhai:PreferNoSchedule --overwrite
-node/k8s232.oldboyedu.com modified
-[root@k8s231.oldboyedu.com tolerations]# 
-
-
-	(2)查看污点
-[root@k8s231.oldboyedu.com tolerations]# kubectl describe nodes | grep Taints -A 2
-Taints:             node-role.kubernetes.io/master:NoSchedule
-Unschedulable:      false
-Lease:
---
-Taints:             school=oldboyedu:NoSchedule
-                    school=laonanhai:PreferNoSchedule
-Unschedulable:      false
---
-Taints:             class=linux85:NoExecute
-Unschedulable:      false
-Lease:
-[root@k8s231.oldboyedu.com tolerations]# 
-
-
-	(3)编写资源清单
-[root@k8s231.oldboyedu.com tolerations]# cat 01-deploy-web.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: oldboyedu-linux85-tolerations
-spec:
-  replicas: 5
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      # 配置Pod的污点容忍
-      tolerations:
-        # 指定污点的key
-        # 若不指定key，则operator的值必须为Exists，表示匹配所有的key
-      - key: class
-        # 指定污点的value
-        value: linux85
-        # 指定污点的effect，有效值为: NoSchedule, PreferNoSchedule,NoExecute
-        # 若不指定则匹配所有的影响度。
-        effect: NoExecute
-        # 表示key和value的关系，有效值为Exists， Equal。
-        #    Exists:
-        #      表示存在指定的key即可，若配置，则要求value字段为空。
-        #    Equal:
-        #      默认值，表示key=value。
-        operator: Equal
-      - key: school
-        operator: Exists
-      - key: node-role.kubernetes.io/master
-        operator: Exists
-      # 如果不指定key，value，effect，仅配置"operator: Exists"表示无视任何污点!
-      #- operator: Exists
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-        # image: harbor.oldboyedu.com/update/apps:v2
-        # image: harbor.oldboyedu.com/update/apps:v3
-[root@k8s231.oldboyedu.com tolerations]# 
 
 
 
 
-节点选择器nodeselector:
-	(1)给节点打标签
-[root@k8s231.oldboyedu.com tolerations]# kubectl label nodes k8s231.oldboyedu.com school=oldboyedu
-node/k8s231.oldboyedu.com labeled
-[root@k8s231.oldboyedu.com tolerations]# 
-[root@k8s231.oldboyedu.com tolerations]# kubectl label nodes k8s231.oldboyedu.com class=linux85
-node/k8s231.oldboyedu.com labeled
-[root@k8s231.oldboyedu.com tolerations]# 
-[root@k8s231.oldboyedu.com tolerations]# kubectl label nodes k8s233.oldboyedu.com school=oldboyedu
-node/k8s233.oldboyedu.com labeled
-[root@k8s231.oldboyedu.com tolerations]# 
-[root@k8s231.oldboyedu.com tolerations]# kubectl label nodes k8s233.oldboyedu.com class=linux85
-node/k8s233.oldboyedu.com labeled
-[root@k8s231.oldboyedu.com tolerations]# 
-
-
-
-	(2)编写资源清单
-[root@k8s231.oldboyedu.com nodeSelector]# cat 01-deploy-web.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: oldboyedu-linux85-nodeselector
-spec:
-  replicas: 10
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      # 基于worker node节点进行标签选择，注意，节点必须包含所有的标签
-      nodeSelector:
-        school: oldboyedu
-        class: linux85
-      tolerations:
-      - operator: Exists
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-[root@k8s231.oldboyedu.com nodeSelector]# 
-
-
-	(3)删除标签
-[root@k8s231.oldboyedu.com nodeSelector]# kubectl label nodes --all school- 
-[root@k8s231.oldboyedu.com nodeSelector]# kubectl label nodes --all class-
-
-
-
-
-节点亲和性nodeAffinity:
-	(1)打标签
-[root@k8s231.oldboyedu.com nodeAffinity]# kubectl label nodes k8s231.oldboyedu.com school=oldboyedu
-[root@k8s231.oldboyedu.com nodeAffinity]# kubectl label nodes k8s233.oldboyedu.com school=laonanhai
-[root@k8s231.oldboyedu.com nodeAffinity]# kubectl get nodes --show-labels | grep school
-
-
-	(2)编写资源清单
-[root@k8s231.oldboyedu.com nodeAffinity]# cat 01-deploy-web.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: oldboyedu-linux85-nodeaffinity
-spec:
-  replicas: 10
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      # 定义亲和性
-      affinity:
-        # 定义节点的亲和性
-        nodeAffinity:
-          # 定义硬限制
-          requiredDuringSchedulingIgnoredDuringExecution:
-            # 定义节点的匹配条件
-            nodeSelectorTerms:
-              # 基于节点的标签进行匹配
-            - matchExpressions:
-                # 指定标签的key
-              - key: school
-                # 指定标签的value
-                values:
-                - oldboyedu
-                - laonanhai
-                # 指定key和value之间的对应关系，有效值如下:
-                #   In:
-                #     key的值必须在vlaues内。要求values不能为空。
-                #   NotIn:
-                #     和In相反。要求values不能为空。
-                #   Exists:
-                #     只要存在指定key即可，vlaues的值必须为空。
-                #   DoesNotExist:
-                #     只要不存在指定key即可，vlaues的值必须为空。
-                #   Gt:
-                #     表示大于的意思，values的值会被解释为整数。
-                #   Lt:
-                #     表示小于的意思，values的值会被解释为整数。
-                operator: In
-      tolerations:
-      - operator: Exists
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-[root@k8s231.oldboyedu.com nodeAffinity]# 
-
-
-	(3)删除标签
-[root@k8s231.oldboyedu.com nodeAffinity]# kubectl label nodes --all school- 
 
 
 
 
 Pod的亲和性:
 	(1)打标签
-[root@k8s231.oldboyedu.com podAffinity]# kubectl label nodes --all dc=lugu
-node/k8s231.oldboyedu.com labeled
-node/k8s232.oldboyedu.com labeled
-node/k8s233.oldboyedu.com labeled
-[root@k8s231.oldboyedu.com podAffinity]# 
-[root@k8s231.oldboyedu.com podAffinity]# kubectl label nodes k8s232.oldboyedu.com dc=jiuxianqiao --overwrite 
-node/k8s232.oldboyedu.com labeled
-[root@k8s231.oldboyedu.com podAffinity]# 
+[root@k8s231.myharbor.com podAffinity]# kubectl label nodes --all dc=lugu
+node/k8s231.myharbor.com labeled
+node/k8s232.myharbor.com labeled
+node/k8s233.myharbor.com labeled
+[root@k8s231.myharbor.com podAffinity]# 
+[root@k8s231.myharbor.com podAffinity]# kubectl label nodes k8s232.myharbor.com dc=jiuxianqiao --overwrite 
+node/k8s232.myharbor.com labeled
+[root@k8s231.myharbor.com podAffinity]# 
 
 
 	(2)编写资源清单
-[root@k8s231.oldboyedu.com podAffinity]# cat 01-deploy-web.yaml 
+[root@k8s231.myharbor.com podAffinity]# cat 01-deploy-web.yaml 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: oldboyedu-linux85-podaffinity
+  name: nginx-podaffinity
 spec:
   replicas: 10
   selector:
@@ -614,41 +115,41 @@ spec:
   template:
     metadata:
       labels:
-        apps: linux85-web
+        apps: haha-web
     spec:
-      # 定义亲和性
+      定义亲和性
       affinity:
-        # 定义Pod的亲和性
+        定义Pod的亲和性
         podAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-            # 指定拓扑域的key
-          # - topologyKey: dc
-          # - topologyKey: beta.kubernetes.io/arch
+            指定拓扑域的key
+          - topologyKey: dc
+          - topologyKey: beta.kubernetes.io/arch
           - topologyKey: kubernetes.io/hostname
-            # 基于标签匹配
+            基于标签匹配
             labelSelector:
                matchExpressions:
-                 # 指的是Pod标签的key
+                 指的是Pod标签的key
                - key: apps
-                 # 指的是Pod标签的values
+                 指的是Pod标签的values
                  values:
-                 - linux85-web
+                 - haha-web
                  operator: In
       tolerations:
       - operator: Exists
       containers:
       - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-[root@k8s231.oldboyedu.com podAffinity]# 
+        image: harbor.myharbor.com/update/apps:v1
+[root@k8s231.myharbor.com podAffinity]# 
 
 
 
 Pod的反亲和性:
-[root@k8s231.oldboyedu.com podAntiAffinity]# cat 01-deploy-web.yaml 
+[root@k8s231.myharbor.com podAntiAffinity]# cat 01-deploy-web.yaml 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: oldboyedu-linux85-podantiaffinity
+  name: nginx-podantiaffinity
 spec:
   replicas: 5
   selector:
@@ -658,32 +159,32 @@ spec:
   template:
     metadata:
       labels:
-        apps: linux85-web
+        apps: haha-web
     spec:
-      # 定义亲和性
+      定义亲和性
       affinity:
-        # 定义Pod的反亲和性
+        定义Pod的反亲和性
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-            # 指定拓扑域的key
+            指定拓扑域的key
           - topologyKey: dc
-          # - topologyKey: beta.kubernetes.io/arch
-          #- topologyKey: kubernetes.io/hostname
-            # 基于标签匹配
+          - topologyKey: beta.kubernetes.io/arch
+         - topologyKey: kubernetes.io/hostname
+            基于标签匹配
             labelSelector:
                matchExpressions:
-                 # 指的是Pod标签的key
+                 指的是Pod标签的key
                - key: apps
-                 # 指的是Pod标签的values
+                 指的是Pod标签的values
                  values:
-                 - linux85-web
+                 - haha-web
                  operator: In
       tolerations:
       - operator: Exists
       containers:
       - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-[root@k8s231.oldboyedu.com podAntiAffinity]# 
+        image: harbor.myharbor.com/update/apps:v1
+[root@k8s231.myharbor.com podAntiAffinity]# 
 
 	
 	
@@ -708,11 +209,11 @@ DaemonSet概述:
 		
 		
 编写资源清单：
-[root@k8s231.oldboyedu.com daemonsets]# cat 01-ds-web.yaml 
+[root@k8s231.myharbor.com daemonsets]# cat 01-ds-web.yaml 
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: oldboyedu-linux85-ds
+  name: nginx-ds
 spec:
   selector:
     matchExpressions:
@@ -721,27 +222,27 @@ spec:
   template:
     metadata:
       labels:
-        apps: linux85-web
+        apps: haha-web
     spec:
-      #affinity:
-      #  nodeAffinity:
-      #    requiredDuringSchedulingIgnoredDuringExecution:
-      #      nodeSelectorTerms:
-      #      - matchExpressions:
-      #        - key: school
-      #          values:
-      #          - oldboyedu
-      #          - laonanhai
-      #          operator: In
-      #
+     affinity:
+       nodeAffinity:
+         requiredDuringSchedulingIgnoredDuringExecution:
+           nodeSelectorTerms:
+           - matchExpressions:
+             - key: wahaha
+               values:
+               - myharbor
+               - laonanhai
+               operator: In
+     
       nodeSelector:
-        class: linux85
+        yohaha: haha
       tolerations:
       - operator: Exists
       containers:
       - name: web
-        image: harbor.oldboyedu.com/update/apps:v2
-[root@k8s231.oldboyedu.com daemonsets]# 
+        image: harbor.myharbor.com/update/apps:v2
+[root@k8s231.myharbor.com daemonsets]# 
 
 	
 	
@@ -764,16 +265,16 @@ Pod驱逐及K8S节点下线：
 	
 - 参考步骤:
 	(1)编写资源清单并创建
-[root@k8s231.oldboyedu.com drain]# ll
+[root@k8s231.myharbor.com drain]# ll
 total 8
 -rw-r--r-- 1 root root 335 Apr 20 15:17 01-drain-deploy.yaml
 -rw-r--r-- 1 root root 317 Apr 20 15:21 02-drain-ds.yaml
-[root@k8s231.oldboyedu.com drain]# 
-[root@k8s231.oldboyedu.com drain]# cat 01-drain-deploy.yaml 
+[root@k8s231.myharbor.com drain]# 
+[root@k8s231.myharbor.com drain]# cat 01-drain-deploy.yaml 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: oldboyedu-linux85-drain
+  name: nginx-drain
 spec:
   replicas: 5
   selector:
@@ -783,17 +284,17 @@ spec:
   template:
     metadata:
       labels:
-        apps: linux85-web
+        apps: haha-web
     spec:
       containers:
       - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-[root@k8s231.oldboyedu.com drain]# 
-[root@k8s231.oldboyedu.com drain]# cat 02-drain-ds.yaml 
+        image: harbor.myharbor.com/update/apps:v1
+[root@k8s231.myharbor.com drain]# 
+[root@k8s231.myharbor.com drain]# cat 02-drain-ds.yaml 
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: oldboyedu-linux85-ds
+  name: nginx-ds
 spec:
   selector:
     matchExpressions:
@@ -802,52 +303,52 @@ spec:
   template:
     metadata:
       labels:
-        apps: linux85-web
+        apps: haha-web
     spec:
       containers:
       - name: web
-        image: harbor.oldboyedu.com/update/apps:v2
-[root@k8s231.oldboyedu.com drain]# 
+        image: harbor.myharbor.com/update/apps:v2
+[root@k8s231.myharbor.com drain]# 
 
 
 	(2)驱逐Pod并打SchedulingDisable标签，但不会驱逐ds资源调度的pod。
-[root@k8s231.oldboyedu.com drain]# kubectl drain k8s233.oldboyedu.com --ignore-daemonsets
-node/k8s233.oldboyedu.com already cordoned
-WARNING: ignoring DaemonSet-managed Pods: default/oldboyedu-linux85-ds-f97fs, kube-flannel/kube-flannel-ds-6m48r, kube-system/kube-proxy-skcr4
-node/k8s233.oldboyedu.com drained
-[root@k8s231.oldboyedu.com drain]# 
-[root@k8s231.oldboyedu.com drain]# kubectl get nodes 
+[root@k8s231.myharbor.com drain]# kubectl drain k8s233.myharbor.com --ignore-daemonsets
+node/k8s233.myharbor.com already cordoned
+WARNING: ignoring DaemonSet-managed Pods: default/nginx-ds-f97fs, kube-flannel/kube-flannel-ds-6m48r, kube-system/kube-proxy-skcr4
+node/k8s233.myharbor.com drained
+[root@k8s231.myharbor.com drain]# 
+[root@k8s231.myharbor.com drain]# kubectl get nodes 
 NAME                   STATUS                     ROLES                  AGE     VERSION
-k8s231.oldboyedu.com   Ready                      control-plane,master   7d22h   v1.23.17
-k8s232.oldboyedu.com   Ready                      <none>                 7d22h   v1.23.17
-k8s233.oldboyedu.com   Ready,SchedulingDisabled   <none>                 7d22h   v1.23.17
-[root@k8s231.oldboyedu.com drain]# 
+k8s231.myharbor.com   Ready                      control-plane,master   7d22h   v1.23.17
+k8s232.myharbor.com   Ready                      <none>                 7d22h   v1.23.17
+k8s233.myharbor.com   Ready,SchedulingDisabled   <none>                 7d22h   v1.23.17
+[root@k8s231.myharbor.com drain]# 
 
 		
 	(3)配置污点，将ds资源进行立即驱逐Pod。
-[root@k8s231.oldboyedu.com drain]# kubectl taint nodes k8s233.oldboyedu.com  classroom=jiaoshi05:NoExecute  
-node/k8s233.oldboyedu.com tainted
-[root@k8s231.oldboyedu.com drain]# 
+[root@k8s231.myharbor.com drain]# kubectl taint nodes k8s233.myharbor.com  yohaharoom=jiaoshi05:NoExecute  
+node/k8s233.myharbor.com tainted
+[root@k8s231.myharbor.com drain]# 
 
 		
 	(4)登录要下线的节点并重置kubeadm集群环境
-[root@k8s233.oldboyedu.com ~]# kubeadm reset -f
-[root@k8s233.oldboyedu.com ~]# 
-[root@k8s233.oldboyedu.com ~]# rm -rf /etc/cni/net.d && iptables -F && iptables-save 
-[root@k8s233.oldboyedu.com ~]# 
-[root@k8s233.oldboyedu.com ~]# systemctl disable kubelet
+[root@k8s233.myharbor.com ~]# kubeadm reset -f
+[root@k8s233.myharbor.com ~]# 
+[root@k8s233.myharbor.com ~]# rm -rf /etc/cni/net.d && iptables -F && iptables-save 
+[root@k8s233.myharbor.com ~]# 
+[root@k8s233.myharbor.com ~]# systemctl disable kubelet
 Removed symlink /etc/systemd/system/multi-user.target.wants/kubelet.service.
-[root@k8s233.oldboyedu.com ~]# 
+[root@k8s233.myharbor.com ~]# 
 	
 	
 	(5)删除要下线的节点。
-[root@k8s231.oldboyedu.com drain]# kubectl delete nodes k8s233.oldboyedu.com
-node "k8s233.oldboyedu.com" deleted
-[root@k8s231.oldboyedu.com drain]# 
+[root@k8s231.myharbor.com drain]# kubectl delete nodes k8s233.myharbor.com
+node "k8s233.myharbor.com" deleted
+[root@k8s231.myharbor.com drain]# 
 
 		
 	(6)关机并重新安装操作系统
-[root@k8s233.oldboyedu.com ~]# reboot 
+[root@k8s233.myharbor.com ~]# reboot 
 
 	
 
@@ -875,42 +376,42 @@ systemctl status kubelet
 
 	2.在master组件创建token
 		2.1 创建一个永不过期的token，并打印加入集群的命令
-[root@k8s231.oldboyedu.com ~]# kubeadm token create --print-join-command oldboy.qwertyuiopasdfgh --ttl 0
+[root@k8s231.myharbor.com ~]# kubeadm token create --print-join-command oldboy.qwertyuiopasdfgh --ttl 0
 kubeadm join 10.0.0.231:6443 --token oldboy.qwertyuiopasdfgh --discovery-token-ca-cert-hash sha256:cefaa1909119929f34cb7366602a3ea4089f586c6ed8465fd15148644763a181 
-[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.myharbor.com ~]# 
 
 
 		2.2 查看现有的token
-[root@k8s231.oldboyedu.com ~]# kubeadm token list
+[root@k8s231.myharbor.com ~]# kubeadm token list
 TOKEN                     TTL         EXPIRES   USAGES                   DESCRIPTION                                                EXTRA GROUPS
 oldboy.qwertyuiopasdfgh   <forever>   <never>   authentication,signing   <none>                                                     system:bootstrappers:kubeadm:default-node-token
-[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.myharbor.com ~]# 
 
 
 		2.3 删除token（先跳过此步骤，先别删除，加入集群后再来操作哟！）
-[root@k8s231.oldboyedu.com ~]# kubeadm token delete oldboy
+[root@k8s231.myharbor.com ~]# kubeadm token delete oldboy
 bootstrap token "oldboy" deleted
-[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.myharbor.com ~]# 
 
 		
 		
 	3.worker节点加入集群
-[root@k8s233.oldboyedu.com ~]# kubeadm join 10.0.0.231:6443 --token oldboy.qwertyuiopasdfgh --discovery-token-ca-cert-hash sha256:cefaa1909119929f34cb7366602a3ea4089f586c6ed8465fd15148644763a181 
+[root@k8s233.myharbor.com ~]# kubeadm join 10.0.0.231:6443 --token oldboy.qwertyuiopasdfgh --discovery-token-ca-cert-hash sha256:cefaa1909119929f34cb7366602a3ea4089f586c6ed8465fd15148644763a181 
 
 
 	4.查看节点
-[root@k8s231.oldboyedu.com ~]# kubectl get nodes
+[root@k8s231.myharbor.com ~]# kubectl get nodes
 NAME                   STATUS   ROLES                  AGE     VERSION
-k8s231.oldboyedu.com   Ready    control-plane,master   7d23h   v1.23.17
-k8s232.oldboyedu.com   Ready    <none>                 7d23h   v1.23.17
-k8s233.oldboyedu.com   Ready    <none>                 58s     v1.23.17
-[root@k8s231.oldboyedu.com ~]# 
+k8s231.myharbor.com   Ready    control-plane,master   7d23h   v1.23.17
+k8s232.myharbor.com   Ready    <none>                 7d23h   v1.23.17
+k8s233.myharbor.com   Ready    <none>                 58s     v1.23.17
+[root@k8s231.myharbor.com ~]# 
 
 
 	5.查看bootstrap阶段的token信息
-[root@k8s231.oldboyedu.com ~]# kubectl get secrets  -A | grep oldboy
+[root@k8s231.myharbor.com ~]# kubectl get secrets  -A | grep oldboy
 kube-system       bootstrap-token-oldboy                           bootstrap.kubernetes.io/token         5      22s
-[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.myharbor.com ~]# 
 
 
 
@@ -927,22 +428,22 @@ K8S集群在任意云平台环境，比如腾讯云，阿里云，京东云等�
 
 
 	(2)创建svc
-[root@k8s231.oldboyedu.com services]# cat 03-services-LoadBalance.yaml 
+[root@k8s231.myharbor.com services]# cat 03-services-LoadBalance.yaml 
 kind: Service
 apiVersion: v1
 metadata:
   name: svc-loadbalancer
 spec:
-  # 指定service类型为LoadBalancer，注意，一般用于云环境
+  指定service类型为LoadBalancer，注意，一般用于云环境
   type: LoadBalancer
   selector:
-    apps: linux85-web
+    apps: haha-web
   ports:
   - protocol: TCP
     port: 80
     targetPort: 80
     nodePort: 30080
-[root@k8s231.oldboyedu.com services]# 
+[root@k8s231.myharbor.com services]# 
 
 
     
@@ -963,17 +464,17 @@ spec:
 
 
 ExternalName案例：
-[root@k8s151.oldboyedu.com ~]# cat 04-svc-ExternalName.yaml 
+[root@k8s151.myharbor.com ~]# cat 04-svc-ExternalName.yaml 
 apiVersion: v1
 kind: Service
 metadata:
   name: svc-externalname
 spec:
-  # svc类型
+  svc类型
   type: ExternalName
-  # 指定外部域名
+  指定外部域名
   externalName: www.baidu.com
-[root@k8s151.oldboyedu.com ~]# 
+[root@k8s151.myharbor.com ~]# 
 
 
 温馨提示:
@@ -987,16 +488,16 @@ spec:
 
 k8s使用ep资源映射外部服务实战案例:
 	(1)在K8S外部节点部署MySQL环境
-[root@harbor.oldboyedu.com ~]# docker run -de MYSQL_ALLOW_EMPTY_PASSWORD=yes \
+[root@harbor.myharbor.com ~]# docker run -de MYSQL_ALLOW_EMPTY_PASSWORD=yes \
  -p 3306:3306 --name mysql-server --restart unless-stopped \
  -e MYSQL_DATABASE=wordpress \
- -e MYSQL_USER=linux85 \
- -e MYSQL_PASSWORD=oldboyedu \
- harbor.oldboyedu.com/db/mysql:8.0.32-oracle
+ -e MYSQL_USER=haha \
+ -e MYSQL_PASSWORD=myharbor \
+ harbor.myharbor.com/db/mysql:8.0.32-oracle
 
 
 	(2)连接测试
-[root@harbor.oldboyedu.com ~]# docker exec -it mysql-server bash
+[root@harbor.myharbor.com ~]# docker exec -it mysql-server bash
 bash-4.4# 
 bash-4.4# mysql
 ...
@@ -1024,25 +525,25 @@ mysql>
 
 
 	(3)K8S编写ep资源
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 01-ep.yaml 
+[root@k8s231.myharbor.com 05-wordpress-ep]# cat 01-ep.yaml 
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: oldboyedu-linux85-db
+  name: nginx-db
 subsets:
 - addresses:
   - ip: 10.0.0.250
   ports:
   - port: 3306
-[root@k8s231.oldboyedu.com 05-wordpress-ep]#
+[root@k8s231.myharbor.com 05-wordpress-ep]#
 
 
 	(4)编写同名的svc资源
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
+[root@k8s231.myharbor.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
 apiVersion: v1
 kind: Service
 metadata:
-  name: oldboyedu-linux85-db
+  name: nginx-db
 spec:
   selector:
     app: mysql
@@ -1050,19 +551,19 @@ spec:
   ports:
   - port: 3306
     targetPort: 3306
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
+[root@k8s231.myharbor.com 05-wordpress-ep]# 
 
 	
 	(5)删除之前旧的WordPress数据
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# rm -rf /oldboyedu/data/kubernetes/wordpress/*
+[root@k8s231.myharbor.com 05-wordpress-ep]# rm -rf /myharbor/data/kubernetes/wordpress/*
 
 	
 	(6)部署wordpres连接MySQL
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 03-deploy-wordpresss.yaml 
+[root@k8s231.myharbor.com 05-wordpress-ep]# cat 03-deploy-wordpresss.yaml 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: oldboyedu-linux85-wordpress
+  name: nginx-wordpress
 spec:
   replicas: 3
   selector:
@@ -1077,47 +578,47 @@ spec:
       - name: data
         nfs:
           server: 10.0.0.231
-          path: /oldboyedu/data/kubernetes/wordpress
+          path: /myharbor/data/kubernetes/wordpress
       containers:
       - name: wordpress
-        image: harbor.oldboyedu.com/web/wordpress
+        image: harbor.myharbor.com/web/wordpress
         ports:
         - containerPort: 80
         env:
         - name: WORDPRESS_DB_HOST
-          value: oldboyedu-linux85-db
+          value: nginx-db
         - name: WORDPRESS_DB_USER
-          value: linux85
+          value: haha
         - name: WORDPRESS_DB_PASSWORD
-          value: oldboyedu
+          value: myharbor
         volumeMounts:
         - name: data
           mountPath: /var/www/html/wp-content/uploads
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
+[root@k8s231.myharbor.com 05-wordpress-ep]# 
 	
 	(7)创建svc暴露WordPress应用
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
+[root@k8s231.myharbor.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
 apiVersion: v1
 kind: Service
 metadata:
-  name: oldboyedu-linux85-db
+  name: nginx-db
 spec:
   type: ClusterIP
   ports:
   - port: 3306
     targetPort: 3306
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
+[root@k8s231.myharbor.com 05-wordpress-ep]# 
 
 
 	(8)创建应用
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# kubectl delete all --all
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# kubectl apply -f .
-endpoints/oldboyedu-linux85-db created
-service/oldboyedu-linux85-db created
-deployment.apps/oldboyedu-linux85-wordpress created
-service/oldboyedu-linux85-wordpress created
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
+[root@k8s231.myharbor.com 05-wordpress-ep]# kubectl delete all --all
+[root@k8s231.myharbor.com 05-wordpress-ep]# 
+[root@k8s231.myharbor.com 05-wordpress-ep]# kubectl apply -f .
+endpoints/nginx-db created
+service/nginx-db created
+deployment.apps/nginx-wordpress created
+service/nginx-wordpress created
+[root@k8s231.myharbor.com 05-wordpress-ep]# 
 
 	
 	(9)访问webUI测试
@@ -1161,12 +662,12 @@ chmod 755 /etc/sysconfig/modules/ipvs.modules && bash /etc/sysconfig/modules/ipv
 
 	(4)修改kube-proxy的工作模式为ipvs
 		4.1仅需修改工作模式("mode")为ipvs即可。切记，一定要保存退出！
-[root@k8s231.oldboyedu.com ~]# kubectl -n kube-system edit cm kube-proxy
+[root@k8s231.myharbor.com ~]# kubectl -n kube-system edit cm kube-proxy
 
 		4.2 验证是否修改成功
-[root@k8s231.oldboyedu.com ~]# kubectl -n kube-system describe cm kube-proxy | grep mode
+[root@k8s231.myharbor.com ~]# kubectl -n kube-system describe cm kube-proxy | grep mode
 mode: "ipvs"
-[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.myharbor.com ~]# 
 
 
 	(5)删除旧的kube-proxy
@@ -1175,13 +676,13 @@ kubectl get pods -A | grep kube-proxy | awk '{print $2}' | xargs kubectl -n kube
 
 	(6)验证kube-proxy组件工作模式是否生效
 		6.1 查看日志
-[root@k8s231.oldboyedu.com ~]# kubectl get pods -A | grep kube-proxy 
+[root@k8s231.myharbor.com ~]# kubectl get pods -A | grep kube-proxy 
 kube-system    kube-proxy-k6mrc                               1/1     Running   0               58s
 kube-system    kube-proxy-pt7mk                               1/1     Running   0               57s
 kube-system    kube-proxy-rmhh6                               1/1     Running   0               57s
-[root@k8s231.oldboyedu.com ~]# 
-[root@k8s231.oldboyedu.com ~]# 
-[root@k8s231.oldboyedu.com ~]# kubectl logs kube-proxy-k6mrc -n kube-system 
+[root@k8s231.myharbor.com ~]# 
+[root@k8s231.myharbor.com ~]# 
+[root@k8s231.myharbor.com ~]# kubectl logs kube-proxy-k6mrc -n kube-system 
 I0420 09:45:23.314221       1 node.go:163] Successfully retrieved node IP: 10.0.0.233
 I0420 09:45:23.314300       1 server_others.go:138] "Detected node IP" address="10.0.0.233"
 I0420 09:45:23.334201       1 server_others.go:269] "Using ipvs Proxier"
@@ -1189,27 +690,27 @@ I0420 09:45:23.334201       1 server_others.go:269] "Using ipvs Proxier"
 
 
 		6.2 测试服务是否正常访问
-[root@k8s231.oldboyedu.com ~]# curl -I http://10.0.0.233:30080/2023/04/20/hello-world/
+[root@k8s231.myharbor.com ~]# curl -I http://10.0.0.233:30080/2023/04/20/hello-world/
 
 
 	(3)验证ipvs的工作模式，如下图所示。
-[root@k8s231.oldboyedu.com ~]# kubectl get po,svc
+[root@k8s231.myharbor.com ~]# kubectl get po,svc
 NAME                                               READY   STATUS    RESTARTS   AGE
-pod/oldboyedu-linux85-wordpress-6b757777b7-dn7xr   1/1     Running   0          34m
-pod/oldboyedu-linux85-wordpress-6b757777b7-rzthp   1/1     Running   0          34m
-pod/oldboyedu-linux85-wordpress-6b757777b7-ssm65   1/1     Running   0          34m
+pod/nginx-wordpress-6b757777b7-dn7xr   1/1     Running   0          34m
+pod/nginx-wordpress-6b757777b7-rzthp   1/1     Running   0          34m
+pod/nginx-wordpress-6b757777b7-ssm65   1/1     Running   0          34m
 
 NAME                                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
 service/kubernetes                    ClusterIP   10.200.0.1       <none>        443/TCP        37m
-service/oldboyedu-linux85-db          ClusterIP   10.200.36.230    <none>        3306/TCP       34m
-service/oldboyedu-linux85-wordpress   NodePort    10.200.100.200   <none>        80:30080/TCP   34m
-[root@k8s231.oldboyedu.com ~]# 
-[root@k8s231.oldboyedu.com ~]# ipvsadm -ln | grep 10.200.100.200 -A 3
+service/nginx-db          ClusterIP   10.200.36.230    <none>        3306/TCP       34m
+service/nginx-wordpress   NodePort    10.200.100.200   <none>        80:30080/TCP   34m
+[root@k8s231.myharbor.com ~]# 
+[root@k8s231.myharbor.com ~]# ipvsadm -ln | grep 10.200.100.200 -A 3
 TCP  10.200.100.200:80 rr
   -> 10.100.1.196:80              Masq    1      0          0         
   -> 10.100.1.197:80              Masq    1      0          0         
   -> 10.100.3.8:80                Masq    1      0          0         
-[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.myharbor.com ~]# 
 
 
 
@@ -1236,10 +737,531 @@ Q3: 影响Pod调度的因素有哪些?
 
 今日作业:
 	- 完成课堂的所有练习并整理思维导图;
-	- 将"harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1"镜像的多个服务修改端口范围81-85端口，不允许重新打镜像;
+	- 将"harbor.myharbor.com/myharbor-games/jasonyin2020/myharbor-games:v0.1"镜像的多个服务修改端口范围81-85端口，不允许重新打镜像;
 	- 使用一个svc暴露这5个服务;
 	
 扩展作业:
 	- 部署可道云到K8S集群;
+```
+
+# Q1: 影响pod调度的因素有哪些?
+
+- nodeName
+  - resources
+  - hostNetwork
+  ...
+  - 污点
+  - 污点容忍
+  - Pod亲和性
+  - Pod反亲和性
+  - 节点亲和性
+
+# 污点概述
+
+```
+污点通常情况下是作用在worker节点上，其可以影响Pod的调度。
+
+污点的语法格式如下:
+key[=value]:effect
+		
+相关字段说明:
+key:字母或数字开头，可以包含字母、数字、连字符(-)、点(.)和下划线(_)，最多253个字符。也可以以DNS子域前缀和单个"/"开头
+value:该值是可选的。如果给定，它必须以字母或数字开头，可以包含字母、数字、连字符、点和下划线，最多63个字符。
+effect:[ɪˈfekt]
+	effect必须是NoSchedule、PreferNoSchedule或NoExecute。
+	NoSchedule: [noʊ,ˈskedʒuːl] 该节点不再接收新的Pod调度，但不会驱赶已经调度到该节点的Pod。
+	PreferNoSchedule: [prɪˈfɜːr,noʊ,ˈskedʒuː] 该节点可以接受调度，但会尽可能将Pod调度到其他节点，换句话说，让该节点的调度优先级降低啦。
+	NoExecute:[ˈnoʊ,eksɪkjuːt] 该节点不再接收新的Pod调度，与此同时，会立刻驱逐已经调度到该节点的Pod。
+```
+
+## NoExecute 污点实战
+
+```
+(1)创建资源清单
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-taint-demo-1
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 5
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - wahaha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: wahaha1
+    spec:
+      containers:
+      - name: nginx-deploy-demo-1  
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: IfNotPresent
+ 
+(2)查看Pod调度节点
+kubectl get pods -n haha -o wide | awk '{print $7}'
+NODE
+centos7k8s2
+centos7k8s3
+centos7k8s2
+centos7k8s3
+centos7k8s2
+ 
+(3)打污点
+kubectl taint node centos7k8s2 mytaint1=waxixi:NoExecute
+node/centos7k8s2 tainted
+
+(4)查看污点
+kubectl describe nodes | grep Taint -A 3
+Taints:             node-role.kubernetes.io/master:NoSchedule
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s1
+--
+Taints:             mytaint1=waxixi:NoExecute
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s2
+--
+Taints:             <none>
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s3
+  
+(5)打污点后
+kubectl get pods -n haha -o wide | awk '{print $7}'
+NODE
+centos7k8s3
+centos7k8s3
+centos7k8s3
+centos7k8s3
+centos7k8s3
+ 
+(6)清除污点
+kubectl taint node centos7k8s2 mytaint1-
+node/centos7k8s2 untainted
+ 
+(7)再次修改Pod副本数量
+kubectl edit deployments.apps nginx-taint-demo-1 -n haha
+deployment.apps/nginx-taint-demo-1 edited
+
+kubectl get pods -n haha -o wide | awk '{print $7}'
+NODE
+centos7k8s2
+centos7k8s3
+centos7k8s2
+centos7k8s3
+centos7k8s3
+centos7k8s2
+centos7k8s3
+centos7k8s2
+centos7k8s3
+```
+
+## PreferNoSchedule污点实战案例
+
+```
+(1)添加PreferNoSchedule污点
+kubectl taint node centos7k8s2 mytaint=yoxixi:PreferNoSchedule
+node/centos7k8s2 tainted
+[root@centos7k8s1 taint]# kubectl describe nodes | grep Taint -A 3
+Taints:             node-role.kubernetes.io/master:NoSchedule
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s1
+--
+Taints:             mytaint=yoxixi:PreferNoSchedule
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s2
+--
+Taints:             <none>
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s3
+(2)创建资源清单并应用
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-taint-prefernoschedule-demo-1
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 5
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - wahaha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: wahaha1
+    spec:
+      containers:
+      - name: nginx-taint-prefernoschedule-demo
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+ 
+kubectl apply -f 02_nginx_deploy_taint_prefernoschedule_demo.yml 
+deployment.apps/nginx-taint-prefernoschedule-demo-1 created
+(3)查看调度节点
+kubectl get pods -n haha -o wide | awk '{print $7}'
+NODE
+centos7k8s3
+centos7k8s3
+centos7k8s3
+centos7k8s3
+centos7k8s3
+(4)添加NoExecute污点
+kubectl taint node centos7k8s3 mytaint2=wuhaha:NoExecute
+node/centos7k8s3 tainted
+(5)再次查看Pod调度节点
+kubectl get pods -n haha -o wide | awk '{print $7}'
+NODE
+centos7k8s2
+centos7k8s2
+centos7k8s2
+centos7k8s2
+centos7k8s2
+```
+
+## NoSchedule污点实战案例
+
+```
+(1)查看现有污点状态
+kubectl describe nodes | grep Taint -A 3
+Taints:             node-role.kubernetes.io/master:NoSchedule
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s1
+--
+Taints:             mytaint=yoxixi:PreferNoSchedule
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s2
+--
+Taints:             mytaint2=wuhaha:NoExecute
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s3
+
+(2)添加污点
+kubectl taint node centos7k8s2 mytaint=yoxixi:NoSchedule
+node/centos7k8s2 tainted
+
+(3)再次查看节点的污点状态
+kubectl describe nodes | grep Taint -A 3
+Taints:             node-role.kubernetes.io/master:NoSchedule
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s1
+--
+Taints:             mytaint=yoxixi:NoSchedule
+                    mytaint=yoxixi:PreferNoSchedule
+Unschedulable:      false
+Lease:
+--
+Taints:             mytaint2=wuhaha:NoExecute
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s3
+
+(4)查看现有的Pod调度
+kubectl get pods -n haha -o wide | awk '{print $7}'
+NODE
+centos7k8s2
+centos7k8s2
+centos7k8s2
+centos7k8s2
+centos7k8s2	
+	
+(5)调大副本数量，观察是否能完成调度，比如增加4个Pod副本，会出现如下的Pending状态哟！
+kubectl edit deployments.apps nginx-taint-prefernoschedule-demo-1 -n haha
+deployment.apps/nginx-taint-prefernoschedule-demo-1 edited
+
+kubectl get pods -n haha -o wide | awk '{print $1, $3, $7}'
+NAME STATUS NODE
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-77n2r Pending <none>
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-b2l2w Running centos7k8s2
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-cr4cp Pending <none>
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-hmmjh Running centos7k8s2
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-mnrb9 Pending <none>
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-pnzhv Running centos7k8s2
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-tnpcs Running centos7k8s2
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-twhvp Running centos7k8s2
+nginx-taint-prefernoschedule-demo-1-5dbc469d84-xn2cv Pending <none>
+```
+
+## 配置污点容忍实战案例
+
+```
+(1)修改污点
+kubectl taint node centos7k8s2 mytaint=yohaha:PreferNoSchedule --overwrite
+node/centos7k8s2 modified
+
+(2)查看污点
+kubectl describe nodes | grep Taint -A 3
+Taints:             node-role.kubernetes.io/master:NoSchedule
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s1
+--
+Taints:             mytaint=yoxixi:NoSchedule
+                    mytaint=yohaha:PreferNoSchedule
+Unschedulable:      false
+Lease:
+--
+Taints:             mytaint2=wuhaha:NoExecute
+Unschedulable:      false
+Lease:
+  HolderIdentity:  centos7k8s3
+  
+(3)编写资源清单
+# kubectl explain po.spec.tolerations
+配置Pod的污点容忍
+tolerations:
+- key: 指定污点的key 若不指定key，则operator的值必须为Exists，表示匹配所有的key
+  value: 指定污点的key的value
+  effect: 指定污点的effect，有效值为: NoSchedule, PreferNoSchedule,NoExecute 若不指定则匹配所有的影响度。
+  operator: 表示key和value的关系，有效值为Exists， Equal。
+     Exists:
+       表示存在指定的key即可，若配置，则要求value字段为空。
+     Equal:
+       默认值，表示key=value。       
+
+如果不指定key，value，effect，仅配置"operator: Exists"表示无视任何污点!
+ - operator: Exists
+
+# 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-taint-prefernoschedule-demo-1
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 5
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - wahaha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: wahaha1
+    spec:
+      tolerations:
+      - key: mytaint2
+        value: wuhaha
+        effect: NoExecute
+        operator: Equal
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+      containers:
+      - name: nginx-taint-prefernoschedule-demo
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
+ 
+(4)查看现有的Pod调度
+kubectl get pods -n haha -o wide | awk '{print $7}'
+NODE
+centos7k8s3
+centos7k8s3
+centos7k8s1
+centos7k8s1
+centos7k8s3
+```
+
+# 节点选择器nodeselector
+
+```
+(1)给节点打标签
+kubectl label nodes centos7k8s1 ynode=gotit
+node/centos7k8s1 labeled
+
+kubectl get nodes --show-labels
+NAME          STATUS   ROLES                  AGE   VERSION    LABELS
+centos7k8s1   Ready    control-plane,master   14d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s1,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node.kubernetes.io/exclude-from-external-load-balancers=,ynode=gotit
+centos7k8s2   Ready    <none>                 14d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s2,kubernetes.io/os=linux,mynode=iwant
+centos7k8s3   Ready    <none>                 14d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s3,kubernetes.io/os=linux,mynode=iwant
+
+
+(2)编写资源清单
+kubectl explain po.spec.nodeSelector
+KIND:     Pod
+VERSION:  v1
+
+FIELD:    nodeSelector <map[string]string>
+
+nodeSelector:
+  label_name: value #匹配节点的标签名和值，如有多个则须都写。需调用的节点标签值要一致，否则会报错或一直在pending状态
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-node-selector
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 5
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+      - operator: Exists
+      nodeSelector:
+        mynode: iwant
+        #ynode: gotit
+      containers:
+      - name: nginx-deploy-node-selector-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
+
+kubectl get pod -n haha -o wide | awk '{print $7}'
+NODE
+centos7k8s3
+centos7k8s2
+centos7k8s2
+centos7k8s3
+centos7k8s3
+
+(3)删除标签
+[root@centos7k8s1 node_selector]# kubectl label nodes --all mynode-
+label "mynode" not found.
+node/centos7k8s1 not labeled
+node/centos7k8s2 unlabeled
+node/centos7k8s3 unlabeled
+[root@centos7k8s1 node_selector]# kubectl label nodes --all ynode-
+node/centos7k8s1 unlabeled
+label "ynode" not found.
+node/centos7k8s2 not labeled
+label "ynode" not found.
+node/centos7k8s3 not labeled
+```
+
+# 节点亲和性nodeAffinity
+
+```
+(1)打标签
+[root@centos7k8s1 node_affinity]# kubectl label nodes centos7k8s1 mynode=iwant
+node/centos7k8s1 labeled
+[root@centos7k8s1 node_affinity]# kubectl label nodes centos7k8s3 mynode=ywant
+node/centos7k8s3 labeled
+
+kubectl get nodes --show-labels
+NAME          STATUS   ROLES                  AGE   VERSION    LABELS
+centos7k8s1   Ready    control-plane,master   14d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s1,kubernetes.io/os=linux,mynode=iwant,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node.kubernetes.io/exclude-from-external-load-balancers=
+centos7k8s2   Ready    <none>                 14d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s2,kubernetes.io/os=linux
+centos7k8s3   Ready    <none>                 14d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s3,kubernetes.io/os=linux,mynode=ywant
+
+(2)编写资源清单
+affinity:  #定义亲和性
+  nodeAffinity: #定义节点的亲和性    
+    requiredDuringSchedulingIgnoredDuringExecution: #定义硬限制      
+      nodeSelectorTerms: #定义节点的匹配条件        
+      - matchExpressions: #基于节点的标签进行匹配          
+        - key: 指定标签的key          
+          values: 指定标签的value
+          - value1
+          - value2
+          ...
+          operator: In # 指定key和value之间的对应关系，有效值如下:
+            In:
+              key的值必须在vlaues内。要求values不能为空。
+            NotIn:
+              和In相反。要求values不能为空。
+            Exists:
+              只要存在指定key即可，vlaues的值必须为空。
+            DoesNotExist:
+              只要不存在指定key即可，vlaues的值必须为空。
+            Gt:
+              表示大于的意思，values的值会被解释为整数。
+            Lt:
+              表示小于的意思，values的值会被解释为整数。
+          
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-node-affinity
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 5
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+        #key: node-role.kubernetes.io/master
+        #effect: NoSchedule
+      - operator: Exists
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: mynode
+                values: 
+                - iwant
+                - ywant
+                operator: In
+              #- key: ynode
+              #  values: 
+              #  - gotit
+              #  operator: In
+      containers:
+      - name: nginx-deploy-node-affinity-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-deploy-node-affinity-svc
+  namespace: haha
+spec:
+  selector:
+    app: haha1
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 31800
+  clusterIP: 10.200.111.111
+
+
+(3)删除标签
+[root@k8s231.myharbor.com nodeAffinity]# kubectl label nodes --all mynode- 
 ```
 
