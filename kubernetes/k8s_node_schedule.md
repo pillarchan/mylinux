@@ -25,23 +25,16 @@
 			
 		- 应用案例:
 			- wordpress
-			- redis
-			
+			- redis			
 	- services:
 		- NodePort
-		- ClusterIP
-		
-		
+		- ClusterIP		
 	- coreDNS:
-		将svc解析为clusterIP。
-		
+		将svc解析为clusterIP。		
 	- Job
-		一次性任务
-		
+		一次性任务	
 	- CronJob
-		周期性任务，底层调用的Job控制器。
-		
-		
+		周期性任务，底层调用的Job控制器。		
 故障案例1:
 	- wordPress连接MySQL一直出现连接数据库失败。
 		- 检查K8S集群是否健康
@@ -55,8 +48,7 @@
 			kubectl exec -it ...
 		- 检查存储卷
 			删除MySQL数据目录对应nfs。删除后重新创建即可。
-			如果还不行，建议更换MySQL 5.7
-			
+			如果还不行，建议更换MySQL 5.7			
 故障案例2:
 	k8s232节点可以正常运行Pod，k8s233无法正常运行pod，报错是挂载失败。
 		- 手动挂载:
@@ -64,92 +56,18 @@
 		
 		- 安装nfs依赖:
 			yum -y install nfs-utils
-			
-			
 故障案例3:
 	svc关联pod失败。
 		- svc的标签选择器有6个。
 		- Pod仅包含了1个。
 		综上所述: Pod的标签数必须包含svc所关联的标签，只能多不能少。
-		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Pod的亲和性:
-	(1)打标签
-[root@k8s231.myharbor.com podAffinity]# kubectl label nodes --all dc=lugu
-node/k8s231.myharbor.com labeled
-node/k8s232.myharbor.com labeled
-node/k8s233.myharbor.com labeled
-[root@k8s231.myharbor.com podAffinity]# 
-[root@k8s231.myharbor.com podAffinity]# kubectl label nodes k8s232.myharbor.com dc=jiuxianqiao --overwrite 
-node/k8s232.myharbor.com labeled
-[root@k8s231.myharbor.com podAffinity]# 
-
-
-	(2)编写资源清单
-[root@k8s231.myharbor.com podAffinity]# cat 01-deploy-web.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-podaffinity
-spec:
-  replicas: 10
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: haha-web
-    spec:
-      定义亲和性
-      affinity:
-        定义Pod的亲和性
-        podAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            指定拓扑域的key
-          - topologyKey: dc
-          - topologyKey: beta.kubernetes.io/arch
-          - topologyKey: kubernetes.io/hostname
-            基于标签匹配
-            labelSelector:
-               matchExpressions:
-                 指的是Pod标签的key
-               - key: apps
-                 指的是Pod标签的values
-                 values:
-                 - haha-web
-                 operator: In
-      tolerations:
-      - operator: Exists
-      containers:
-      - name: web
-        image: harbor.myharbor.com/update/apps:v1
-[root@k8s231.myharbor.com podAffinity]# 
-
-
 
 Pod的反亲和性:
-[root@k8s231.myharbor.com podAntiAffinity]# cat 01-deploy-web.yaml 
+[root@k8s231.oldboyedu.com podAntiAffinity]# cat 01-deploy-web.yaml 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-podantiaffinity
+  name: oldboyedu-linux85-podantiaffinity
 spec:
   replicas: 5
   selector:
@@ -159,32 +77,32 @@ spec:
   template:
     metadata:
       labels:
-        apps: haha-web
+        apps: linux85-web
     spec:
-      定义亲和性
+      # 定义亲和性
       affinity:
-        定义Pod的反亲和性
+        # 定义Pod的反亲和性
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-            指定拓扑域的key
+            # 指定拓扑域的key
           - topologyKey: dc
-          - topologyKey: beta.kubernetes.io/arch
-         - topologyKey: kubernetes.io/hostname
-            基于标签匹配
+          # - topologyKey: beta.kubernetes.io/arch
+          #- topologyKey: kubernetes.io/hostname
+            # 基于标签匹配
             labelSelector:
                matchExpressions:
-                 指的是Pod标签的key
+                 # 指的是Pod标签的key
                - key: apps
-                 指的是Pod标签的values
+                 # 指的是Pod标签的values
                  values:
-                 - haha-web
+                 - linux85-web
                  operator: In
       tolerations:
       - operator: Exists
       containers:
       - name: web
-        image: harbor.myharbor.com/update/apps:v1
-[root@k8s231.myharbor.com podAntiAffinity]# 
+        image: harbor.oldboyedu.com/update/apps:v1
+[root@k8s231.oldboyedu.com podAntiAffinity]# 
 
 	
 	
@@ -209,11 +127,11 @@ DaemonSet概述:
 		
 		
 编写资源清单：
-[root@k8s231.myharbor.com daemonsets]# cat 01-ds-web.yaml 
+[root@k8s231.oldboyedu.com daemonsets]# cat 01-ds-web.yaml 
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: nginx-ds
+  name: oldboyedu-linux85-ds
 spec:
   selector:
     matchExpressions:
@@ -222,27 +140,27 @@ spec:
   template:
     metadata:
       labels:
-        apps: haha-web
+        apps: linux85-web
     spec:
-     affinity:
-       nodeAffinity:
-         requiredDuringSchedulingIgnoredDuringExecution:
-           nodeSelectorTerms:
-           - matchExpressions:
-             - key: wahaha
-               values:
-               - myharbor
-               - laonanhai
-               operator: In
-     
+      #affinity:
+      #  nodeAffinity:
+      #    requiredDuringSchedulingIgnoredDuringExecution:
+      #      nodeSelectorTerms:
+      #      - matchExpressions:
+      #        - key: school
+      #          values:
+      #          - oldboyedu
+      #          - laonanhai
+      #          operator: In
+      #
       nodeSelector:
-        yohaha: haha
+        class: linux85
       tolerations:
       - operator: Exists
       containers:
       - name: web
-        image: harbor.myharbor.com/update/apps:v2
-[root@k8s231.myharbor.com daemonsets]# 
+        image: harbor.oldboyedu.com/update/apps:v2
+[root@k8s231.oldboyedu.com daemonsets]# 
 
 	
 	
@@ -265,16 +183,16 @@ Pod驱逐及K8S节点下线：
 	
 - 参考步骤:
 	(1)编写资源清单并创建
-[root@k8s231.myharbor.com drain]# ll
+[root@k8s231.oldboyedu.com drain]# ll
 total 8
 -rw-r--r-- 1 root root 335 Apr 20 15:17 01-drain-deploy.yaml
 -rw-r--r-- 1 root root 317 Apr 20 15:21 02-drain-ds.yaml
-[root@k8s231.myharbor.com drain]# 
-[root@k8s231.myharbor.com drain]# cat 01-drain-deploy.yaml 
+[root@k8s231.oldboyedu.com drain]# 
+[root@k8s231.oldboyedu.com drain]# cat 01-drain-deploy.yaml 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-drain
+  name: oldboyedu-linux85-drain
 spec:
   replicas: 5
   selector:
@@ -284,17 +202,17 @@ spec:
   template:
     metadata:
       labels:
-        apps: haha-web
+        apps: linux85-web
     spec:
       containers:
       - name: web
-        image: harbor.myharbor.com/update/apps:v1
-[root@k8s231.myharbor.com drain]# 
-[root@k8s231.myharbor.com drain]# cat 02-drain-ds.yaml 
+        image: harbor.oldboyedu.com/update/apps:v1
+[root@k8s231.oldboyedu.com drain]# 
+[root@k8s231.oldboyedu.com drain]# cat 02-drain-ds.yaml 
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: nginx-ds
+  name: oldboyedu-linux85-ds
 spec:
   selector:
     matchExpressions:
@@ -303,52 +221,52 @@ spec:
   template:
     metadata:
       labels:
-        apps: haha-web
+        apps: linux85-web
     spec:
       containers:
       - name: web
-        image: harbor.myharbor.com/update/apps:v2
-[root@k8s231.myharbor.com drain]# 
+        image: harbor.oldboyedu.com/update/apps:v2
+[root@k8s231.oldboyedu.com drain]# 
 
 
 	(2)驱逐Pod并打SchedulingDisable标签，但不会驱逐ds资源调度的pod。
-[root@k8s231.myharbor.com drain]# kubectl drain k8s233.myharbor.com --ignore-daemonsets
-node/k8s233.myharbor.com already cordoned
-WARNING: ignoring DaemonSet-managed Pods: default/nginx-ds-f97fs, kube-flannel/kube-flannel-ds-6m48r, kube-system/kube-proxy-skcr4
-node/k8s233.myharbor.com drained
-[root@k8s231.myharbor.com drain]# 
-[root@k8s231.myharbor.com drain]# kubectl get nodes 
+[root@k8s231.oldboyedu.com drain]# kubectl drain k8s233.oldboyedu.com --ignore-daemonsets
+node/k8s233.oldboyedu.com already cordoned
+WARNING: ignoring DaemonSet-managed Pods: default/oldboyedu-linux85-ds-f97fs, kube-flannel/kube-flannel-ds-6m48r, kube-system/kube-proxy-skcr4
+node/k8s233.oldboyedu.com drained
+[root@k8s231.oldboyedu.com drain]# 
+[root@k8s231.oldboyedu.com drain]# kubectl get nodes 
 NAME                   STATUS                     ROLES                  AGE     VERSION
-k8s231.myharbor.com   Ready                      control-plane,master   7d22h   v1.23.17
-k8s232.myharbor.com   Ready                      <none>                 7d22h   v1.23.17
-k8s233.myharbor.com   Ready,SchedulingDisabled   <none>                 7d22h   v1.23.17
-[root@k8s231.myharbor.com drain]# 
+k8s231.oldboyedu.com   Ready                      control-plane,master   7d22h   v1.23.17
+k8s232.oldboyedu.com   Ready                      <none>                 7d22h   v1.23.17
+k8s233.oldboyedu.com   Ready,SchedulingDisabled   <none>                 7d22h   v1.23.17
+[root@k8s231.oldboyedu.com drain]# 
 
 		
 	(3)配置污点，将ds资源进行立即驱逐Pod。
-[root@k8s231.myharbor.com drain]# kubectl taint nodes k8s233.myharbor.com  yohaharoom=jiaoshi05:NoExecute  
-node/k8s233.myharbor.com tainted
-[root@k8s231.myharbor.com drain]# 
+[root@k8s231.oldboyedu.com drain]# kubectl taint nodes k8s233.oldboyedu.com  classroom=jiaoshi05:NoExecute  
+node/k8s233.oldboyedu.com tainted
+[root@k8s231.oldboyedu.com drain]# 
 
 		
 	(4)登录要下线的节点并重置kubeadm集群环境
-[root@k8s233.myharbor.com ~]# kubeadm reset -f
-[root@k8s233.myharbor.com ~]# 
-[root@k8s233.myharbor.com ~]# rm -rf /etc/cni/net.d && iptables -F && iptables-save 
-[root@k8s233.myharbor.com ~]# 
-[root@k8s233.myharbor.com ~]# systemctl disable kubelet
+[root@k8s233.oldboyedu.com ~]# kubeadm reset -f
+[root@k8s233.oldboyedu.com ~]# 
+[root@k8s233.oldboyedu.com ~]# rm -rf /etc/cni/net.d && iptables -F && iptables-save 
+[root@k8s233.oldboyedu.com ~]# 
+[root@k8s233.oldboyedu.com ~]# systemctl disable kubelet
 Removed symlink /etc/systemd/system/multi-user.target.wants/kubelet.service.
-[root@k8s233.myharbor.com ~]# 
+[root@k8s233.oldboyedu.com ~]# 
 	
 	
 	(5)删除要下线的节点。
-[root@k8s231.myharbor.com drain]# kubectl delete nodes k8s233.myharbor.com
-node "k8s233.myharbor.com" deleted
-[root@k8s231.myharbor.com drain]# 
+[root@k8s231.oldboyedu.com drain]# kubectl delete nodes k8s233.oldboyedu.com
+node "k8s233.oldboyedu.com" deleted
+[root@k8s231.oldboyedu.com drain]# 
 
 		
 	(6)关机并重新安装操作系统
-[root@k8s233.myharbor.com ~]# reboot 
+[root@k8s233.oldboyedu.com ~]# reboot 
 
 	
 
@@ -376,42 +294,42 @@ systemctl status kubelet
 
 	2.在master组件创建token
 		2.1 创建一个永不过期的token，并打印加入集群的命令
-[root@k8s231.myharbor.com ~]# kubeadm token create --print-join-command oldboy.qwertyuiopasdfgh --ttl 0
+[root@k8s231.oldboyedu.com ~]# kubeadm token create --print-join-command oldboy.qwertyuiopasdfgh --ttl 0
 kubeadm join 10.0.0.231:6443 --token oldboy.qwertyuiopasdfgh --discovery-token-ca-cert-hash sha256:cefaa1909119929f34cb7366602a3ea4089f586c6ed8465fd15148644763a181 
-[root@k8s231.myharbor.com ~]# 
+[root@k8s231.oldboyedu.com ~]# 
 
 
 		2.2 查看现有的token
-[root@k8s231.myharbor.com ~]# kubeadm token list
+[root@k8s231.oldboyedu.com ~]# kubeadm token list
 TOKEN                     TTL         EXPIRES   USAGES                   DESCRIPTION                                                EXTRA GROUPS
 oldboy.qwertyuiopasdfgh   <forever>   <never>   authentication,signing   <none>                                                     system:bootstrappers:kubeadm:default-node-token
-[root@k8s231.myharbor.com ~]# 
+[root@k8s231.oldboyedu.com ~]# 
 
 
 		2.3 删除token（先跳过此步骤，先别删除，加入集群后再来操作哟！）
-[root@k8s231.myharbor.com ~]# kubeadm token delete oldboy
+[root@k8s231.oldboyedu.com ~]# kubeadm token delete oldboy
 bootstrap token "oldboy" deleted
-[root@k8s231.myharbor.com ~]# 
+[root@k8s231.oldboyedu.com ~]# 
 
 		
 		
 	3.worker节点加入集群
-[root@k8s233.myharbor.com ~]# kubeadm join 10.0.0.231:6443 --token oldboy.qwertyuiopasdfgh --discovery-token-ca-cert-hash sha256:cefaa1909119929f34cb7366602a3ea4089f586c6ed8465fd15148644763a181 
+[root@k8s233.oldboyedu.com ~]# kubeadm join 10.0.0.231:6443 --token oldboy.qwertyuiopasdfgh --discovery-token-ca-cert-hash sha256:cefaa1909119929f34cb7366602a3ea4089f586c6ed8465fd15148644763a181 
 
 
 	4.查看节点
-[root@k8s231.myharbor.com ~]# kubectl get nodes
+[root@k8s231.oldboyedu.com ~]# kubectl get nodes
 NAME                   STATUS   ROLES                  AGE     VERSION
-k8s231.myharbor.com   Ready    control-plane,master   7d23h   v1.23.17
-k8s232.myharbor.com   Ready    <none>                 7d23h   v1.23.17
-k8s233.myharbor.com   Ready    <none>                 58s     v1.23.17
-[root@k8s231.myharbor.com ~]# 
+k8s231.oldboyedu.com   Ready    control-plane,master   7d23h   v1.23.17
+k8s232.oldboyedu.com   Ready    <none>                 7d23h   v1.23.17
+k8s233.oldboyedu.com   Ready    <none>                 58s     v1.23.17
+[root@k8s231.oldboyedu.com ~]# 
 
 
 	5.查看bootstrap阶段的token信息
-[root@k8s231.myharbor.com ~]# kubectl get secrets  -A | grep oldboy
+[root@k8s231.oldboyedu.com ~]# kubectl get secrets  -A | grep oldboy
 kube-system       bootstrap-token-oldboy                           bootstrap.kubernetes.io/token         5      22s
-[root@k8s231.myharbor.com ~]# 
+[root@k8s231.oldboyedu.com ~]# 
 
 
 
@@ -428,22 +346,22 @@ K8S集群在任意云平台环境，比如腾讯云，阿里云，京东云等�
 
 
 	(2)创建svc
-[root@k8s231.myharbor.com services]# cat 03-services-LoadBalance.yaml 
+[root@k8s231.oldboyedu.com services]# cat 03-services-LoadBalance.yaml 
 kind: Service
 apiVersion: v1
 metadata:
   name: svc-loadbalancer
 spec:
-  指定service类型为LoadBalancer，注意，一般用于云环境
+  # 指定service类型为LoadBalancer，注意，一般用于云环境
   type: LoadBalancer
   selector:
-    apps: haha-web
+    apps: linux85-web
   ports:
   - protocol: TCP
     port: 80
     targetPort: 80
     nodePort: 30080
-[root@k8s231.myharbor.com services]# 
+[root@k8s231.oldboyedu.com services]# 
 
 
     
@@ -464,17 +382,17 @@ spec:
 
 
 ExternalName案例：
-[root@k8s151.myharbor.com ~]# cat 04-svc-ExternalName.yaml 
+[root@k8s151.oldboyedu.com ~]# cat 04-svc-ExternalName.yaml 
 apiVersion: v1
 kind: Service
 metadata:
   name: svc-externalname
 spec:
-  svc类型
+  # svc类型
   type: ExternalName
-  指定外部域名
+  # 指定外部域名
   externalName: www.baidu.com
-[root@k8s151.myharbor.com ~]# 
+[root@k8s151.oldboyedu.com ~]# 
 
 
 温馨提示:
@@ -488,16 +406,16 @@ spec:
 
 k8s使用ep资源映射外部服务实战案例:
 	(1)在K8S外部节点部署MySQL环境
-[root@harbor.myharbor.com ~]# docker run -de MYSQL_ALLOW_EMPTY_PASSWORD=yes \
+[root@harbor.oldboyedu.com ~]# docker run -de MYSQL_ALLOW_EMPTY_PASSWORD=yes \
  -p 3306:3306 --name mysql-server --restart unless-stopped \
  -e MYSQL_DATABASE=wordpress \
- -e MYSQL_USER=haha \
- -e MYSQL_PASSWORD=myharbor \
- harbor.myharbor.com/db/mysql:8.0.32-oracle
+ -e MYSQL_USER=linux85 \
+ -e MYSQL_PASSWORD=oldboyedu \
+ harbor.oldboyedu.com/db/mysql:8.0.32-oracle
 
 
 	(2)连接测试
-[root@harbor.myharbor.com ~]# docker exec -it mysql-server bash
+[root@harbor.oldboyedu.com ~]# docker exec -it mysql-server bash
 bash-4.4# 
 bash-4.4# mysql
 ...
@@ -525,25 +443,25 @@ mysql>
 
 
 	(3)K8S编写ep资源
-[root@k8s231.myharbor.com 05-wordpress-ep]# cat 01-ep.yaml 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 01-ep.yaml 
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: nginx-db
+  name: oldboyedu-linux85-db
 subsets:
 - addresses:
   - ip: 10.0.0.250
   ports:
   - port: 3306
-[root@k8s231.myharbor.com 05-wordpress-ep]#
+[root@k8s231.oldboyedu.com 05-wordpress-ep]#
 
 
 	(4)编写同名的svc资源
-[root@k8s231.myharbor.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-db
+  name: oldboyedu-linux85-db
 spec:
   selector:
     app: mysql
@@ -551,19 +469,19 @@ spec:
   ports:
   - port: 3306
     targetPort: 3306
-[root@k8s231.myharbor.com 05-wordpress-ep]# 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
 
 	
 	(5)删除之前旧的WordPress数据
-[root@k8s231.myharbor.com 05-wordpress-ep]# rm -rf /myharbor/data/kubernetes/wordpress/*
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# rm -rf /oldboyedu/data/kubernetes/wordpress/*
 
 	
 	(6)部署wordpres连接MySQL
-[root@k8s231.myharbor.com 05-wordpress-ep]# cat 03-deploy-wordpresss.yaml 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 03-deploy-wordpresss.yaml 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-wordpress
+  name: oldboyedu-linux85-wordpress
 spec:
   replicas: 3
   selector:
@@ -578,47 +496,47 @@ spec:
       - name: data
         nfs:
           server: 10.0.0.231
-          path: /myharbor/data/kubernetes/wordpress
+          path: /oldboyedu/data/kubernetes/wordpress
       containers:
       - name: wordpress
-        image: harbor.myharbor.com/web/wordpress
+        image: harbor.oldboyedu.com/web/wordpress
         ports:
         - containerPort: 80
         env:
         - name: WORDPRESS_DB_HOST
-          value: nginx-db
+          value: oldboyedu-linux85-db
         - name: WORDPRESS_DB_USER
-          value: haha
+          value: linux85
         - name: WORDPRESS_DB_PASSWORD
-          value: myharbor
+          value: oldboyedu
         volumeMounts:
         - name: data
           mountPath: /var/www/html/wp-content/uploads
-[root@k8s231.myharbor.com 05-wordpress-ep]# 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
 	
 	(7)创建svc暴露WordPress应用
-[root@k8s231.myharbor.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-db
+  name: oldboyedu-linux85-db
 spec:
   type: ClusterIP
   ports:
   - port: 3306
     targetPort: 3306
-[root@k8s231.myharbor.com 05-wordpress-ep]# 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
 
 
 	(8)创建应用
-[root@k8s231.myharbor.com 05-wordpress-ep]# kubectl delete all --all
-[root@k8s231.myharbor.com 05-wordpress-ep]# 
-[root@k8s231.myharbor.com 05-wordpress-ep]# kubectl apply -f .
-endpoints/nginx-db created
-service/nginx-db created
-deployment.apps/nginx-wordpress created
-service/nginx-wordpress created
-[root@k8s231.myharbor.com 05-wordpress-ep]# 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# kubectl delete all --all
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# kubectl apply -f .
+endpoints/oldboyedu-linux85-db created
+service/oldboyedu-linux85-db created
+deployment.apps/oldboyedu-linux85-wordpress created
+service/oldboyedu-linux85-wordpress created
+[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
 
 	
 	(9)访问webUI测试
@@ -662,12 +580,12 @@ chmod 755 /etc/sysconfig/modules/ipvs.modules && bash /etc/sysconfig/modules/ipv
 
 	(4)修改kube-proxy的工作模式为ipvs
 		4.1仅需修改工作模式("mode")为ipvs即可。切记，一定要保存退出！
-[root@k8s231.myharbor.com ~]# kubectl -n kube-system edit cm kube-proxy
+[root@k8s231.oldboyedu.com ~]# kubectl -n kube-system edit cm kube-proxy
 
 		4.2 验证是否修改成功
-[root@k8s231.myharbor.com ~]# kubectl -n kube-system describe cm kube-proxy | grep mode
+[root@k8s231.oldboyedu.com ~]# kubectl -n kube-system describe cm kube-proxy | grep mode
 mode: "ipvs"
-[root@k8s231.myharbor.com ~]# 
+[root@k8s231.oldboyedu.com ~]# 
 
 
 	(5)删除旧的kube-proxy
@@ -676,13 +594,13 @@ kubectl get pods -A | grep kube-proxy | awk '{print $2}' | xargs kubectl -n kube
 
 	(6)验证kube-proxy组件工作模式是否生效
 		6.1 查看日志
-[root@k8s231.myharbor.com ~]# kubectl get pods -A | grep kube-proxy 
+[root@k8s231.oldboyedu.com ~]# kubectl get pods -A | grep kube-proxy 
 kube-system    kube-proxy-k6mrc                               1/1     Running   0               58s
 kube-system    kube-proxy-pt7mk                               1/1     Running   0               57s
 kube-system    kube-proxy-rmhh6                               1/1     Running   0               57s
-[root@k8s231.myharbor.com ~]# 
-[root@k8s231.myharbor.com ~]# 
-[root@k8s231.myharbor.com ~]# kubectl logs kube-proxy-k6mrc -n kube-system 
+[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.oldboyedu.com ~]# kubectl logs kube-proxy-k6mrc -n kube-system 
 I0420 09:45:23.314221       1 node.go:163] Successfully retrieved node IP: 10.0.0.233
 I0420 09:45:23.314300       1 server_others.go:138] "Detected node IP" address="10.0.0.233"
 I0420 09:45:23.334201       1 server_others.go:269] "Using ipvs Proxier"
@@ -690,27 +608,27 @@ I0420 09:45:23.334201       1 server_others.go:269] "Using ipvs Proxier"
 
 
 		6.2 测试服务是否正常访问
-[root@k8s231.myharbor.com ~]# curl -I http://10.0.0.233:30080/2023/04/20/hello-world/
+[root@k8s231.oldboyedu.com ~]# curl -I http://10.0.0.233:30080/2023/04/20/hello-world/
 
 
 	(3)验证ipvs的工作模式，如下图所示。
-[root@k8s231.myharbor.com ~]# kubectl get po,svc
+[root@k8s231.oldboyedu.com ~]# kubectl get po,svc
 NAME                                               READY   STATUS    RESTARTS   AGE
-pod/nginx-wordpress-6b757777b7-dn7xr   1/1     Running   0          34m
-pod/nginx-wordpress-6b757777b7-rzthp   1/1     Running   0          34m
-pod/nginx-wordpress-6b757777b7-ssm65   1/1     Running   0          34m
+pod/oldboyedu-linux85-wordpress-6b757777b7-dn7xr   1/1     Running   0          34m
+pod/oldboyedu-linux85-wordpress-6b757777b7-rzthp   1/1     Running   0          34m
+pod/oldboyedu-linux85-wordpress-6b757777b7-ssm65   1/1     Running   0          34m
 
 NAME                                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
 service/kubernetes                    ClusterIP   10.200.0.1       <none>        443/TCP        37m
-service/nginx-db          ClusterIP   10.200.36.230    <none>        3306/TCP       34m
-service/nginx-wordpress   NodePort    10.200.100.200   <none>        80:30080/TCP   34m
-[root@k8s231.myharbor.com ~]# 
-[root@k8s231.myharbor.com ~]# ipvsadm -ln | grep 10.200.100.200 -A 3
+service/oldboyedu-linux85-db          ClusterIP   10.200.36.230    <none>        3306/TCP       34m
+service/oldboyedu-linux85-wordpress   NodePort    10.200.100.200   <none>        80:30080/TCP   34m
+[root@k8s231.oldboyedu.com ~]# 
+[root@k8s231.oldboyedu.com ~]# ipvsadm -ln | grep 10.200.100.200 -A 3
 TCP  10.200.100.200:80 rr
   -> 10.100.1.196:80              Masq    1      0          0         
   -> 10.100.1.197:80              Masq    1      0          0         
   -> 10.100.3.8:80                Masq    1      0          0         
-[root@k8s231.myharbor.com ~]# 
+[root@k8s231.oldboyedu.com ~]# 
 
 
 
@@ -737,7 +655,7 @@ Q3: 影响Pod调度的因素有哪些?
 
 今日作业:
 	- 完成课堂的所有练习并整理思维导图;
-	- 将"harbor.myharbor.com/myharbor-games/jasonyin2020/myharbor-games:v0.1"镜像的多个服务修改端口范围81-85端口，不允许重新打镜像;
+	- 将"harbor.oldboyedu.com/oldboyedu-games/jasonyin2020/oldboyedu-games:v0.1"镜像的多个服务修改端口范围81-85端口，不允许重新打镜像;
 	- 使用一个svc暴露这5个服务;
 	
 扩展作业:
@@ -1263,5 +1181,67 @@ spec:
 
 (3)删除标签
 [root@k8s231.myharbor.com nodeAffinity]# kubectl label nodes --all mynode- 
+```
+
+# Pod的亲和性
+
+```
+(1)node打标签
+[root@centos7k8s1 node_selector]# kubectl label nodes centos7k8s1 dc=dawa
+node/centos7k8s1 labeled
+[root@centos7k8s1 node_selector]# kubectl label nodes centos7k8s2 dc=erwa
+node/centos7k8s2 labeled
+[root@centos7k8s1 node_selector]# kubectl label nodes centos7k8s3 dc=sanwa
+node/centos7k8s3 labele
+
+kubectl get nodes --show-labels | grep dc
+centos7k8s1   Ready    control-plane,master   15d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,dc=dawa,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s1,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node.kubernetes.io/exclude-from-external-load-balancers=
+centos7k8s2   Ready    <none>                 15d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,dc=erwa,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s2,kubernetes.io/os=linux
+centos7k8s3   Ready    <none>                 15d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,dc=sanwa,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s3,kubernetes.io/os=linux
+
+(2)编写资源清单
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-pod-affinity
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 9
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+        #key: node-role.kubernetes.io/master
+        #effect: NoSchedule
+      - operator: Exists
+      affinity: #定义亲和性
+        podAffinity: #定义Pod的亲和性
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: dc #指定拓扑域的key 就是nodes中的label
+            #- topologyKey: kubernetes.io/os
+              labelSelector: #定义标签选择器，这里是指pod的标签
+                matchExpressions: 
+                - key: app
+                  values: 
+                  - haha1
+                  operator: In
+                #- key: ynode
+                #  values: 
+                #  - gotit
+                #  operator: In
+      containers:
+      - name: nginx-deploy-node-affinity-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
 ```
 
