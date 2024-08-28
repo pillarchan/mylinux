@@ -1245,3 +1245,51 @@ spec:
         imagePullPolicy: IfNotPresent
 ```
 
+# Pod的反亲和性
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-pod-affinity
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 9
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+        #key: node-role.kubernetes.io/master
+        #effect: NoSchedule
+      - operator: Exists
+      affinity: #定义亲和性
+        podAntiAffinity: #定义Pod的反亲和性
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: dc #指定拓扑域的key 就是nodes中的label
+            #- topologyKey: kubernetes.io/os
+              labelSelector: #定义标签选择器，这里是指pod的标签
+                matchExpressions:
+                - key: app
+                  values: 
+                  - haha1
+                  operator: In
+                #- key: ynode
+                #  values: 
+                #  - gotit
+                #  operator: In
+      containers:
+      - name: nginx-deploy-node-affinity-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresen
+```
+
