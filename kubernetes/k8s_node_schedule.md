@@ -109,58 +109,7 @@ spec:
 	
 	
 	
-DaemonSet概述:
-	DaemonSet确保全部worker节点上运行一个Pod的副本。
 
-	DaemonSet的一些典型用法：
-		(1)在每个节点上运行集群守护进程(flannel等)
-		(2)在每个节点上运行日志收集守护进程(flume，filebeat，fluentd等)
-		(3)在每个节点上运行监控守护进程（zabbix agent，node_exportor等）
-
-
-	温馨提示:
-		(1)当有新节点加入集群时，也会为新节点新增一个Pod;
-		(2)当有节点从集群移除时，这些Pod也会被回收;
-		(3)删除DaemonSet将会删除它创建的所有Pod;
-		(4)如果节点被打了污点的话，且DaemonSet中未定义污点容忍，则Pod并不会被调度到该节点上;("flannel案例")
-		
-		
-		
-编写资源清单：
-[root@k8s231.oldboyedu.com daemonsets]# cat 01-ds-web.yaml 
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: oldboyedu-linux85-ds
-spec:
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      #affinity:
-      #  nodeAffinity:
-      #    requiredDuringSchedulingIgnoredDuringExecution:
-      #      nodeSelectorTerms:
-      #      - matchExpressions:
-      #        - key: school
-      #          values:
-      #          - oldboyedu
-      #          - laonanhai
-      #          operator: In
-      #
-      nodeSelector:
-        class: linux85
-      tolerations:
-      - operator: Exists
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v2
-[root@k8s231.oldboyedu.com daemonsets]# 
 
 	
 	
@@ -642,11 +591,6 @@ TCP  10.200.100.200:80 rr
 	
 	
 
-Q1: 请陈述Pod的亲和性和反亲和性的作用和区别?
-
-Q2: 节点和亲和性和节点选择器的区别?
-
-Q3: 影响Pod调度的因素有哪些?
 
 
 
@@ -1291,5 +1235,271 @@ spec:
       - name: nginx-deploy-node-affinity-1
         image: harbor.myharbor.com/myharbor/nginx:v1.0-my
         imagePullPolicy: IfNotPresen
+        
+        
+        
+
+   
+```
+
+# 面试题
+
+```
+Q1: 请陈述Pod的亲和性和反亲和性的作用和区别?
+亲和性： 当pod调度到某一个拓扑域时，其它的pod会调度到与之相同的拓扑域
+反亲和性：当pod调度到某一个拓扑域时，其它的pod不会调度到与之相同的拓扑域，并且只调度一个pod到一个node节点
+
+Q2: 节点和亲和性和节点选择器的区别?
+
+kubectl get nodes --show-labels
+NAME          STATUS   ROLES                  AGE   VERSION    LABELS
+centos7k8s1   Ready    control-plane,master   16d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,dc=dawa,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s1,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=,node.kubernetes.io/exclude-from-external-load-balancers=
+centos7k8s2   Ready    <none>                 16d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,dc=erwa,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s2,kubernetes.io/os=linux,mynode=iwant
+centos7k8s3   Ready    <none>                 16d   v1.23.17   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,dc=sanwa,kubernetes.io/arch=amd64,kubernetes.io/hostname=centos7k8s3,kubernetes.io/os=linux,mynode=iwant
+
+节点选择器只能通过单一key:value节点标签来选择调度到匹配的节点
+
+如果每个节点自定义标签有指定的key:value标签，那么pod调度到有这些标签的节点
+      nodeSelector:
+        mynode: iwant
+
+kubectl get pods -n haha -o wide
+NAME                                          READY   STATUS    RESTARTS   AGE   IP             NODE          NOMINATED NODE   READINESS GATES
+nginx-deploy-node-selector-6c9bf75db4-6k9b4   1/1     Running   0          6s    10.100.2.108   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-6c9bf75db4-fp6mp   1/1     Running   0          6s    10.100.1.37    centos7k8s2   <none>           <none>
+nginx-deploy-node-selector-6c9bf75db4-jhcrh   1/1     Running   0          5s    10.100.1.38    centos7k8s2   <none>           <none>
+nginx-deploy-node-selector-6c9bf75db4-mhfpc   1/1     Running   0          6s    10.100.2.107   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-6c9bf75db4-wjrrr   1/1     Running   0          5s    10.100.2.109   centos7k8s3   <none>           <none>
+
+如果指定标签的key相同而value不同，则会选择key相同的最后一个value来调度
+      nodeSelector:
+        dc: erwa
+        dc: sanwa
+        mynode: iwant
+
+kubectl get pods -n haha -o wide
+NAME                                          READY   STATUS    RESTARTS   AGE   IP             NODE          NOMINATED NODE   READINESS GATES
+nginx-deploy-node-selector-7555c9969c-6spr2   1/1     Running   0          8s    10.100.2.114   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-7555c9969c-dhxwv   1/1     Running   0          10s   10.100.2.111   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-7555c9969c-h2587   1/1     Running   0          8s    10.100.2.113   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-7555c9969c-qpjb5   1/1     Running   0          10s   10.100.2.110   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-7555c9969c-ww7nq   1/1     Running   0          10s   10.100.2.112   centos7k8s3   <none>           <none>
+
+如果节点的上自定义标签没有指定的key:value标签还需要手动添加，否则就会pending，原因就是在该节点找不到指定的标签
+      nodeSelector:
+        dc: erwa
+        dc: sanwa
+        dc: dawa
+        mynode: iwant
+kubectl get pods -n haha -o wide
+NAME                                          READY   STATUS    RESTARTS   AGE     IP             NODE          NOMINATED NODE   READINESS GATES
+nginx-deploy-node-selector-7555c9969c-dhxwv   1/1     Running   0          2m32s   10.100.2.111   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-7555c9969c-h2587   1/1     Running   0          2m30s   10.100.2.113   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-7555c9969c-qpjb5   1/1     Running   0          2m32s   10.100.2.110   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-7555c9969c-ww7nq   1/1     Running   0          2m32s   10.100.2.112   centos7k8s3   <none>           <none>
+nginx-deploy-node-selector-775bb5fcd6-ppz2q   0/1     Pending   0          22s     <none>         <none>        <none>           <none>
+nginx-deploy-node-selector-775bb5fcd6-sprfq   0/1     Pending   0          22s     <none>         <none>        <none>           <none>
+nginx-deploy-node-selector-775bb5fcd6-wwb77   0/1     Pending   0          22s     <none>         <none>        <none>           <none>
+
+节点亲和性可以匹配实现key相同,value不相同的节点调度，功能更强大
+affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: dc
+                values: 
+                - dawa
+                - erwa
+                - sanwa
+                operator: In
+kubectl get pods -n haha -o wide
+NAME                                          READY   STATUS    RESTARTS   AGE   IP             NODE          NOMINATED NODE   READINESS GATES
+nginx-deploy-node-affinity-646b99686c-77mlm   1/1     Running   0          16s   10.100.2.119   centos7k8s3   <none>           <none>
+nginx-deploy-node-affinity-646b99686c-mz9xv   1/1     Running   0          16s   10.100.0.24    centos7k8s1   <none>           <none>
+nginx-deploy-node-affinity-646b99686c-np84b   1/1     Running   0          16s   10.100.1.40    centos7k8s2   <none>           <none>
+nginx-deploy-node-affinity-646b99686c-ptqv4   1/1     Running   0          16s   10.100.1.39    centos7k8s2   <none>           <none>
+nginx-deploy-node-affinity-646b99686c-qwf5w   1/1     Running   0          16s   10.100.2.120   centos7k8s3   <none>           <none>
+
+Q3: 影响Pod调度的因素有哪些?
+nodeName
+taint
+tolerations
+nodeSelector
+nodeAffinity
+podAffinity
+podAntiAffinity
+```
+
+# DaemonSet概述
+
+```
+DaemonSet确保全部worker节点上运行一个Pod的副本。
+
+DaemonSet的一些典型用法：
+(1)在每个节点上运行集群守护进程(flannel等)
+(2)在每个节点上运行日志收集守护进程(flume，filebeat，fluentd等)
+(3)在每个节点上运行监控守护进程（zabbix agent，node_exportor等）
+
+温馨提示:
+(1)当有新节点加入集群时，也会为新节点新增一个Pod;
+(2)当有节点从集群移除时，这些Pod也会被回收;
+(3)删除DaemonSet将会删除它创建的所有Pod;
+(4)如果节点被打了污点的话，且DaemonSet中未定义污点容忍，则Pod并不会被调度到该节点上;("flannel案例")
+		
+编写资源清单：
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx-deploy-node-daemonset
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+        #key: node-role.kubernetes.io/master
+        #effect: NoSchedule
+      - operator: Exists
+      containers:
+      - name: nginx-deploy-node-affinity-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-deploy-node-affinity-svc
+  namespace: haha
+spec:
+  selector:
+    app: haha1
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 31800
+  clusterIP: 10.200.111.111
+```
+
+## 结合node亲合性案例
+
+```
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx-node-daemonset
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+        #key: node-role.kubernetes.io/master
+        #effect: NoSchedule
+      - operator: Exists
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: dc
+                values: 
+              #  - dawa
+                - erwa
+                - sanwa
+                operator: In
+              #- key: ynode
+              #  values: 
+              #  - gotit
+              #  operator: In
+      containers:
+      - name: nginx-node-daemonset-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-node-daemonset-svc
+  namespace: haha
+spec:
+  selector:
+    app: haha1
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 31800
+  clusterIP: 10.200.111.111
+```
+
+## 结合node选择器案例
+
+```
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx-node-daemonset
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+        #key: node-role.kubernetes.io/master
+        #effect: NoSchedule
+      - operator: Exists
+      nodeSelector:
+        mynode: iwant
+      containers:
+      - name: nginx-node-daemonset-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-node-daemonset-svc
+  namespace: haha
+spec:
+  selector:
+    app: haha1
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 31800
+  clusterIP: 10.200.111.111
 ```
 
