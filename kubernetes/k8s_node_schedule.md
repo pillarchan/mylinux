@@ -62,434 +62,8 @@
 		- Pod仅包含了1个。
 		综上所述: Pod的标签数必须包含svc所关联的标签，只能多不能少。
 
-Pod的反亲和性:
-[root@k8s231.oldboyedu.com podAntiAffinity]# cat 01-deploy-web.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: oldboyedu-linux85-podantiaffinity
-spec:
-  replicas: 5
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      # 定义亲和性
-      affinity:
-        # 定义Pod的反亲和性
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            # 指定拓扑域的key
-          - topologyKey: dc
-          # - topologyKey: beta.kubernetes.io/arch
-          #- topologyKey: kubernetes.io/hostname
-            # 基于标签匹配
-            labelSelector:
-               matchExpressions:
-                 # 指的是Pod标签的key
-               - key: apps
-                 # 指的是Pod标签的values
-                 values:
-                 - linux85-web
-                 operator: In
-      tolerations:
-      - operator: Exists
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-[root@k8s231.oldboyedu.com podAntiAffinity]# 
 
-	
-	
-	
-	
-	
 
-
-	
-	
-Pod驱逐及K8S节点下线：
-驱逐简介:
-	kubelet监控当前node节点的CPU，内存，磁盘空间和文件系统的inode等资源。
-	当这些资源中的一个或者多个达到特定的消耗水平，kubelet就会主动地将节点上一个或者多个Pod强制驱逐。
-	以防止当前node节点资源无法正常分配而引发的OOM。
-
-
-
-参考链接:
-	https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/node-pressure-eviction/
-	
-   
-   
-- 手动驱逐Pod，模拟下线节点
-- 应用场景:
-	node因为硬件故障或者其他原因要下线。
-	
-- 参考步骤:
-	(1)编写资源清单并创建
-[root@k8s231.oldboyedu.com drain]# ll
-total 8
--rw-r--r-- 1 root root 335 Apr 20 15:17 01-drain-deploy.yaml
--rw-r--r-- 1 root root 317 Apr 20 15:21 02-drain-ds.yaml
-[root@k8s231.oldboyedu.com drain]# 
-[root@k8s231.oldboyedu.com drain]# cat 01-drain-deploy.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: oldboyedu-linux85-drain
-spec:
-  replicas: 5
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v1
-[root@k8s231.oldboyedu.com drain]# 
-[root@k8s231.oldboyedu.com drain]# cat 02-drain-ds.yaml 
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: oldboyedu-linux85-ds
-spec:
-  selector:
-    matchExpressions:
-    - key: apps
-      operator: Exists
-  template:
-    metadata:
-      labels:
-        apps: linux85-web
-    spec:
-      containers:
-      - name: web
-        image: harbor.oldboyedu.com/update/apps:v2
-[root@k8s231.oldboyedu.com drain]# 
-
-
-	(2)驱逐Pod并打SchedulingDisable标签，但不会驱逐ds资源调度的pod。
-[root@k8s231.oldboyedu.com drain]# kubectl drain k8s233.oldboyedu.com --ignore-daemonsets
-node/k8s233.oldboyedu.com already cordoned
-WARNING: ignoring DaemonSet-managed Pods: default/oldboyedu-linux85-ds-f97fs, kube-flannel/kube-flannel-ds-6m48r, kube-system/kube-proxy-skcr4
-node/k8s233.oldboyedu.com drained
-[root@k8s231.oldboyedu.com drain]# 
-[root@k8s231.oldboyedu.com drain]# kubectl get nodes 
-NAME                   STATUS                     ROLES                  AGE     VERSION
-k8s231.oldboyedu.com   Ready                      control-plane,master   7d22h   v1.23.17
-k8s232.oldboyedu.com   Ready                      <none>                 7d22h   v1.23.17
-k8s233.oldboyedu.com   Ready,SchedulingDisabled   <none>                 7d22h   v1.23.17
-[root@k8s231.oldboyedu.com drain]# 
-
-		
-	(3)配置污点，将ds资源进行立即驱逐Pod。
-[root@k8s231.oldboyedu.com drain]# kubectl taint nodes k8s233.oldboyedu.com  classroom=jiaoshi05:NoExecute  
-node/k8s233.oldboyedu.com tainted
-[root@k8s231.oldboyedu.com drain]# 
-
-		
-	(4)登录要下线的节点并重置kubeadm集群环境
-[root@k8s233.oldboyedu.com ~]# kubeadm reset -f
-[root@k8s233.oldboyedu.com ~]# 
-[root@k8s233.oldboyedu.com ~]# rm -rf /etc/cni/net.d && iptables -F && iptables-save 
-[root@k8s233.oldboyedu.com ~]# 
-[root@k8s233.oldboyedu.com ~]# systemctl disable kubelet
-Removed symlink /etc/systemd/system/multi-user.target.wants/kubelet.service.
-[root@k8s233.oldboyedu.com ~]# 
-	
-	
-	(5)删除要下线的节点。
-[root@k8s231.oldboyedu.com drain]# kubectl delete nodes k8s233.oldboyedu.com
-node "k8s233.oldboyedu.com" deleted
-[root@k8s231.oldboyedu.com drain]# 
-
-		
-	(6)关机并重新安装操作系统
-[root@k8s233.oldboyedu.com ~]# reboot 
-
-	
-
-
-	
-kubeadm快速将节点加入集群:
-	1.安装必要组件
-		1.1 配置软件源
-cat  > /etc/yum.repos.d/kubernetes.repo <<EOF
-[kubernetes]
-name=Kubernetes
-baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
-enabled=1
-gpgcheck=0
-repo_gpgcheck=0
-EOF
-	
-		1.2 安装kubeadm，kubelet，kubectl软件包
-yum -y install kubeadm-1.23.17-0 kubelet-1.23.17-0 kubectl-1.23.17-0 
-
-		1.3 启动kubelet服务(若服务启动失败时正常现象，其会自动重启，因为缺失配置文件，初始化集群后恢复！此步骤可跳过！)
-systemctl enable --now kubelet
-systemctl status kubelet
-
-
-	2.在master组件创建token
-		2.1 创建一个永不过期的token，并打印加入集群的命令
-[root@k8s231.oldboyedu.com ~]# kubeadm token create --print-join-command oldboy.qwertyuiopasdfgh --ttl 0
-kubeadm join 10.0.0.231:6443 --token oldboy.qwertyuiopasdfgh --discovery-token-ca-cert-hash sha256:cefaa1909119929f34cb7366602a3ea4089f586c6ed8465fd15148644763a181 
-[root@k8s231.oldboyedu.com ~]# 
-
-
-		2.2 查看现有的token
-[root@k8s231.oldboyedu.com ~]# kubeadm token list
-TOKEN                     TTL         EXPIRES   USAGES                   DESCRIPTION                                                EXTRA GROUPS
-oldboy.qwertyuiopasdfgh   <forever>   <never>   authentication,signing   <none>                                                     system:bootstrappers:kubeadm:default-node-token
-[root@k8s231.oldboyedu.com ~]# 
-
-
-		2.3 删除token（先跳过此步骤，先别删除，加入集群后再来操作哟！）
-[root@k8s231.oldboyedu.com ~]# kubeadm token delete oldboy
-bootstrap token "oldboy" deleted
-[root@k8s231.oldboyedu.com ~]# 
-
-		
-		
-	3.worker节点加入集群
-[root@k8s233.oldboyedu.com ~]# kubeadm join 10.0.0.231:6443 --token oldboy.qwertyuiopasdfgh --discovery-token-ca-cert-hash sha256:cefaa1909119929f34cb7366602a3ea4089f586c6ed8465fd15148644763a181 
-
-
-	4.查看节点
-[root@k8s231.oldboyedu.com ~]# kubectl get nodes
-NAME                   STATUS   ROLES                  AGE     VERSION
-k8s231.oldboyedu.com   Ready    control-plane,master   7d23h   v1.23.17
-k8s232.oldboyedu.com   Ready    <none>                 7d23h   v1.23.17
-k8s233.oldboyedu.com   Ready    <none>                 58s     v1.23.17
-[root@k8s231.oldboyedu.com ~]# 
-
-
-	5.查看bootstrap阶段的token信息
-[root@k8s231.oldboyedu.com ~]# kubectl get secrets  -A | grep oldboy
-kube-system       bootstrap-token-oldboy                           bootstrap.kubernetes.io/token         5      22s
-[root@k8s231.oldboyedu.com ~]# 
-
-
-
-
-
-
-
-
-
-LoadBalance案例：
-- LoadBalance案例:
-	(1)前提条件
-K8S集群在任意云平台环境，比如腾讯云，阿里云，京东云等。
-
-
-	(2)创建svc
-[root@k8s231.oldboyedu.com services]# cat 03-services-LoadBalance.yaml 
-kind: Service
-apiVersion: v1
-metadata:
-  name: svc-loadbalancer
-spec:
-  # 指定service类型为LoadBalancer，注意，一般用于云环境
-  type: LoadBalancer
-  selector:
-    apps: linux85-web
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 80
-    nodePort: 30080
-[root@k8s231.oldboyedu.com services]# 
-
-
-    
-    
-    (3)配置云环境的应用负载均衡器
-添加监听器规则，比如访问负载均衡器的80端口，反向代理到30080端口。
-简而言之，就是访问云环境的应用服务器的哪个端口，把他反向代理到K8S集群的node端口为30080即可。
-
-
-	(4)用户访问应用负载均衡器的端口
-用户直接访问云环境应用服务器的80端口即可，请求会自动转发到云环境nodePort的30080端口哟。
-
-
-
-
-
-
-
-
-ExternalName案例：
-[root@k8s151.oldboyedu.com ~]# cat 04-svc-ExternalName.yaml 
-apiVersion: v1
-kind: Service
-metadata:
-  name: svc-externalname
-spec:
-  # svc类型
-  type: ExternalName
-  # 指定外部域名
-  externalName: www.baidu.com
-[root@k8s151.oldboyedu.com ~]# 
-
-
-温馨提示:
-	启动容器后访问名为"svc-externalname"的svc，请求会被cname到"www.baidu.com"的A记录。
-	这种方式使用并不多，因为对于域名解析直接配置DSNS的解析较多，因此此处了解即可。
-
- 
-
-
-
-
-k8s使用ep资源映射外部服务实战案例:
-	(1)在K8S外部节点部署MySQL环境
-[root@harbor.oldboyedu.com ~]# docker run -de MYSQL_ALLOW_EMPTY_PASSWORD=yes \
- -p 3306:3306 --name mysql-server --restart unless-stopped \
- -e MYSQL_DATABASE=wordpress \
- -e MYSQL_USER=linux85 \
- -e MYSQL_PASSWORD=oldboyedu \
- harbor.oldboyedu.com/db/mysql:8.0.32-oracle
-
-
-	(2)连接测试
-[root@harbor.oldboyedu.com ~]# docker exec -it mysql-server bash
-bash-4.4# 
-bash-4.4# mysql
-...
-mysql> SHOW DATABASES;
-+--------------------+
-| Database           |
-+--------------------+
-| information_schema |
-| mysql              |
-| performance_schema |
-| sys                |
-| wordpress          |
-+--------------------+
-5 rows in set (0.00 sec)
-
-mysql> 
-mysql> 
-mysql> USE wordpress
-Database changed
-mysql> 
-mysql> SHOW TABLES;
-Empty set (0.00 sec)
-
-mysql> 
-
-
-	(3)K8S编写ep资源
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 01-ep.yaml 
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: oldboyedu-linux85-db
-subsets:
-- addresses:
-  - ip: 10.0.0.250
-  ports:
-  - port: 3306
-[root@k8s231.oldboyedu.com 05-wordpress-ep]#
-
-
-	(4)编写同名的svc资源
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
-apiVersion: v1
-kind: Service
-metadata:
-  name: oldboyedu-linux85-db
-spec:
-  selector:
-    app: mysql
-  type: ClusterIP
-  ports:
-  - port: 3306
-    targetPort: 3306
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
-
-	
-	(5)删除之前旧的WordPress数据
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# rm -rf /oldboyedu/data/kubernetes/wordpress/*
-
-	
-	(6)部署wordpres连接MySQL
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 03-deploy-wordpresss.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: oldboyedu-linux85-wordpress
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: wordpress
-  template:
-    metadata:
-      labels:
-        app: wordpress
-    spec:
-      volumes:
-      - name: data
-        nfs:
-          server: 10.0.0.231
-          path: /oldboyedu/data/kubernetes/wordpress
-      containers:
-      - name: wordpress
-        image: harbor.oldboyedu.com/web/wordpress
-        ports:
-        - containerPort: 80
-        env:
-        - name: WORDPRESS_DB_HOST
-          value: oldboyedu-linux85-db
-        - name: WORDPRESS_DB_USER
-          value: linux85
-        - name: WORDPRESS_DB_PASSWORD
-          value: oldboyedu
-        volumeMounts:
-        - name: data
-          mountPath: /var/www/html/wp-content/uploads
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
-	
-	(7)创建svc暴露WordPress应用
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# cat 02-mysql-svc.yaml 
-apiVersion: v1
-kind: Service
-metadata:
-  name: oldboyedu-linux85-db
-spec:
-  type: ClusterIP
-  ports:
-  - port: 3306
-    targetPort: 3306
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
-
-
-	(8)创建应用
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# kubectl delete all --all
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# kubectl apply -f .
-endpoints/oldboyedu-linux85-db created
-service/oldboyedu-linux85-db created
-deployment.apps/oldboyedu-linux85-wordpress created
-service/oldboyedu-linux85-wordpress created
-[root@k8s231.oldboyedu.com 05-wordpress-ep]# 
-
-	
-	(9)访问webUI测试
-略。
 	
 
 
@@ -1501,5 +1075,98 @@ spec:
     targetPort: 80
     nodePort: 31800
   clusterIP: 10.200.111.111
+```
+
+# K8S节点扩缩容
+
+## Pod驱逐及K8S节点下线
+
+```
+驱逐简介:
+	kubelet监控当前node节点的CPU，内存，磁盘空间和文件系统的inode等资源。
+	当这些资源中的一个或者多个达到特定的消耗水平，kubelet就会主动地将节点上一个或者多个Pod强制驱逐。
+	以防止当前node节点资源无法正常分配而引发的OOM。
+参考链接:
+	https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/node-pressure-eviction/
+   
+- 手动驱逐Pod，模拟下线节点
+- 应用场景:
+	node因为硬件故障或者其他原因要下线。
+	
+- 参考步骤:
+	(1)编写资源清单并创建
+	(2)驱逐Pod并打SchedulingDisable标签，但不会驱逐ds资源调度的pod。
+	(3)配置污点，将ds资源进行立即驱逐Pod。
+	(4)登录要下线的节点并重置kubeadm集群环境
+	(5)删除要下线的节点。
+	(6)关机并重新安装操作系统
+
+关键点：
+1.使用 drain方式驱逐的本质就是给某个节点打上SchedulingDisable的污点，但如果做了污点容忍，特别是不指定key - operator: Exists这种全容忍，此时这种驱逐方式的意义就没有了
+```
+
+## K8S节点上线
+
+```
+kubeadm快速将节点加入集群:
+1.安装必要组件
+1.1 配置软件源
+cat  > /etc/yum.repos.d/kubernetes.repo <<EOF
+[kubernetes]
+name=Kubernetes
+baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+EOF
+	
+1.2 安装kubeadm，kubelet，kubectl软件包
+yum -y install kubeadm-1.23.17-0 kubelet-1.23.17-0 kubectl-1.23.17-0 
+
+1.3 启动kubelet服务(若服务启动失败时正常现象，其会自动重启，因为缺失配置文件，初始化集群后恢复！此步骤可跳过！)
+systemctl enable --now kubelet
+systemctl status kubelet
+
+2.在master组件创建token
+2.1 创建一个永不过期的token，并打印加入集群的命令
+ token create --print-join-command --ttl 0
+kubeadm join 192.168.76.142:6443 --token fshyfs.m3pa94qhkg9ox0kg --discovery-token-ca-cert-hash sha256:041f82856e5e00e514558e97b258b29a9bc4a66bdf1f3e3074badbd3aaa19858
+
+注：token create --print-join-command --ttl 0 [可以创建自定义的token 格式 6字符:16字符 小写]
+2.2 查看现有的token
+[root@centos7k8s1 ~]# kubeadm token list
+TOKEN                     TTL         EXPIRES                USAGES                   DESCRIPTION                                                EXTRA GROUPS
+crg7k2.jtgfq8gdvu4iiapv   21h         2024-09-02T23:31:45Z   authentication,signing   <none>                                                     system:bootstrappers:kubeadm:default-node-token
+fshyfs.m3pa94qhkg9ox0kg   <forever>   <never>   authentication,signing   <none>                                                     system:bootstrappers:kubeadm:default-node-token
+
+2.3 删除token（先跳过此步骤，先别删除，加入集群后再来操作哟！）
+kubeadm token delete fshyfs
+bootstrap token "fshyfs" deleted	
+		
+3.worker节点加入集群
+kubeadm join 192.168.76.142:6443 --token fshyfs.m3pa94qhkg9ox0kg --discovery-token-ca-cert-hash sha256:041f82856e5e00e514558e97b258b29a9bc4a66bdf1f3e3074badbd3aaa19858
+
+4.查看节点
+kubectl get nodes
+NAME          STATUS   ROLES                  AGE    VERSION
+centos7k8s1   Ready    control-plane,master   21d    v1.23.17
+centos7k8s2   Ready    <none>                 21d    v1.23.17
+centos7k8s3   Ready    <none>                 3h1m   v1.23.17
+
+5.查看bootstrap阶段的token信息
+[root@k8s231.oldboyedu.com ~]# kubectl get secrets -A | grep crg7k2
+kube-system       bootstrap-token-crg7k2 
+```
+
+## kubeadm 节点上线原理
+
+```
+api server 组件通信基于https协议，所以肯定会用到证书
+当时worker节点要加入一个集群，就需要认证，而一个新的节点是没有相关证书的
+kubeadm 就可以基于api server证书创建为一个token，此时该token就会保存在k8s的secrets中，相当于就得到了k8s的授权
+当使用kubeadm join时，新的节点就会携带该token加入到集群，由于携带的token是已经被K8S授权，这样就加入成功了
+加入成功后 api server 就会给worker节点颁发一个证书，之后节点与master通信就可以不再需要token了，这就是为什么节点成功加入集群后可以删除token
+
+相关面试：worker节点的启动阶段都做了些什么？kubeadm join命令都做了些什么事儿
 ```
 
