@@ -30,212 +30,6 @@
 		- metric-server
 	- helm
 	
-	
-	
-	
-K8S的内置角色:
-	K8S内置集群角色：
-		cluster-admin:
-			超级管理员，有集群所有权限。
-		admin:
-			主要用于授权命名空间所有读写权限。
-		edit:
-			允许对大多数对象读写操作，不允许查看或者修改角色，角色绑定。
-		view:
-			允许对命名空间大多数对象只读权限，不允许查看角色，角色绑定和secret。
-
-
-	K8S预定好了四个集群角色供用户使用，使用"kubectl get clusterrole"查看，其中"systemd:"开头的为系统内部使用。
-
-	clusterrole查看，其中"system:"开头的为系统内部使用。
-	
-	
-
-
-
-基于用户的权限管理实战:
-1.使用k8s ca签发客户端证书
-	1.1 解压证书管理工具包
-[root@k8s231.oldboyedu.com ~]# wget http://192.168.15.253/Kubernetes/day08-/softwares/oldboyedu-cfssl.tar.gz
-
-[root@k8s231.oldboyedu.com ~]# tar xf oldboyedu-cfssl.tar.gz -C /usr/bin/  && chmod +x /usr/bin/cfssl*
-
-	1.2 编写证书请求
-[root@k8s231.oldboyedu.com user]#  cat > ca-config.json <<EOF
-{
-  "signing": {
-    "default": {
-      "expiry": "87600h"
-    },
-    "profiles": {
-      "kubernetes": {
-        "usages": [
-            "signing",
-            "key encipherment",
-            "server auth",
-            "client auth"
-        ],
-        "expiry": "87600h"
-      }
-    }
-  }
-}
-EOF
-
-
-[root@k8s231.oldboyedu.com user]#  cat > oldboyedu-csr.json <<EOF
-{
-  "CN": "oldboyedu",
-  "hosts": [],
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "CN",
-      "ST": "BeiJing",
-      "L": "BeiJing",
-      "O": "k8s",
-      "OU": "System"
-    }
-  ]
-}
-EOF
-
-
-	1.3 生成证书
-[root@k8s231.oldboyedu.com user]#  cfssl gencert -ca=/etc/kubernetes/pki/ca.crt -ca-key=/etc/kubernetes/pki/ca.key -config=ca-config.json -profile=kubernetes oldboyedu-csr.json | cfssljson -bare oldboyedu
-
-
-
-2.生成kubeconfig授权文件
-	2.1 编写生成kubeconfig文件的脚本
-cat > kubeconfig.sh <<'EOF'
-# 配置集群
-# --certificate-authority
-#   指定K8s的ca根证书文件路径
-# --embed-certs
-#   如果设置为true，表示将根证书文件的内容写入到配置文件中，
-#   如果设置为false,则只是引用配置文件，将kubeconfig
-# --server
-#   指定APIServer的地址。
-# --kubeconfig
-#   指定kubeconfig的配置文件名称
-kubectl config set-cluster oldboyedu-linux \
-  --certificate-authority=/etc/kubernetes/pki/ca.crt \
-  --embed-certs=true \
-  --server=https://10.0.0.231:6443 \
-  --kubeconfig=oldboyedu-linux.kubeconfig
- 
-# 设置客户端认证
-kubectl config set-credentials oldboyedu \
-  --client-key=oldboyedu-key.pem \
-  --client-certificate=oldboyedu.pem \
-  --embed-certs=true \
-  --kubeconfig=oldboyedu-linux.kubeconfig
-
-# 设置默认上下文
-kubectl config set-context linux \
-  --cluster=oldboyedu-linux \
-  --user=oldboyedu \
-  --kubeconfig=oldboyedu-linux.kubeconfig
-
-# 设置当前使用的上下文
-kubectl config use-context linux --kubeconfig=oldboyedu-linux.kubeconfig
-EOF
-
-
-
-	2.2 生成kubeconfig文件
-bash kubeconfig.sh
-
-
-
-
-3. 创建RBAC授权策略
-	3.1 创建rbac等配置文件
-[root@k8s231.oldboyedu.com user]# cat rbac.yaml 
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  namespace: default
-  name: linux-role-reader
-rules:
-  # API组,""表示核心组,该组包括但不限于"configmaps","nodes","pods","services"等资源.
-- apiGroups: ["","apps/v1"]  
-  # 资源类型，不支持写简称，必须写全称哟!!
-  # resources: ["pods","deployments"]  
-  resources: ["pods","deployments","services"]  
-  # 对资源的操作方法.
-  # verbs: ["get", "list"]  
-  verbs: ["get", "list","delete"]  
-- apiGroups: ["","apps"]
-  resources: ["configmaps","secrets","daemonsets"]
-  verbs: ["get", "list"]  
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["delete"]  
-
----
-
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: oldboyedu-linux81-resources-reader
-  namespace: default
-subjects:
-  # 主体类型
-- kind: User  
-  # 用户名
-  name: oldboyedu  
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  # 角色类型
-  kind: Role  
-  # 绑定角色名称
-  name: linux-role-reader
-  apiGroup: rbac.authorization.k8s.io
-[root@k8s231.oldboyedu.com user]# 
-
-
-	3.2 应用rbac授权
-[root@k8s231.oldboyedu.com user]# kubectl apply -f rbac.yaml 
-
-
-	3.3 访问测试
-[root@k8s232.oldboyedu.com ~]# kubectl get po,cm,secret --kubeconfig=oldboyedu-linux.kubeconfig
-NAME                                               READY   STATUS             RESTARTS   AGE
-pod/oldboyedu-linux85-ds-xgp9v                     1/1     Running            0          2m18s
-pod/oldboyedu-linux85-wordpress-6b757777b7-l78gl   0/1     ImagePullBackOff   0          14m
-pod/oldboyedu-linux85-wordpress-6b757777b7-n7m8d   0/1     ImagePullBackOff   0          14m
-pod/oldboyedu-linux85-wordpress-6b757777b7-scqf4   0/1     ImagePullBackOff   0          14m
-
-NAME                                DATA   AGE
-configmap/kube-root-ca.crt          1      8d
-configmap/oldboyedu-linux85-games   1      6d17h
-
-NAME                         TYPE                                  DATA   AGE
-secret/default-token-4qknd   kubernetes.io/service-account-token   3      8d
-secret/es-https              Opaque                                3      6d16h
-secret/linux85               kubernetes.io/dockerconfigjson        1      6d15h
-secret/linux85-harbor        kubernetes.io/dockerconfigjson        1      3d22h
-[root@k8s232.oldboyedu.com ~]# 
-[root@k8s232.oldboyedu.com ~]# kubectl delete configmap/oldboyedu-linux85-games --kubeconfig=oldboyedu-linux.kubeconfig
-Error from server (Forbidden): configmaps "oldboyedu-linux85-games" is forbidden: User "oldboyedu" cannot delete resource "configmaps" in API group "" in the namespace "default"
-[root@k8s232.oldboyedu.com ~]# 
-[root@k8s232.oldboyedu.com ~]# 
-[root@k8s232.oldboyedu.com ~]# kubectl delete secret/linux85-harbor --kubeconfig=oldboyedu-linux.kubeconfig
-secret "linux85-harbor" deleted
-[root@k8s232.oldboyedu.com ~]# 
-
-
-
-
-
-
-
-
 
 RBAC基于组的方式认证:
 	CN: 代表用户，
@@ -1246,5 +1040,229 @@ sz oldboyedu-k8s-dashboard-admin.conf
 	- 完成istio的服务部署;
 
 
+```
+
+# RBAC
+
+## 角色
+
+```
+角色绑定
+	角色：
+		role: 某个名称空间的role,局部的资源
+         cluster-role: 集群的角色,集群资源
+         规则（rules）:
+            apiGroups API组
+            resources 资源列表
+            verbs 操作方法
+            ...
+    主题：
+    	User: 自定义用户名称，一般给人用的
+    	ServiceAccount: 服务账号，一般是给程序使用
+    	Group: 给一个组使用
+
+K8S的内置角色:
+	K8S内置集群角色：
+		cluster-admin:
+			超级管理员，有集群所有权限。
+		admin:
+			主要用于授权命名空间所有读写权限。
+		edit:
+			允许对大多数对象读写操作，不允许查看或者修改角色，角色绑定。
+		view:
+			允许对命名空间大多数对象只读权限，不允许查看角色，角色绑定和secret。
+
+	K8S预定好了四个集群角色供用户使用，使用"kubectl get clusterrole"查看，其中"systemd:"开头的为系统内部使用。
+
+	clusterrole查看，其中"system:"开头的为系统内部使用。
+```
+
+## cfssl (Cloudflare's PKI and TLS toolkit)
+
+```
+官网地址 https://github.com/cloudflare/cfssl
+```
+
+## 基于用户的权限管理实战
+
+### 1.使用k8s ca签发客户端证书
+
+```
+1.1 安装证书管理工具包
+需要go言环境
+git clone https://github.com/cloudflare/cfssl.git
+cd cfssl
+make
+make install
+
+echo $PATH
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin
+cp bin/* /usr/local/bin/
+
+1.2 编写证书请求
+cat > ca-config.json <<EOF
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ],
+        "expiry": "87600h"
+      }
+    }
+  }
+}
+EOF
+
+cat > wahaha-csr.json <<EOF
+{
+  "CN": "wahaha",
+  "hosts": [],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "BeiJing",
+      "L": "BeiJing",
+      "O": "k8s",
+      "OU": "System"
+    }
+  ]
+}
+EOF
+
+1.3 生成证书
+cfssl gencert -ca=/etc/kubernetes/pki/ca.crt -ca-key=/etc/kubernetes/pki/ca.key -config=ca-config.json -profile=kubernetes wahaha-csr.json | cfssljson -bare wahaha
+```
+
+### 2.生成kubeconfig授权文件
+
+```
+2.1 编写生成kubeconfig文件的脚本
+cat > kubeconfig.sh <<'EOF'
+# 配置集群
+# --certificate-authority
+#   指定K8s的ca根证书文件路径
+# --embed-certs
+#   如果设置为true，表示将根证书文件的内容写入到配置文件中，
+#   如果设置为false,则只是引用配置文件，将kubeconfig
+# --server
+#   指定APIServer的地址。
+# --kubeconfig
+#   指定kubeconfig的配置文件名称
+kubectl config set-cluster wahaha-linux \
+  --certificate-authority=/etc/kubernetes/pki/ca.crt \
+  --embed-certs=true \
+  --server=https://192.168.76.142:6443 \
+  --kubeconfig=wahaha-linux.kubeconfig
+ 
+# 设置客户端认证
+kubectl config set-credentials wahaha \
+  --client-key=wahaha-key.pem \
+  --client-certificate=wahaha.pem \
+  --embed-certs=true \
+  --kubeconfig=wahaha-linux.kubeconfig
+
+# 设置默认上下文
+kubectl config set-context linux \
+  --cluster=wahaha-linux \
+  --user=wahaha \
+  --kubeconfig=wahaha-linux.kubeconfig
+
+# 设置当前使用的上下文
+kubectl config use-context linux --kubeconfig=wahaha-linux.kubeconfig
+EOF
+
+2.2 生成kubeconfig文件
+bash kubeconfig.sh
+```
+
+### 创建RBAC授权策略
+
+```
+3. 创建RBAC授权策略
+	3.1 创建rbac等配置文件
+[root@k8s231.wahaha.com user]# cat rbac.yaml 
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: default
+  name: linux-role-reader
+rules:
+  # API组,""表示核心组,该组包括但不限于"configmaps","nodes","pods","services"等资源.
+- apiGroups: ["","apps/v1"]  
+  # 资源类型，不支持写简称，必须写全称哟!!
+  # resources: ["pods","deployments"]  
+  resources: ["pods","deployments","services"]  
+  # 对资源的操作方法.
+  # verbs: ["get", "list"]  
+  verbs: ["get", "list","delete"]  
+- apiGroups: ["","apps"]
+  resources: ["configmaps","secrets","daemonsets"]
+  verbs: ["get", "list"]  
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["delete"]  
+
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: oldboyedu-linux81-resources-reader
+  namespace: default
+subjects:
+  # 主体类型
+- kind: User  
+  # 用户名
+  name: oldboyedu  
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # 角色类型
+  kind: Role  
+  # 绑定角色名称
+  name: linux-role-reader
+  apiGroup: rbac.authorization.k8s.io
+[root@k8s231.oldboyedu.com user]# 
+
+
+	3.2 应用rbac授权
+[root@k8s231.oldboyedu.com user]# kubectl apply -f rbac.yaml 
+
+
+	3.3 访问测试
+[root@k8s232.oldboyedu.com ~]# kubectl get po,cm,secret --kubeconfig=oldboyedu-linux.kubeconfig
+NAME                                               READY   STATUS             RESTARTS   AGE
+pod/oldboyedu-linux85-ds-xgp9v                     1/1     Running            0          2m18s
+pod/oldboyedu-linux85-wordpress-6b757777b7-l78gl   0/1     ImagePullBackOff   0          14m
+pod/oldboyedu-linux85-wordpress-6b757777b7-n7m8d   0/1     ImagePullBackOff   0          14m
+pod/oldboyedu-linux85-wordpress-6b757777b7-scqf4   0/1     ImagePullBackOff   0          14m
+
+NAME                                DATA   AGE
+configmap/kube-root-ca.crt          1      8d
+configmap/oldboyedu-linux85-games   1      6d17h
+
+NAME                         TYPE                                  DATA   AGE
+secret/default-token-4qknd   kubernetes.io/service-account-token   3      8d
+secret/es-https              Opaque                                3      6d16h
+secret/linux85               kubernetes.io/dockerconfigjson        1      6d15h
+secret/linux85-harbor        kubernetes.io/dockerconfigjson        1      3d22h
+[root@k8s232.oldboyedu.com ~]# 
+[root@k8s232.oldboyedu.com ~]# kubectl delete configmap/oldboyedu-linux85-games --kubeconfig=oldboyedu-linux.kubeconfig
+Error from server (Forbidden): configmaps "oldboyedu-linux85-games" is forbidden: User "oldboyedu" cannot delete resource "configmaps" in API group "" in the namespace "default"
+[root@k8s232.oldboyedu.com ~]# 
+[root@k8s232.oldboyedu.com ~]# 
+[root@k8s232.oldboyedu.com ~]# kubectl delete secret/linux85-harbor --kubeconfig=oldboyedu-linux.kubeconfig
+secret "linux85-harbor" deleted
 ```
 
