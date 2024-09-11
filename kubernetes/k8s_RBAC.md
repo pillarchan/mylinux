@@ -1187,16 +1187,14 @@ EOF
 bash kubeconfig.sh
 ```
 
-### 创建RBAC授权策略
+### 3. 创建RBAC授权策略
 
 ```
-3. 创建RBAC授权策略
-	3.1 创建rbac等配置文件
-[root@k8s231.wahaha.com user]# cat rbac.yaml 
+3.1 创建rbac等配置文件
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  namespace: default
+  namespace: haha #需要指定名称空间
   name: linux-role-reader
 rules:
   # API组,""表示核心组,该组包括但不限于"configmaps","nodes","pods","services"等资源.
@@ -1208,7 +1206,7 @@ rules:
   # verbs: ["get", "list"]  
   verbs: ["get", "list","delete"]  
 - apiGroups: ["","apps"]
-  resources: ["configmaps","secrets","daemonsets"]
+  resources: ["configmaps","secrets","daemonsets","deployments"] #
   verbs: ["get", "list"]  
 - apiGroups: [""]
   resources: ["secrets"]
@@ -1219,13 +1217,13 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: oldboyedu-linux81-resources-reader
-  namespace: default
+  name: wahaha-linux-resources-reader
+  namespace: haha #需要指定名称空间
 subjects:
   # 主体类型
 - kind: User  
   # 用户名
-  name: oldboyedu  
+  name: wahaha
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   # 角色类型
@@ -1233,36 +1231,44 @@ roleRef:
   # 绑定角色名称
   name: linux-role-reader
   apiGroup: rbac.authorization.k8s.io
-[root@k8s231.oldboyedu.com user]# 
+
+3.2 应用rbac授权
+kubectl apply -f rbac.yaml 
+
+3.3 访问测试
+kubectl get  po,svc,deploy,cm -n haha --kubeconfig=wahaha-linux.kubeconfig 
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/web-wordpress-demo-96f689cd-5tq2d   1/1     Running   0          2d19h
+pod/web-wordpress-demo-96f689cd-76wnd   1/1     Running   0          2d19h
+
+NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/mysql-wordpress   ClusterIP      10.200.29.117   <none>        3306/TCP       8d
+service/wordpress-svc     LoadBalancer   10.200.61.128   <pending>     80:30080/TCP   8d
+
+NAME                         DATA   AGE
+configmap/kube-root-ca.crt   1      28d
+Error from server (Forbidden): deployments.apps is forbidden: User "wahaha" cannot list resource "deployments" in API group "apps" in the namespace "haha"
 
 
-	3.2 应用rbac授权
-[root@k8s231.oldboyedu.com user]# kubectl apply -f rbac.yaml 
+注意：
+Error from server (Forbidden): deployments.apps is forbidden: User "wahaha" cannot list resource "deployments" in API group "apps" in the namespace "haha"
 
+报错分析：
+rules:
+- apiGroups: ["","apps/v1"]  # 此处定义了api-resources为apps/v1
+  resources: ["pods","deployments","services"]  # 
+  verbs: ["get", "list","delete"]  
+- apiGroups: ["","apps"] # 此处定义了api-resources为apps 在实践中可以理解为 kubectl api-resources | grep apps，相当于是匹配字符的一种，当然就是包含了apps/v1，但是实际操作中就算增加了一段新的apiGroups并且数组中加上apps/v1，指定deployments资源，还是会报同样的错，这是因为apps与apps/v1会被认为是两种apiGroups，且apps包含apps/v1，自然还是会以apps中指定的deployments为准
+  resources: ["configmaps","secrets","daemonsets"] # 这里只指定了daemonsets一种资源,并没有指定deployments
+  verbs: ["get", "list"]  
+  
+  kubectl api-resources | grep apps
+controllerrevisions                            apps/v1                                true         ControllerRevision
+daemonsets                        ds           apps/v1                                true         DaemonSet
+deployments                       deploy       apps/v1                                true         Deployment
+replicasets                       rs           apps/v1                                true         ReplicaSet
+statefulsets                      sts          apps/v1                                true         StatefulSet 
 
-	3.3 访问测试
-[root@k8s232.oldboyedu.com ~]# kubectl get po,cm,secret --kubeconfig=oldboyedu-linux.kubeconfig
-NAME                                               READY   STATUS             RESTARTS   AGE
-pod/oldboyedu-linux85-ds-xgp9v                     1/1     Running            0          2m18s
-pod/oldboyedu-linux85-wordpress-6b757777b7-l78gl   0/1     ImagePullBackOff   0          14m
-pod/oldboyedu-linux85-wordpress-6b757777b7-n7m8d   0/1     ImagePullBackOff   0          14m
-pod/oldboyedu-linux85-wordpress-6b757777b7-scqf4   0/1     ImagePullBackOff   0          14m
-
-NAME                                DATA   AGE
-configmap/kube-root-ca.crt          1      8d
-configmap/oldboyedu-linux85-games   1      6d17h
-
-NAME                         TYPE                                  DATA   AGE
-secret/default-token-4qknd   kubernetes.io/service-account-token   3      8d
-secret/es-https              Opaque                                3      6d16h
-secret/linux85               kubernetes.io/dockerconfigjson        1      6d15h
-secret/linux85-harbor        kubernetes.io/dockerconfigjson        1      3d22h
-[root@k8s232.oldboyedu.com ~]# 
-[root@k8s232.oldboyedu.com ~]# kubectl delete configmap/oldboyedu-linux85-games --kubeconfig=oldboyedu-linux.kubeconfig
-Error from server (Forbidden): configmaps "oldboyedu-linux85-games" is forbidden: User "oldboyedu" cannot delete resource "configmaps" in API group "" in the namespace "default"
-[root@k8s232.oldboyedu.com ~]# 
-[root@k8s232.oldboyedu.com ~]# 
-[root@k8s232.oldboyedu.com ~]# kubectl delete secret/linux85-harbor --kubeconfig=oldboyedu-linux.kubeconfig
-secret "linux85-harbor" deleted
+小结: 相同资源组，资源与权限取并集
 ```
 
