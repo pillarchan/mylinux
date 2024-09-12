@@ -7,20 +7,17 @@
 			NoScheduler
 			PreferNoScheduler
 			NoExecute
-			
 	- 污点容忍:
 	- 节点选择器:
 	- 亲和性:
 		- 节点亲和性
 		- Pod亲和性
 		- Pod反亲和性
-		
 	- daemonSets
 	- Pod驱逐
 	- kubeadm集群的扩缩容
 	- kube-proxy的工作切换，由iptables切换为ipvs
-	- svc的NodePort类型的端口范围映射
-	
+	- svc的NodePort类型的端口范围映射	
 	
 今日内容预告:
 	- K8S的安全框架;
@@ -31,236 +28,6 @@
 	- helm
 	
 
-RBAC基于组的方式认证:
-	CN: 代表用户，
-	O: 组。
-	
-- 1.使用k8s ca签发客户端证书
-	1.1 编写证书请求
-[root@k8s231.oldboyedu.com groups]# cat > ca-config.json <<EOF
-{
-  "signing": {
-    "default": {
-      "expiry": "87600h"
-    },
-    "profiles": {
-      "kubernetes": {
-        "usages": [
-            "signing",
-            "key encipherment",
-            "server auth",
-            "client auth"
-        ],
-        "expiry": "87600h"
-      }
-    }
-  }
-}
-EOF
-
-[root@k8s231.oldboyedu.com groups]# cat > oldboyedu-csr.json <<EOF
-{
-  "CN": "linux",
-  "hosts": [],
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "CN",
-      "ST": "BeiJing",
-      "L": "BeiJing",
-      "O": "oldboyedu",
-      "OU": "System"
-    }
-  ]
-}
-EOF
-
-
-	1.3 生成证书
-[root@k8s231.oldboyedu.com groups]#  cfssl gencert -ca=/etc/kubernetes/pki/ca.crt -ca-key=/etc/kubernetes/pki/ca.key -config=ca-config.json -profile=kubernetes oldboyedu-csr.json | cfssljson -bare oldboyedu-groups
-
-
-
-
-- 2.生成kubeconfig授权文件
-	2.1 编写生成kubeconfig文件的脚本
-[root@k8s231.oldboyedu.com groups]#  cat > kubeconfig.sh <<'EOF'
-kubectl config set-cluster oldboyedu-linux-groups \
-  --certificate-authority=/etc/kubernetes/pki/ca.crt \
-  --embed-certs=true \
-  --server=https://10.0.0.231:6443 \
-  --kubeconfig=oldboyedu-linux.kubeconfig
- 
-# 设置客户端认证
-kubectl config set-credentials oldboyedu \
-  --client-key=oldboyedu-groups-key.pem \
-  --client-certificate=oldboyedu-groups.pem \
-  --embed-certs=true \
-  --kubeconfig=oldboyedu-linux.kubeconfig
-
-# 设置默认上下文
-kubectl config set-context linux-groups \
-  --cluster=oldboyedu-linux-groups \
-  --user=oldboyedu \
-  --kubeconfig=oldboyedu-linux.kubeconfig
-
-# 设置当前使用的上下文
-kubectl config use-context linux-groups --kubeconfig=oldboyedu-linux.kubeconfig
-EOF
-
-
-	2.2 生成kubeconfig文件
-[root@k8s231.oldboyedu.com groups]#  bash kubeconfig.sh
-[root@k8s231.oldboyedu.com groups]# scp oldboyedu-linux.kubeconfig 10.0.0.233:~
-
-
-
-- 3. 创建RBAC授权策略
-[root@k8s231.oldboyedu.com groups]# cat rbac.yaml 
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  namespace: default
-  name: linux-role-reader
-rules:
-  # API组,""表示核心组,该组包括但不限于"configmaps","nodes","pods","services"等资源.
-- apiGroups: ["","apps"]  
-  # 资源类型，不支持写简称，必须写全称哟!!
-  resources: ["pods","nodes","services","deployments","configmaps"]  
-  # 对资源的操作方法.
-  verbs: ["get", "watch", "list"]  
-
----
-
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: oldboyedu-to-linux84-role-reader
-  namespace: default
-subjects:
-  # 主体类型
-- kind: Group
-  # 用户名
-  name: oldboyedu  
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  # 角色类型
-  kind: Role  
-  # 绑定角色名称
-  name: linux-role-reader
-  apiGroup: rbac.authorization.k8s.io
-[root@k8s231.oldboyedu.com groups]# 
-[root@k8s231.oldboyedu.com groups]# kubectl apply -f rbac.yaml 
-
-
-- 4.验证权限
-[root@k8s233.oldboyedu.com ~]# kubectl get po,cm,deploy --kubeconfig=oldboyedu-linux.kubeconfig
-
-
-
-
-
-- 5.创建新用户加入oldboyedu组
-	5.1使用k8s ca签发客户端证书
-		5.1.1 编写证书请求
-[root@k8s231.oldboyedu.com jasonyin]# cat > ca-config.json <<EOF
-{
-  "signing": {
-    "default": {
-      "expiry": "87600h"
-    },
-    "profiles": {
-      "kubernetes": {
-        "usages": [
-            "signing",
-            "key encipherment",
-            "server auth",
-            "client auth"
-        ],
-        "expiry": "87600h"
-      }
-    }
-  }
-}
-EOF
-
-[root@k8s231.oldboyedu.com jasonyin]# cat > oldboyedu-csr.json <<EOF
-{
-  "CN": "jasonyin",
-  "hosts": [],
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "CN",
-      "ST": "BeiJing",
-      "L": "BeiJing",
-      "O": "oldboyedu",
-      "OU": "System"
-    }
-  ]
-}
-EOF
-
-
-		5.1.2 生成证书
-[root@k8s231.oldboyedu.com jasonyin]# cfssl gencert -ca=/etc/kubernetes/pki/ca.crt -ca-key=/etc/kubernetes/pki/ca.key -config=ca-config.json -profile=kubernetes oldboyedu-csr.json | cfssljson -bare oldboyedu-jasonyin
-
-
-
-
-	5.2 生成kubeconfig文件文件
-		5.2.1 编写生成kubeconfig文件的脚本
-[root@k8s231.oldboyedu.com jasonyin]# cat > kubeconfig.sh <<'EOF'
-kubectl config set-cluster oldboyedu-jasonyin \
-  --certificate-authority=/etc/kubernetes/pki/ca.crt \
-  --embed-certs=true \
-  --server=https://10.0.0.231:6443 \
-  --kubeconfig=oldboyedu-linux.kubeconfig
- 
-# 设置客户端认证
-kubectl config set-credentials jasonyin \
-  --client-key=oldboyedu-jasonyin-key.pem \
-  --client-certificate=oldboyedu-jasonyin.pem \
-  --embed-certs=true \
-  --kubeconfig=oldboyedu-linux.kubeconfig
-
-# 设置默认上下文
-kubectl config set-context linux-jasonyin \
-  --cluster=oldboyedu-jasonyin \
-  --user=jasonyin \
-  --kubeconfig=oldboyedu-linux.kubeconfig
-
-# 设置当前使用的上下文
-kubectl config use-context linux-jasonyin --kubeconfig=oldboyedu-linux.kubeconfig
-EOF
-
-
-		5.2.2 生成kubeconfig文件
-[root@k8s231.oldboyedu.com jasonyin]#  bash kubeconfig.sh
-[root@k8s231.oldboyedu.com jasonyin]# scp oldboyedu-linux.kubeconfig 10.0.0.233:/tmp/
-
-
-	5.3 验证权限
-[root@k8s233.oldboyedu.com ~]# kubectl get po,cm,deploy --kubeconfig=/tmp/oldboyedu-linux.kubeconfig
-NAME                                               READY   STATUS             RESTARTS   AGE
-pod/oldboyedu-linux85-ds-xgp9v                     1/1     Running            0          50m
-pod/oldboyedu-linux85-wordpress-6b757777b7-l78gl   0/1     ErrImagePull       0          62m
-pod/oldboyedu-linux85-wordpress-6b757777b7-n7m8d   0/1     ImagePullBackOff   0          62m
-pod/oldboyedu-linux85-wordpress-6b757777b7-scqf4   0/1     ImagePullBackOff   0          62m
-
-NAME                                DATA   AGE
-configmap/kube-root-ca.crt          1      8d
-configmap/oldboyedu-linux85-games   1      6d18h
-
-NAME                                          READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/oldboyedu-linux85-wordpress   0/3     3            0           17h
-[root@k8s233.oldboyedu.com ~]# 
 
 
 
@@ -1221,7 +988,7 @@ metadata:
   namespace: haha #需要指定名称空间
 subjects:
   # 主体类型
-- kind: User  
+- kind: User
   # 用户名
   name: wahaha
   apiGroup: rbac.authorization.k8s.io
@@ -1270,5 +1037,239 @@ replicasets                       rs           apps/v1                          
 statefulsets                      sts          apps/v1                                true         StatefulSet 
 
 小结: 相同资源组，资源与权限取并集
+```
+
+## RBAC基于组的方式认证
+
+```
+CN: 代表用户，
+O: 组。
+```
+
+### 1.使用k8s ca签发客户端证书
+
+```
+1.1 编写证书请求
+cat > ca-config.json <<EOF
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ],
+        "expiry": "87600h"
+      }
+    }
+  }
+}
+EOF
+
+cat > group-yohaha-user-yohaha1-csr.json << EOF
+{
+  "CN": "yohaha1",
+  "hosts": [],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "BeiJing",
+      "L": "BeiJing",
+      "O": "yohaha",
+      "OU": "System"
+    }
+  ]
+}
+EOF
+
+1.3 生成证书
+cfssl gencert -ca=/etc/kubernetes/pki/ca.crt -ca-key=/etc/kubernetes/pki/ca.key -config=ca-config.json -profile=kubernetes group-yohaha-user-yohaha1-csr.json | cfssljson -bare group-yohaha
+```
+
+### 2.生成kubeconfig授权文件
+
+```
+2.1 编写生成kubeconfig文件的脚本
+cat > kubeconfig.sh <<'EOF'
+kubectl config set-cluster group-yohaha \
+  --certificate-authority=/etc/kubernetes/pki/ca.crt \
+  --embed-certs=true \
+  --server=https://192.168.76.142:6443 \
+  --kubeconfig=group-yohaha.kubeconfig
+ 
+# 设置客户端认证
+kubectl config set-credentials yohaha \
+  --client-key=group-yohaha-key.pem \
+  --client-certificate=group-yohaha.pem \
+  --embed-certs=true \
+  --kubeconfig=group-yohaha.kubeconfig
+
+# 设置默认上下文
+kubectl config set-context linux \
+  --cluster=group-yohaha \
+  --user=yohaha \
+  --kubeconfig=group-yohaha.kubeconfig
+
+# 设置当前使用的上下文
+kubectl config use-context linux --kubeconfig=group-yohaha.kubeconfig
+EOF
+
+2.2 生成kubeconfig文件
+[root@centos7k8s1 group]# bash kubeconfig.sh 
+Cluster "group-yohaha" set.
+User "yohaha" set.
+Context "linux" created.
+Switched to context "linux".
+
+scp group-yohaha.kubeconfig 192.168.76.144:/usr/local/src
+```
+
+### 3.创建RBAC授权策略
+
+```
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: haha
+  name: linux-role-reader
+rules:
+  # API组,""表示核心组,该组包括但不限于"configmaps","nodes","pods","services"等资源.
+- apiGroups: ["","apps"]  
+  # 资源类型，不支持写简称，必须写全称哟!!
+  # resources: ["pods","deployments"]  
+  resources: ["pods","configmaps","deployments","services","daemonsets"]  
+  # 对资源的操作方法.
+  # verbs: ["get", "list"]  
+  verbs: ["get", "list","watch"]  
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: group-yohaha-resources-reader
+  namespace: haha
+subjects:
+  # 主体类型
+- kind: Group
+  # 用户组名
+  name: yohaha
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # 角色类型
+  kind: Role
+  # 绑定角色名称
+  name: linux-role-reader
+  apiGroup: rbac.authorization.k8s.io
+```
+
+### 4.验证权限
+
+```
+kubectl -n haha get po,deploy,cm,svc,ds --kubeconfig=group-yohaha.kubeconfig
+```
+
+5.创建新用户加入yohaha组
+
+```
+5.1 使用k8s ca签发客户端证书
+5.1.1 编写证书请求
+cat > ca-config.json <<EOF
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ],
+        "expiry": "87600h"
+      }
+    }
+  }
+}
+EOF
+
+cat > group-yohaha-user-yohaha2-csr.jsonn <<EOF 
+{
+  "CN": "yohaha2",
+  "hosts": [],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "BeiJing",
+      "L": "BeiJing",
+      "O": "yohaha",
+      "OU": "System"
+    }
+  ]
+}
+EOF
+
+5.1.2 生成证书
+cfssl gencert -ca=/etc/kubernetes/pki/ca.crt -ca-key=/etc/kubernetes/pki/ca.key -config=ca-config.json -profile=kubernetes group-yohaha-user-yohaha2-csr.json | cfssljson -bare yohaha2-yohaha
+
+5.2 生成kubeconfig文件文件
+5.2.1 编写生成kubeconfig文件的脚本
+cat > kubeconfig.sh <<'EOF'
+kubectl config set-cluster yohaha2-group-yohaha \
+  --certificate-authority=/etc/kubernetes/pki/ca.crt \
+  --embed-certs=true \
+  --server=https://192.168.76.142:6443 \
+  --kubeconfig=yohaha2-group-yohaha.kubeconfig
+ 
+# 设置客户端认证
+kubectl config set-credentials yohaha2 \
+  --client-key=yohaha2-yohaha-key.pem \
+  --client-certificate=yohaha2-yohaha.pem \
+  --embed-certs=true \
+  --kubeconfig=yohaha2-group-yohaha.kubeconfig
+
+# 设置默认上下文
+kubectl config set-context yohaha2-linux \
+  --cluster=yohaha2-group-yohaha \
+  --user=yohaha2 \
+  --kubeconfig=yohaha2-group-yohaha.kubeconfig
+
+# 设置当前使用的上下文
+kubectl config use-context yohaha2-linux --kubeconfig=yohaha2-group-yohaha.kubeconfig
+EOF
+
+5.2.2 生成kubeconfig文件
+# bash kubeconfig.sh
+# scp yohaha2-group-yohaha.kubeconfig 192.168.76.144:/usr/local/src
+
+5.3 验证权限
+kubectl -n haha get po,deploy,cm,svc,ds --kubeconfig=yohaha2-group-yohaha.kubeconfig 
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/web-wordpress-demo-96f689cd-5tq2d   1/1     Running   0          4d
+pod/web-wordpress-demo-96f689cd-76wnd   1/1     Running   0          4d
+
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/web-wordpress-demo   2/2     2            2           9d
+
+NAME                         DATA   AGE
+configmap/kube-root-ca.crt   1      29d
+
+NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/mysql-wordpress   ClusterIP      10.200.29.117   <none>        3306/TCP       9d
+service/wordpress-svc     LoadBalancer   10.200.61.128   <pending>     80:30080/TCP   9d
 ```
 
