@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf-cm-multi
+  labels:
+    app: nginx-conf-cm-multi
+data:
+  html.conf: |
+    server {
+        listen 58881;
+        server_name _;
+        location / {
+            root /opt/nginx/html;
+            index index.html index.htm;
+        } 
+    }
+  html1.conf: |
+    server {
+        listen 58882;
+        server_name _;
+        location / {
+            root /opt/nginx/html1;
+            index index.html index.htm;
+        }
+    }
+  html2.conf: |
+    server {
+        listen 58883;
+        server_name _;
+        location / {
+            root /opt/nginx/html2;
+            index index.html index.htm;
+        }
+    }
+  html3.conf: |
+    server {
+        listen 58884;
+        server_name _;
+        location / {
+            root /opt/nginx/html3;
+            index index.html index.htm;
+        }
+    }
+  html4.conf: |
+    server {
+        listen 58885;
+        server_name _;
+        location / {
+            root /opt/nginx/html4;
+            index index.html index.htm;
+        }
+    }
+  html5.conf: |
+    server {
+        listen 58886;
+        server_name _;
+        location / {
+            root /opt/nginx/html5;
+            index index.html index.htm;
+        }
+    }

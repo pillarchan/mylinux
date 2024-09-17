@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata: 
+  name: jobs-demo-1
+spec:
+  template:
+    metadata:
+      labels: 
+        app: job-yoyo
+    spec:
+      containers:
+      - name: jobs-demo
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command: ["sh","-c","for i in $(seq 1 10);do echo $i;done"] 
+      restartPolicy: Never
+  backoffLimit: 3

@@ -1,0 +1,33 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: haha
+  name: linux-role-reader
+rules:
+  # API组,""表示核心组,该组包括但不限于"configmaps","nodes","pods","services"等资源.
+- apiGroups: ["","apps"]  
+  # 资源类型，不支持写简称，必须写全称哟!!
+  # resources: ["pods","deployments"]  
+  resources: ["pods","configmaps","deployments","services","daemonsets"]  
+  # 对资源的操作方法.
+  # verbs: ["get", "list"]  
+  verbs: ["get", "list","watch"]  
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: group-yohaha-resources-reader
+  namespace: haha
+subjects:
+  # 主体类型
+- kind: Group
+  # 用户名
+  name: yohaha
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # 角色类型
+  kind: Role  
+  # 绑定角色名称
+  name: linux-role-reader
+  apiGroup: rbac.authorization.k8s.io

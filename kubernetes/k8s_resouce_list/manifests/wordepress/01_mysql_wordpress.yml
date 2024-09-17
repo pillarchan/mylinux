@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-wordpress-demo
+  labels:
+    item: wordpress
+  namespace: mywordpress
+spec:
+  replicas: 1
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - mysql1
+      operator: In
+#  strategy:
+#    type: RollingUpdate
+#    rollingUpdate:
+#      maxSurge: 3
+#      maxUnavailable: 2
+  template:
+    metadata:
+      labels:
+        app: mysql1
+    spec:
+      containers:
+      - name: mysql-wordpress-demo-1
+        image: harbor.myharbor.com/myharbor/mysql:8.0.36
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "654321"
+        - name: MYSQL_DATABASE
+          value: "wordpress"
+        - name: MYSQL_USER
+          value: "wordpress_user"
+        - name: MYSQL_PASSWORD
+          value: "123456"   
+        #resources:
+        #  requests:
+        #    cpu: '0.5'
+        #    memory: '0.5G'
+        #  limits:
+        #    cpu: '1'
+        #    memory: '1G'

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-taint-demo-1
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 5
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - wahaha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: wahaha1
+    spec:
+      containers:
+      - name: nginx-deploy-demo-1  
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: IfNotPresent

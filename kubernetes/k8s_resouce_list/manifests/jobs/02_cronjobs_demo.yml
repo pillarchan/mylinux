@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata: 
+  name: jobs-cronjob-demo-1
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels: 
+            app: job-yoyo
+        spec:
+          containers:
+          - name: jobs-cronjob-demo
+            image: busybox
+            imagePullPolicy: IfNotPresent
+            command: ["sh","-c","date;echo 'i would like to drink wahaha'"] 
+          restartPolicy: OnFailure
+#      backoffLimit: 3

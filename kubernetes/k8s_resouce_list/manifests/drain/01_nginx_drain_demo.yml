@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-drain-demon
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 5
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - wahaha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: wahaha1
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+      containers:
+      - name: nginx-taint-prefernoschedule-demo
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: IfNotPresent

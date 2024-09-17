@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: nginx-demo-1
-          image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+          image: harbor.myharbor.com/myharbor/nginx:v2.0-my
           imagePullPolicy: IfNotPresent
 ---
 apiVersion: v1
@@ -36,3 +36,4 @@ spec:
       targetPort: 80
       protocol: TCP
   clusterIP: 10.200.111.101
+

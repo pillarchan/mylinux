@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-rs-demo
+  labels:
+    item: yoyo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: haha1
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      containers:
+      - name: nginx-rs-demo-1  
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: '0.5'
+            memory: '0.5G'
+          limits:
+            cpu: '1'
+            memory: '1G'
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - "/bin/sh"
+              - "-c"
+              - 'echo "<h2>yoyo page</h2>" > /usr/share/nginx/html/yoyo.html'
+          preStop:
+            exec:
+              command:
+              - "/bin/sh"
+              - "-c"
+              - 'nginx -s stop'
+      initContainers:
+      - name: init-somaxconn
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        command:
+        - "/bin/sh"
+        - "-c"
+        - 'ls /proc/sys/net/core/somaxconn'

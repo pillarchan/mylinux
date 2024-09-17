@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-update-demo
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 1
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - wahaha1
+      operator: In
+#  strategy:
+#    type: RollingUpdate
+#    rollingUpdate:
+#      maxSurge: 3
+#      maxUnavailable: 2
+  template:
+    metadata:
+      labels:
+        app: wahaha1
+    spec:
+      containers:
+      - name: redis-update-demo-1 
+        image: redis:6.2.14
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: '0.5'
+            memory: '0.5G'
+          limits:
+            cpu: '1'
+            memory: '1G'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-svc
+  namespace: haha
+spec:
+  selector:
+    app: wahaha1
+#  type: NodePort
+  ports:
+  - port: 6379
+    targetPort: 6379
+    

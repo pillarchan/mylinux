@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy-node-selector
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 5
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+      - operator: Exists
+      nodeSelector:
+        dc: erwa
+        dc: sanwa
+        dc: dawa
+        mynode: iwant
+      containers:
+      - name: nginx-deploy-node-selector-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent  
+

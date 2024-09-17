@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx-deploy-node-daemonset
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - haha1
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: haha1
+    spec:
+      tolerations:
+        #key: node-role.kubernetes.io/master
+        #effect: NoSchedule
+      - operator: Exists
+      #affinity:
+      #  nodeAffinity:
+      #    requiredDuringSchedulingIgnoredDuringExecution:
+      #      nodeSelectorTerms:
+      #      - matchExpressions:
+      #        - key: dc
+      #          values: 
+      #          - dawa
+      #          - erwa
+      #          - sanwa
+      #          operator: In
+      #        #- key: ynode
+      #        #  values: 
+      #        #  - gotit
+      #        #  operator: In
+      containers:
+      - name: nginx-deploy-node-affinity-1
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-deploy-node-affinity-svc
+  namespace: haha
+spec:
+  selector:
+    app: haha1
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 31800
+  clusterIP: 10.200.111.111
+

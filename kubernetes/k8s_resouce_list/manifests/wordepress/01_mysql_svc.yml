@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-wordpress-svc
+  namespace: mywordpress
+spec:
+  selector:
+    app: mysql1
+  ports:
+  - port: 3306
+    targetPort: 3306
+  clusterIP: 10.200.100.36
+  

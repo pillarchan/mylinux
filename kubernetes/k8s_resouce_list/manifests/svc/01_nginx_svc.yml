@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc-01
+  namespace: item-haha
+  labels:
+    item: haha
+spec:
+  selector:
+    app: haha-1
+  type: ClusterIP
+  ports:
+  - port: 8888
+    targetPort: 80
+    protocol: TCP
+  clusterIP: 10.200.111.111
+status: {}

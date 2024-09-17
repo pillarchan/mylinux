@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-rs-deploy-strategy-demo-1
+  labels:
+    item: wahaha
+  namespace: haha
+spec:
+  replicas: 3
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - wahaha1
+      operator: In
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 3
+      maxUnavailable: 2
+  template:
+    metadata:
+      labels:
+        app: wahaha1
+    spec:
+      containers:
+      - name: nginx-deploy-demo-1  
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: '0.5'
+            memory: '0.5G'
+          limits:
+            cpu: '1'
+            memory: '1G'
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - "/bin/sh"
+              - "-c"
+              - 'echo "<h2>yoyo page</h2>" > /usr/share/nginx/html/yoyo.html'
+          preStop:
+            exec:
+              command:
+              - "/bin/sh"
+              - "-c"
+              - 'nginx -s stop'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-rs-svc
+  namespace: haha
+spec:
+  selector:
+    app: wahaha1
+  type: ClusterIP
+  ports:
+  - port: 88
+    targetPort: 80

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-sa-demo
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchExpressions:
+    - key: apps
+      values: 
+      - pythonweb
+      operator: In
+  template:
+    metadata:
+      labels:
+        apps: pythonweb
+    spec:
+      # 指定sa的名称，请确认该账号是有权限访问K8S集群的哟!
+      serviceAccountName: yohaha-python
+      containers:
+      - name: python-sa-demo-1
+        image: harbor.myharbor.com/myharbor/python:3.9.16
+        imagePullPolicy: IfNotPresent
+        command: 
+        - "tail"
+        - "-f"
+        - "/etc/hosts"
