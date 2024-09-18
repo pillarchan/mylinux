@@ -183,15 +183,12 @@ spec:
     nodePort: 30088
 ```
 
+## 删除pvc验证pv的回收策略
 
-
-
-
-
+### 1.pv的回收策略
 
 ```
-删除pvc验证pv的回收策略:
-	Retain:
+Retain:
 	   "保留回收"策略允许手动回收资源,删除pvc时，pv仍然存在，并且该卷被视为"已释放(Released)"。
 	   在管理员手动回收资源之前，使用该策略其他Pod将无法直接使用。
 	   温馨提示:
@@ -208,35 +205,35 @@ spec:
 	   对于"回收利用"策略官方已弃用。相反，推荐的方法是使用动态资源调配。而动态存储类已经不支持该类型啦！
 	   如果基础卷插件支持，回收回收策略将对卷执行基本清理（rm -rf /thevolume/*），并使其再次可用于新的声明。
 	   温馨提示，在k8s1.15.12版本测试时，删除pvc发现nfs存储卷的数据被删除。
+```
 
+## PV的回收策略案例
 
-- PV的回收策略:
-	(1)給pv打补丁
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# kubectl get pv,pvc
-NAME                                    CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                         STORAGECLASS   REASON   AGE
-persistentvolume/oldboyedu-linux-pv01   2Gi        RWX            Retain           Available                                                         157m
-persistentvolume/oldboyedu-linux-pv02   5Gi        RWX            Retain           Released    default/oldboyedu-linux-pvc                           157m
-persistentvolume/oldboyedu-linux-pv03   10Gi       RWX            Retain           Available                                                         157m
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# 
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# 
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# kubectl patch pv oldboyedu-linux-pv03  -p '{"spec":{"persistentVolumeReclaimPolicy":"Recycle"}}'
-persistentvolume/oldboyedu-linux-pv03 patched
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# 
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# kubectl get pv,pvc
-NAME                                    CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                         STORAGECLASS   REASON   AGE
-persistentvolume/oldboyedu-linux-pv01   2Gi        RWX            Retain           Available                                                         157m
-persistentvolume/oldboyedu-linux-pv02   5Gi        RWX            Retain           Released    default/oldboyedu-linux-pvc                           157m
-persistentvolume/oldboyedu-linux-pv03   10Gi       RWX            Recycle          Available                                                         157m
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# 
+### (1)给pv打补丁
 
+```
+kubectl patch pv pv001-nfs -p '{"spec":{"persistentVolumeReclaimPolicy":"Recycle"}}'
+persistentvolume/pv001-nfs patched
+```
 
+### (2)查看是否打补丁成功
 
-	(2)测试
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# cat 01-manual-pvc.yaml 
+```
+kubectl get pv
+NAME        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+pv001-nfs   2G         RWX            Recycle          Available                                   80m
+pv002-nfs   5G         RWX            Retain           Available                                   12m
+pv003-nfs   8G         RWX            Retain           Available                                   80m
+```
+
+### (3)测试验证
+
+```
+#pvc资源
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: oldboyedu-linux-pvc
+  name: pv-pvc-demo
 spec:
   # 声明资源的访问模式
   accessModes:
@@ -244,16 +241,15 @@ spec:
   # 声明资源的使用量
   resources:
     limits:
-       storage: 4Gi
+       storage: 2Gi
     requests:
-       storage: 3Gi
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# 
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# 
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# cat 02-deploy-nginx-pvc.yaml 
+       storage: 1Gi
+
+#deployment资源
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: oldboyedu-nginx-pvc
+  name: pvc-nginx-demo
 spec:
   replicas: 2
   selector:
@@ -263,175 +259,86 @@ spec:
   template:
     metadata:
       labels:
-        apps: nginx
+        apps: pvcnginx
     spec:
       volumes:
       - name: data
-        # 声明是一个PVC类型
         persistentVolumeClaim:
-          # 引用哪个PVC
-          claimName: oldboyedu-linux-pvc
+          claimName: pv-pvc-demo
       containers:
-      - name: web
-        image: harbor.oldboyedu.com/web/apps:v1
+      - name: pvc-nginx-web
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
+        imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: data
           mountPath: /usr/share/nginx/html
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
-  name: oldboyedu-linux-nginx
+  name: pvc-nginx-svc
 spec:
+  selector: 
+    apps: pvcnginx
   type: NodePort
-  selector:
-    apps: nginx
   ports:
   - port: 80
     targetPort: 80
-    nodePort: 30080
-[root@k8s231.oldboyedu.com persistentvolumeclaims]# 
+    nodePort: 30088
+    
+#验证绑定
+kubectl get pv,pvc,po -o wide
+NAME                         CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                 STORAGECLASS   REASON   AGE   VOLUMEMODE
+persistentvolume/pv001-nfs   2G         RWX            Recycle          Bound       default/pv-pvc-demo                           84m   Filesystem
+persistentvolume/pv002-nfs   5G         RWX            Retain           Available                                                 16m   Filesystem
+persistentvolume/pv003-nfs   8G         RWX            Retain           Available                                                 84m   Filesystem
 
+NAME                                STATUS   VOLUME      CAPACITY   ACCESS MODES   STORAGECLASS   AGE   VOLUMEMODE
+persistentvolumeclaim/pv-pvc-demo   Bound    pv001-nfs   2G         RWX                           24s   Filesystem
 
+NAME                                  READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+pod/pvc-nginx-demo-66974fc6bc-45g86   1/1     Running   0          20s   10.100.5.21   centos7k8s3   <none>           <none>
+pod/pvc-nginx-demo-66974fc6bc-xrk2g   1/1     Running   0          21s   10.100.1.83   centos7k8s2   <none>           <none>
 
+echo "111111pvc" > /opt/data/k8s/pv/pv001/index.html
 
-动态存储类sc实战:
-	(1)k8s组件原生并不支持NFS动态存储
-https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner
+curl 10.100.5.21
+111111pvc
+```
 
-	(2)NFS不提供内部配置器实现动态存储，但可以使用外部配置器。
-[root@k8s231.oldboyedu.com storageclasses]# yum -y install git
+### (4)回收验证
 
-[root@k8s231.oldboyedu.com storageclasses]# git clone https://gitee.com/yinzhengjie/k8s-external-storage.git
+```
+#删除deployment
+kubectl delete -f 03_pvc_nginx.yml 
+deployment.apps "pvc-nginx-demo" deleted
+service "pvc-nginx-svc" deleted
+#删除pvc
+kubectl delete -f 02_pvc.yml 
+persistentvolumeclaim "pv-pvc-demo" deleted
+#查看是否自动回收
+[root@centos7k8s1 pv_pvc]# kubectl get pv
+NAME        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                 STORAGECLASS   REASON   AGE
+pv001-nfs   2G         RWX            Recycle          Released    default/pv-pvc-demo                           91m
+pv002-nfs   5G         RWX            Retain           Available                                                 22m
+pv003-nfs   8G         RWX            Retain           Available                                                 91m
+[root@centos7k8s1 pv_pvc]# kubectl get pv
+NAME        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+pv001-nfs   2G         RWX            Recycle          Available   #变成available 验证成功          91m
+pv002-nfs   5G         RWX            Retain           Available                                   22m
+pv003-nfs   8G         RWX            Retain           Available                                   91m
+```
 
-	(3)修改配置文件
-[root@k8s231.oldboyedu.com storageclasses]# cd k8s-external-storage/nfs-client/deploy
-[root@k8s231.oldboyedu.com deploy]# cat deployment.yaml 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nfs-client-provisioner
-  labels:
-    app: nfs-client-provisioner
-  # replace with namespace where provisioner is deployed
-  namespace: default
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: nfs-client-provisioner
-  template:
-    metadata:
-      labels:
-        app: nfs-client-provisioner
-    spec:
-      serviceAccountName: nfs-client-provisioner
-      containers:
-        - name: nfs-client-provisioner
-          # image: quay.io/external_storage/nfs-client-provisioner:latest
-          image: registry.cn-hangzhou.aliyuncs.com/yinzhengjie-k8s/sc:nfs-client-provisioner
-          volumeMounts:
-            - name: nfs-client-root
-              mountPath: /persistentvolumes
-          env:
-            - name: PROVISIONER_NAME
-              value: oldboyedu/linux85
-              # value: fuseim.pri/ifs
-            - name: NFS_SERVER
-              value: 10.0.0.231
-            - name: NFS_PATH
-              value: /oldboyedu/data/kubernetes/sc
-      volumes:
-        - name: nfs-client-root
-          nfs:
-            server: 10.0.0.231
-            # path: /ifs/kubernetes
-            path: /oldboyedu/data/kubernetes/sc
-[root@k8s231.oldboyedu.com deploy]# 
+### (5)手动回收
 
-
-
-	(4)修改动态存储类的配置文件
-[root@k8s231.oldboyedu.com deploy]# cat class.yaml 
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: managed-nfs-storage
-# provisioner: fuseim.pri/ifs # or choose another name, must match deployment's env PROVISIONER_NAME'
-provisioner: oldboyedu/linux85
-parameters:
-  # archiveOnDelete: "false"
-  archiveOnDelete: "true"
-[root@k8s231.oldboyedu.com deploy]# 
-
-
-	(5)nfs服务器端创建sc需要共享路径
-[root@k8s231.oldboyedu.com deploy]# mkdir -pv /oldboyedu/data/kubernetes/sc
-
-	(6)创建动态存储类
-[root@k8s231.oldboyedu.com deploy]# kubectl apply -f class.yaml && kubectl get sc
-
-
-	(7)创建授权角色
-[root@k8s231.oldboyedu.com deploy]# kubectl apply -f rbac.yaml 
-
-	(8)部署nfs动态存储配置器
-[root@k8s231.oldboyedu.com deploy]# kubectl apply -f deployment.yaml 
-
-
-	(9)查看是否部署成功（如下图所示）
-[root@k8s231.oldboyedu.com deploy]# kubectl get pods,sc
-NAME                                         READY   STATUS    RESTARTS   AGE
-pod/nfs-client-provisioner-c494888bb-rxvtf   1/1     Running   0          90s
-
-NAME                                              PROVISIONER         RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
-storageclass.storage.k8s.io/managed-nfs-storage   oldboyedu/linux85   Delete          Immediate           false                  2m27s
-[root@k8s231.oldboyedu.com deploy]# 
-
-
-	(10)测试动态存储类
-[root@k8s231.oldboyedu.com deploy]# cat test-claim.yaml 
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: test-claim-001
-  annotations:
-    volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
-spec:
-  #storageClassName: managed-nfs-storage
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 20Mi
-[root@k8s231.oldboyedu.com deploy]# 
-[root@k8s231.oldboyedu.com deploy]# 
-[root@k8s231.oldboyedu.com deploy]# cat test-pod.yaml 
-kind: Pod
-apiVersion: v1
-metadata:
-  name: test-pod
-spec:
-  containers:
-  - name: test-pod
-    image: harbor.oldboyedu.com/web/apps:v1
-    command:
-      - "/bin/sh"
-    args:
-      - "-c"
-      - "touch /mnt/SUCCESS && exit 0 || exit 1"
-    volumeMounts:
-      - name: nfs-pvc
-        mountPath: "/mnt"
-  restartPolicy: "Never"
-  volumes:
-    - name: nfs-pvc
-      persistentVolumeClaim:
-        claimName: test-claim-001
-[root@k8s231.oldboyedu.com deploy]#  
+```
+首先还是需要清除pod资源，然后删除pvc资源，将对应pv中的需要备份的数据备份，再删除对应的pv资源，再重新创建。
+persistentVolumeReclaimPolicy值要是Retain
+例如：
+kubectl delete -f 03_pvc_nginx.yml 
+kubectl delete -f 02_pvc.yml
+mv /opt/data/k8s/pv/pv002/index.html /tmp
+kubectl delete pv pv002-nfs
+kubectl apply -f 01_pv_nfs.yml
 ```
 
