@@ -72,6 +72,17 @@ spec:
 status: {}
 
 nodePort 创建后  iptables 会将节点中30088端口通过nat转发的方式对外部提供该端口访问，从而就可以使用 宿主机IP:端口进行访问
+如果使用ipvs则可以ipvsadm进行查看
+
+端口范围的设置 不能直接使用 kubectl edit修改
+cat /etc/kubernetes/manifests/kube-apiserver.yaml
+...
+spec:
+  containers:
+  - command:
+    - kube-apiserver
+    - --service-node-port-range=80-32767
+ ...
 ```
 
 ### LoadBalancer

@@ -21,7 +21,7 @@ clusterDomain: cluster.local
 
 coreDNS的A记录
 	k8s的svc的A记录格式:
-<service name>[.<namespace name>.svc.oldboyedu.com]
+\<service name\>[.\<namespace name\>.svc.clusterDomain]
 
 
 

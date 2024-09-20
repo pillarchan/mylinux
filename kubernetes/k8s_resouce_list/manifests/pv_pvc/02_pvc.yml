@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-pvc-demo
+spec:
+  # 声明资源的访问模式
+  accessModes:
+  - ReadWriteMany
+  # 声明资源的使用量
+  resources:
+    limits:
+       storage: 2Gi
+    requests:
+       storage: 1Gi

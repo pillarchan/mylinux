@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+  # 创建一个名为"lucky"的账户
+  name: lucky
+  namespace: kube-system
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: lucky-dashboard
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  # 既然绑定的是集群角色，那么类型也应该为"ClusterRole",而不是"Role"哟~
+  kind: ClusterRole
+  # 关于集群角色可以使用"kubectl get clusterrole | grep admin"进行过滤哟~
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    # 此处要注意哈，绑定的要和我们上面的服务账户一致哟~
+    name: lucky
+    namespace: kube-system

@@ -1,5 +1,12 @@
 # storageclasses(sc)
 
+## 概念
+
+```
+- sc:
+自动创建pv的一种存储类，pvc可以指定去哪个sc申请资源。
+```
+
 ## 动态存储类sc实战
 
 ### (1)k8s组件原生并不支持NFS动态存储
@@ -32,7 +39,7 @@ yum -y install git
 ### (3)修改nfs-client-provisioner配置文件
 
 ```
-cat deployment.yaml 
+cat k8s-external-storage/nfs-client/deploy/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -78,6 +85,7 @@ spec:
 ### (4)修改动态存储类的配置文件
 
 ```
+cat k8s-external-storage/nfs-client/deploy/class.yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -86,7 +94,6 @@ provisioner: fuseim.pri/ifs # or choose another name, must match deployment's en
 parameters:
   # archiveOnDelete: "false"
   archiveOnDelete: "true"
-
 ```
 
 ### 	(5)nfs服务器端创建sc需要共享路径

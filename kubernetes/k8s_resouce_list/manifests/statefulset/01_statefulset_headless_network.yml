@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: linux-headless
+spec:
+  ports:
+  - port: 80
+    name: web
+  clusterIP: None
+  selector:
+    apps: nginx
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nginx-web-headless
+spec:
+  serviceName: linux-headless
+  replicas: 3
+  selector:
+    matchLabels: 
+      apps: nginx
+  template:
+    metadata:
+      labels:
+        apps: nginx
+    spec:
+      containers:
+      - name: nginx-web-01
+        image: harbor.myharbor.com/myharbor/nginx:v1.0-my
