@@ -44,7 +44,7 @@ k8s 实际工作的节点
 
 ### kubelet 
 
-维护pod的生命周期
+维护pod的生命周期，监控pod的状态并上报给api server
 
 ​	pod里面运行的实际业务
 
@@ -62,7 +62,7 @@ k8s 实际工作的节点
 
 ​			uts 主机域名相关
 
-​         cadvisor 容器监控工具 将采集到的数据返回给api server  并存储到 etcd
+​         **cadvisor** 容器监控工具 将采集到的数据返回给api server  并存储到 etcd
 
 ### kubeproxy
 
