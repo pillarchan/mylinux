@@ -66,240 +66,419 @@ help        (Help about any command)
 ...
 ```
 
+## helm部署服务
 
+### 	(1)创建chart 
 
 ```
-helm部署服务:
-- 管理Chart生命周期初体验
-	(1)创建chart
-[root@k8s231.oldboyedu.com helm]# helm create oldboyedu-linux
-Creating oldboyedu-linux
-[root@k8s231.oldboyedu.com helm]# 
+helm create haha-linux -n haha
+如果需要指定名称空间，需要先创建名称空间 kubectl create ns xxx
+```
 
-	
-	(3)安装chart
-[root@k8s231.oldboyedu.com helm]# helm install web01 oldboyedu-linux -n oldboyedu-helm
-NAME: web01
-LAST DEPLOYED: Sun Apr 23 15:51:49 2023
-NAMESPACE: oldboyedu-helm
+### 	(2)安装chart
+
+```
+helm install hahaweb haha-linux -n haha
+NAME: hahaweb
+LAST DEPLOYED: Sun Sep 22 13:10:45 2024
+NAMESPACE: haha
 STATUS: deployed
 REVISION: 1
-TEST SUITE: None
 NOTES:
-#######################################
-# 欢迎使用老男孩IT教育K8S集群服务系统 #
-#     官方网站:                       #
-#         www.oldboyedu.com           #
-#######################################
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace haha -l "app.kubernetes.io/name=haha-linux,app.kubernetes.io/instance=hahaweb" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace haha $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace haha port-forward $POD_NAME 8080:$CONTAINER_PORT
+当创建好chart后，可以看到一个以chart名命名的目录
 
-恭喜您: harbor.oldboyedu.com/web/apps:v1应用已经部署成功
+# tree haha-linux/
+haha-linux/
+├── charts
+├── Chart.yaml 存放chart信息
+├── templates
+│   ├── deployment.yaml
+│   ├── _helpers.tpl
+│   ├── hpa.yaml
+│   ├── ingress.yaml
+│   ├── NOTES.txt
+│   ├── serviceaccount.yaml
+│   ├── service.yaml
+│   └── tests
+│       └── test-connection.yaml
+└── values.yaml
+```
 
-请尝试访问web吧~
-[root@k8s231.oldboyedu.com helm]# 
+### (3)查看chart
 
-	
-	(3)卸载chart
-[root@k8s231.oldboyedu.com helm]# helm uninstall web01 -n oldboyedu-helm 
-release "web01" uninstalled
-[root@k8s231.oldboyedu.com helm]# 
+```
+# helm list -n haha
+NAME   	NAMESPACE	REVISION	UPDATED                               	STATUS  	CHART           	APP VERSION
+hahaweb	haha     	1       	2024-09-22 13:20:45.37916638 +0800 CST	deployed	haha-linux-0.1.0	1.16.0
+```
 
+#### Chart.yml
 
+```
+# cat haha-linux/Chart.yaml 
+apiVersion: v2
+name: haha-linux
+description: A Helm chart for Kubernetes
 
+# A chart can be either an 'application' or a 'library' chart.
+#
+# Application charts are a collection of templates that can be packaged into versioned archives
+# to be deployed.
+#
+# Library charts provide useful utilities or functions for the chart developer. They're included as
+# a dependency of application charts to inject those utilities and functions into the rendering
+# pipeline. Library charts do not define any templates and therefore cannot be deployed.
+type: application
 
-helm的升级:
-	(1)部署chart
-[root@k8s231.oldboyedu.com helm]# helm install web01 oldboyedu-linux -n oldboyedu-helm 
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.1.0  #此处对应的就是chart的版本
 
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "1.16.0" #此处对应的就是app的版本
+```
 
-	(2)查看发现的Release
-[root@k8s231.oldboyedu.com helm]# helm list -n oldboyedu-helm 
-NAME 	NAMESPACE     	REVISION	UPDATED                                	STATUS  	CHART               	APP VERSION
-web01	oldboyedu-helm	1       	2023-04-23 16:30:22.790921622 +0800 CST	deployed	oldboyedu-linux-v0.1	v1         
-[root@k8s231.oldboyedu.com helm]# 
+#### NOTES.txt
 
-	(3)基于文件的方式升级应用
-[root@k8s231.oldboyedu.com helm]# cat oldboyedu-linux/values.yaml 
-oldboyedu_linux_apps:
-   namespace: oldboyedu-helm
-   image: harbor.oldboyedu.com/web/apps
-   tags: v2
- 
-replicas: 5
+```
+当安装成功一个CHART后，就会显示其中的note信息，这个信息就保存在 chartpath/templates/NOTES.txt中
+NOTES:
+1. Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace haha -l "app.kubernetes.io/name=haha-linux,app.kubernetes.io/instance=hahaweb" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace haha $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace haha port-forward $POD_NAME 8080:$CONTAINER_PORT
+```
 
+#### values.yaml
+
+```
+存放chart数据映射关系，这里可以把它理解为自定义chart全局变量的文件，以key: value的方式存储
+如：
+replicaCount: 1
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+...  
+```
+
+#### templates
+
+```
+该目录中存放的就是这个chart的资源清单了 包括如
+templates
+├── deployment.yaml
+├── _helpers.tpl
+├── hpa.yaml
+├── ingress.yaml
+├── NOTES.txt
+├── serviceaccount.yaml
+├── service.yaml
+└── tests
+    └── test-connection.yaml
+```
+
+#### 小结
+
+```
+通过响应式的方式创建一个chart后， 就可以得到这样一个框架，以此为模板就可以通过声明式的方式构建自己所需要的chart
+```
+
+### (4)卸载chart
+
+```
+helm -n haha uninstall hahaweb 
+release "hahaweb" uninstalled
+```
+
+## helm构建自定义chart（小型案例）
+
+### (1) 创建chart框架
+
+#### 1.创建chart.yaml
+
+```
+cat Chart.yaml 
+apiVersion: v2
+name: myhaha
+description: A defined helm
+type: application
+version: v1.0.1
+appVersion: "v1.0"
+```
+
+#### 2.创建values.yaml
+
+```
+cat values.yaml 
+namespace: haha
+replicasCount: 2
+image:
+  repository: harbor.myharbor.com/myharbor/nginx
+  pullPolicy: IfNotPresent
+  tag: v1.0-my
 labels:
-   apps: web
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# helm upgrade web01 oldboyedu-linux -f oldboyedu-linux/values.yaml -n oldboyedu-helm 
-Release "web01" has been upgraded. Happy Helming!
-NAME: web01
-LAST DEPLOYED: Sun Apr 23 16:32:00 2023
-NAMESPACE: oldboyedu-helm
+  key1: apps
+  apps: hahaweb1
+net:
+  protocol: http
+  port: 80
+```
+
+#### 3.创建 templates/deployment.yaml
+
+```
+cat 01_nginx_deploy_update_demo.yml 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myhaha
+  labels:
+    item: myhaha
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicasCount }}
+  selector:
+    matchExpressions:
+    - key: {{ .Values.labels.key1 }}
+      values:
+      - {{ .Values.labels.apps }}
+      operator: In
+  template:
+    metadata:
+      labels:
+        {{ .Values.labels.key1 }}: {{ .Values.labels.apps }}
+    spec:
+      containers:
+      - name: nginx-deploy  
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 80
+          name: http #此处有关联，与service中targetPort调用该name的值成对应
+```
+
+#### 4.创建templates/service.yaml
+
+```
+cat 01_nginx_svc.yml 
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc-01
+  namespace: {{ .Values.namespace }}
+  labels:
+    item: myhaha
+spec:
+  selector:
+    {{ .Values.labels.key1 }}: {{ .Values.labels.apps }}
+  type: NodePort
+  ports:
+  - port: {{ .Values.net.port }}
+    targetPort: {{ .Values.net.protocol }} #如果service中的端口要使用如http,那么containers.ports.name就必须定义
+    nodePort: 30001
+```
+
+#### 5.创建templates/NOTE.txt
+
+```
+cat NOTES.txt 
+{{ .Values.image.repository }}:{{ .Values.image.tag }}部署成功
+已启动
+```
+
+## helm的升级
+
+### 1.基于文件的方式升级应用
+
+#### 1.查看发现的Release
+
+```
+helm list -n haha
+NAME     	NAMESPACE	REVISION	UPDATED                                	STATUS  	CHART        	APP VERSION
+myhahaweb	haha     	1       	2024-09-22 18:16:14.826510838 +0800 CST	deployed	myhaha-v1.0.1	v1.0
+```
+
+#### 2.修改 values.yaml
+
+```
+cat values.yaml 
+namespace: haha
+replicasCount: 2
+image:
+  repository: harbor.myharbor.com/myharbor/nginx
+  pullPolicy: IfNotPresent
+  tag: v2.0-my #修改了版本号
+labels:
+  key1: apps
+  apps: hahaweb1
+net:
+  protocol: http
+  port: 80
+```
+
+#### 3.使用upgrade命令升级
+
+```
+helm -n haha upgrade myhahaweb myhaha/ -f myhaha/values.yaml 
+Release "myhahaweb" has been upgraded. Happy Helming!
+NAME: myhahaweb
+LAST DEPLOYED: Sun Sep 22 18:30:14 2024
+NAMESPACE: haha
 STATUS: deployed
 REVISION: 2
 TEST SUITE: None
 NOTES:
-#######################################
-# 欢迎使用老男孩IT教育K8S集群服务系统 #
-#     官方网站:                       #
-#         www.oldboyedu.com           #
-#######################################
+harbor.myharbor.com/myharbor/nginx:v2.0-my部署成功
+已启动
+[root@centos7k8s1 helm]# curl 10.200.99.213
+<h1>myweb v2.you see</h1>
+```
 
-恭喜您: harbor.oldboyedu.com/web/apps:v2应用已经部署成功
+### 2.基于传参的方式升级应用
 
-请尝试访问web吧~
-[root@k8s231.oldboyedu.com helm]# 
-
-
-	(4)再次查看版本
-[root@k8s231.oldboyedu.com helm]# helm list -n oldboyedu-helm 
-NAME 	NAMESPACE     	REVISION	UPDATED                                	STATUS  	CHART               	APP VERSION
-web01	oldboyedu-helm	2       	2023-04-23 16:32:00.516613778 +0800 CST	deployed	oldboyedu-linux-v0.1	v1         
-[root@k8s231.oldboyedu.com helm]# 
-
-
-	(5)验证升级是否成功
-[root@k8s231.oldboyedu.com helm]# kubectl get svc -n oldboyedu-helm 
-NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
-oldboyedu-linux-web-svc   ClusterIP   10.200.246.134   <none>        80/TCP    2m49s
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# curl 10.200.246.134 
-<h1 style='color: green;'>www.oldboyedu.com  v0.2</h1>
-[root@k8s231.oldboyedu.com helm]# 
-
-
-	(6)基于传参的方式升级应用
-[root@k8s231.oldboyedu.com helm]# helm upgrade --set oldboyedu_linux_apps.tags=v3,replicas=2 web01 oldboyedu-linux -n oldboyedu-helm 
-Release "web01" has been upgraded. Happy Helming!
-NAME: web01
-LAST DEPLOYED: Sun Apr 23 16:36:35 2023
-NAMESPACE: oldboyedu-helm
+```
+helm -n haha upgrade myhahaweb myhaha/ --set image.tag=v3.0-my
+Release "myhahaweb" has been upgraded. Happy Helming!
+NAME: myhahaweb
+LAST DEPLOYED: Sun Sep 22 18:37:51 2024
+NAMESPACE: haha
 STATUS: deployed
 REVISION: 3
 TEST SUITE: None
 NOTES:
-#######################################
-# 欢迎使用老男孩IT教育K8S集群服务系统 #
-#     官方网站:                       #
-#         www.oldboyedu.com           #
-#######################################
+harbor.myharbor.com/myharbor/nginx:v3.0-my部署成功
+已启动
 
-恭喜您: harbor.oldboyedu.com/web/apps:v3应用已经部署成功
+[root@centos7k8s1 helm]# helm -n haha list
+NAME     	NAMESPACE	REVISION	UPDATED                                	STATUS  	CHART        	APP VERSION
+myhahaweb	haha     	3       	2024-09-22 18:37:51.790938624 +0800 CST	deployed	myhaha-v1.0.1	v1.0       
+[root@centos7k8s1 helm]# curl 10.200.99.213
+<h1>myweb v3.you see</h1>
+```
 
-请尝试访问web吧~
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# helm list -n oldboyedu-helm 
-NAME 	NAMESPACE     	REVISION	UPDATED                                	STATUS  	CHART               	APP VERSION
-web01	oldboyedu-helm	3       	2023-04-23 16:36:35.992389649 +0800 CST	deployed	oldboyedu-linux-v0.1	v1         
-[root@k8s231.oldboyedu.com helm]#
-[root@k8s231.oldboyedu.com helm]# kubectl get svc -n oldboyedu-helm 
-NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
-oldboyedu-linux-web-svc   ClusterIP   10.200.246.134   <none>        80/TCP    6m46s
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# curl 10.200.246.134 
-<h1 style='color: green;'>www.oldboyedu.com  v0.3</h1>
-[root@k8s231.oldboyedu.com helm]# 
+## helm的回滚
 
+### 	(1)查看当前的发行版本
 
+```
+helm -n haha list
+NAME     	NAMESPACE	REVISION	UPDATED                                	STATUS  	CHART        	APP VERSION
+myhahaweb	haha     	3       	2024-09-22 18:37:51.790938624 +0800 CST	deployed	myhaha-v1.0.1	v1.0
+```
 
-- helm的回滚:
-	(1)查看当前的发行版本
-[root@k8s231.oldboyedu.com helm]# helm list -n oldboyedu-helm 
-NAME 	NAMESPACE     	REVISION	UPDATED                                	STATUS  	CHART               	APP VERSION
-web01	oldboyedu-helm	3       	2023-04-23 16:36:35.992389649 +0800 CST	deployed	oldboyedu-linux-v0.1	v1         
-[root@k8s231.oldboyedu.com helm]# 
+### 	(2)查看某个Release发布的历史版本
 
+```
+helm -n haha history myhahaweb 
+REVISION	UPDATED                 	STATUS    	CHART        	APP VERSION	DESCRIPTION     
+1       	Sun Sep 22 17:39:39 2024	superseded	myhaha-v1.0.1	v1.0       	Install complete
+2       	Sun Sep 22 18:30:14 2024	superseded	myhaha-v1.0.1	v1.0       	Upgrade complete
+3       	Sun Sep 22 18:37:51 2024	deployed  	myhaha-v1.0.1	v1.0       	Upgrade complete
+```
 
-	(2)查看某个Release发布的历史版本
-[root@k8s231.oldboyedu.com helm]# helm history web01 -n oldboyedu-helm 
-REVISION	UPDATED                 	STATUS    	CHART               	APP VERSION	DESCRIPTION     
-1       	Sun Apr 23 16:30:22 2023	superseded	oldboyedu-linux-v0.1	v1         	Install complete
-2       	Sun Apr 23 16:32:00 2023	superseded	oldboyedu-linux-v0.1	v1         	Upgrade complete
-3       	Sun Apr 23 16:36:35 2023	deployed  	oldboyedu-linux-v0.1	v1         	Upgrade complete
-[root@k8s231.oldboyedu.com helm]# 
+### 	(3)回滚到上一个版本
 
-	
-	(3)回滚到上一个版本
-[root@k8s231.oldboyedu.com helm]# helm rollback web01 -n oldboyedu-helm 
+```
+helm -n haha rollback myhahaweb 
 Rollback was a success! Happy Helming!
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# kubectl get svc -n oldboyedu-helm 
-NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
-oldboyedu-linux-web-svc   ClusterIP   10.200.246.134   <none>        80/TCP    10m
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# curl 10.200.246.134
-<h1 style='color: green;'>www.oldboyedu.com  v0.2</h1>
-[root@k8s231.oldboyedu.com helm]# 
+[root@centos7k8s1 helm]# helm -n haha history myhahaweb 
+REVISION	UPDATED                 	STATUS    	CHART        	APP VERSION	DESCRIPTION     
+1       	Sun Sep 22 17:39:39 2024	superseded	myhaha-v1.0.1	v1.0       	Install complete
+2       	Sun Sep 22 18:30:14 2024	superseded	myhaha-v1.0.1	v1.0       	Upgrade complete
+3       	Sun Sep 22 18:37:51 2024	superseded	myhaha-v1.0.1	v1.0       	Upgrade complete #回滚是相对当前版本进行的，如果再次回滚的话，那么就是相对于4版本进行回滚到3版本
+4       	Sun Sep 22 18:41:41 2024	deployed  	myhaha-v1.0.1	v1.0       	Rollback to 2   
+[root@centos7k8s1 helm]# curl 10.200.99.213
+<h1>myweb v2.you see</h1>
+```
 
-	(4)回滚到指定版本
-[root@k8s231.oldboyedu.com helm]# helm history web01 -n oldboyedu-helm 
-REVISION	UPDATED                 	STATUS    	CHART               	APP VERSION	DESCRIPTION     
-1       	Sun Apr 23 16:30:22 2023	superseded	oldboyedu-linux-v0.1	v1         	Install complete
-2       	Sun Apr 23 16:32:00 2023	superseded	oldboyedu-linux-v0.1	v1         	Upgrade complete
-3       	Sun Apr 23 16:36:35 2023	superseded	oldboyedu-linux-v0.1	v1         	Upgrade complete
-4       	Sun Apr 23 16:40:56 2023	superseded	oldboyedu-linux-v0.1	v1         	Rollback to 2   
-5       	Sun Apr 23 16:42:10 2023	superseded	oldboyedu-linux-v0.1	v1         	Rollback to 3   
-6       	Sun Apr 23 16:43:06 2023	deployed  	oldboyedu-linux-v0.1	v1         	Rollback to 4   
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# helm rollback web01 1 -n oldboyedu-helm 
+### 	(4)回滚到指定版本
+
+```
+helm -n haha rollback myhahaweb 1 #只需要加个版本参数就可以了
 Rollback was a success! Happy Helming!
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# kubectl get svc -n oldboyedu-helm 
-NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
-oldboyedu-linux-web-svc   ClusterIP   10.200.246.134   <none>        80/TCP    13m
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# curl 10.200.246.134
-<h1 style='color: green;'>www.oldboyedu.com  v0.1</h1>
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# helm history web01 -n oldboyedu-helm 
-REVISION	UPDATED                 	STATUS    	CHART               	APP VERSION	DESCRIPTION     
-1       	Sun Apr 23 16:30:22 2023	superseded	oldboyedu-linux-v0.1	v1         	Install complete
-2       	Sun Apr 23 16:32:00 2023	superseded	oldboyedu-linux-v0.1	v1         	Upgrade complete
-3       	Sun Apr 23 16:36:35 2023	superseded	oldboyedu-linux-v0.1	v1         	Upgrade complete
-4       	Sun Apr 23 16:40:56 2023	superseded	oldboyedu-linux-v0.1	v1         	Rollback to 2   
-5       	Sun Apr 23 16:42:10 2023	superseded	oldboyedu-linux-v0.1	v1         	Rollback to 3   
-6       	Sun Apr 23 16:43:06 2023	superseded	oldboyedu-linux-v0.1	v1         	Rollback to 4   
-7       	Sun Apr 23 16:44:07 2023	deployed  	oldboyedu-linux-v0.1	v1         	Rollback to 1   
-[root@k8s231.oldboyedu.com helm]# 
+[root@centos7k8s1 helm]# curl 10.200.99.213
+<h1>myweb v1.you see</h1>
+[root@centos7k8s1 helm]# helm -n haha history myhahaweb 
+REVISION	UPDATED                 	STATUS    	CHART        	APP VERSION	DESCRIPTION     
+1       	Sun Sep 22 17:39:39 2024	superseded	myhaha-v1.0.1	v1.0       	Install complete
+2       	Sun Sep 22 18:30:14 2024	superseded	myhaha-v1.0.1	v1.0       	Upgrade complete
+3       	Sun Sep 22 18:37:51 2024	superseded	myhaha-v1.0.1	v1.0       	Upgrade complete
+4       	Sun Sep 22 18:41:41 2024	superseded	myhaha-v1.0.1	v1.0       	Rollback to 2   
+5       	Sun Sep 22 18:46:25 2024	deployed  	myhaha-v1.0.1	v1.0       	Rollback to 1
+```
+
+## 共有helm仓库管理
+
+### 1.查看共有helm仓库
+
+```
+helm repo list
+Error: no repositories to show
+```
+
+### 2.添加共有仓库
+
+```
+# helm repo add myhaha-azure http://mirror.azure.cn/kubernetes/charts/
+"myhaha-azure" has been added to your repositories
+# helm repo add myhaha-aliyun https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
+"myhaha-aliyun" has been added to your repositories
+# helm repo list
+NAME         	URL                                                   
+myhaha-azure 	http://mirror.azure.cn/kubernetes/charts/             
+myhaha-aliyun	https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
+```
+
+### 3.搜索关心的chart
+
+```
+# helm search repo redis
+NAME                                  	CHART VERSION	APP VERSION	DESCRIPTION                                       
+myhaha-aliyun/redis                   	1.1.15       	4.0.8      	Open source, advanced key-value store. It is of...
+myhaha-aliyun/redis-ha                	2.0.1        	           	Highly available Redis cluster with multiple se...
+myhaha-azure/prometheus-redis-exporter	3.5.1        	1.3.4      	DEPRECATED Prometheus exporter for Redis metrics  
+myhaha-azure/redis                    	10.5.7       	5.0.7      	DEPRECATED Open source, advanced key-value stor...
+myhaha-azure/redis-ha                 	4.4.6        	5.0.6      	DEPRECATED - Highly available Kubernetes implem...
+myhaha-aliyun/sensu                   	0.2.0        	           	Sensu monitoring framework backed by the Redis ...
+myhaha-azure/sensu                    	0.2.5        	0.28       	DEPRECATED Sensu monitoring framework backed by...
+```
+
+### 4.下载chart
+
+```
+helm pull oldboyedu-aliyun/mysql --untar
+```
+
+### 5.部署chart，部署过程中可能会遇到坑哟~请自行修改!【考点： deploy,sc,coreDNS】
+
+```
+helm install mymysql mysql/
+```
+
+### 6.测试链接MySQL
+
+```
+kubectl run -it --rm db-client --image=harbor.myharbor.com/myharbor/mysql:8.0.36 -- mysql -h mymysql-mysql.default.svc.myharbor.com -p$MYSQL_ROOT_PASSWORD
+```
 
 
-	(5)卸载Release
-[root@k8s231.oldboyedu.com helm]# helm uninstall web01 -n oldboyedu-helm 
-release "web01" uninstalled
-[root@k8s231.oldboyedu.com helm]# 
 
-
-
-共有helm仓库管理:
-	(1)添加共有仓库
-[root@k8s231.oldboyedu.com helm]# helm repo add oldboyedu-azure http://mirror.azure.cn/kubernetes/charts/ 
-"oldboyedu-azure" has been added to your repositories
-[root@k8s231.oldboyedu.com helm]# 
-[root@k8s231.oldboyedu.com helm]# helm repo add oldboyedu-aliyun https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
-"oldboyedu-aliyun" has been added to your repositories
-[root@k8s231.oldboyedu.com helm]# 
-
-
-	(2)查看仓库列表
-[root@k8s231.oldboyedu.com helm]# helm repo list
-NAME            	URL                                                   
-oldboyedu-azure 	http://mirror.azure.cn/kubernetes/charts/             
-oldboyedu-aliyun	https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
-[root@k8s231.oldboyedu.com helm]# 
-
-
-	(3)搜索关心的chart
-[root@k8s231.oldboyedu.com helm]# helm search repo mysql
-NAME                                     	CHART VERSION	APP VERSION	DESCRIPTION                                       
-oldboyedu-aliyun/mysql                   	0.3.5        	           	Fast, reliable, scalable, and easy to use open-...
-oldboyedu-azure/mysql                    	1.6.9        	5.7.30     	DEPRECATED - Fast, reliable, scalable, and easy...
-oldboyedu-azure/mysqldump                	2.6.2        	2.4.1      	DEPRECATED! - A Helm chart to help backup MySQL...
-...
-
+```
 	(4)下载chart
 [root@k8s231.oldboyedu.com helm]# helm pull oldboyedu-aliyun/mysql --untar
 
