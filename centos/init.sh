@@ -1,4 +1,6 @@
 #!/bin/bash
+#mirror.rise.ph
+
 systemctl disable firewalld.service --now
 mkdir -pv /media/CentOS
 sed -ri "s/(^SELINUX=).+/\1disabled/" /etc/selinux/config

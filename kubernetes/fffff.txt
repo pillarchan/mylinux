@@ -1,0 +1,532 @@
+作业:
+	将"jasonyin2020/oldboyedu-games:v0.1"游戏镜像使用helm部署，请自行设计。
+	
+	
+
+作业分析:
+	- 使用的技术栈:
+		- docker	
+			- dockerfile
+			- docker build
+			- docker cp
+			- nginx
+			- harbor
+			
+		- kubernetes
+			- configMap
+			- secret
+			- deployments
+			- service
+			- pv
+			- pvc
+			- sc
+			- helm
+			
+	
+	- 镜像的名称设计:
+		harbor.oldboyedu.com/games/tanke:v1
+		harbor.oldboyedu.com/games/bird:v1
+		harbor.oldboyedu.com/games/pingshu:v1
+		harbor.oldboyedu.com/games/pintai:v1
+		harbor.oldboyedu.com/games/chengbao:v1
+		
+
+
+复刻镜像:
+	(1)运行镜像
+[root@k8s231.oldboyedu.com ~]# docker run -d  --name linux85-games jasonyin2020/oldboyedu-games:v0.1 
+
+
+	(2)创建工作目录
+[root@k8s231.oldboyedu.com homework]# mkdir scripts softwares config  dockerfile
+
+
+	(3)拷贝源代码
+[root@k8s231.oldboyedu.com homework]# docker cp linux85-games:/usr/local/nginx/html/ softwares/
+
+
+	(4)将代码打包
+[root@k8s231.oldboyedu.com homework]# tar zcf softwares/oldboyedu-bird.tar.gz  -C softwares/html bird
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# tar zcf softwares/oldboyedu-chengbao.tar.gz  -C softwares/html chengbao
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# tar zcf softwares/oldboyedu-pingtai.tar.gz  -C softwares/html pingtai
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# tar zcf softwares/oldboyedu-pinshu.tar.gz  -C softwares/html pinshu
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# tar zcf softwares/oldboyedu-tanke.tar.gz  -C softwares/html tanke
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# rm -rf softwares/html/
+
+
+	(5)制作配置文件
+[root@k8s231.oldboyedu.com homework]# cat config/bird.conf 
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    # include /usr/local/nginx/conf/conf.d/*.conf;
+    server {
+        listen       80;
+        root        /usr/local/nginx/html/bird/;
+        server_name   brid.oldboyedu.com;
+    }
+}
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# cat config/chengbao.conf 
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    # include /usr/local/nginx/conf/conf.d/*.conf;
+    server {
+        listen       80;
+        root        /usr/local/nginx/html/chengbao/;
+        server_name   chengbao.oldboyedu.com;
+    }
+
+}
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# cat config/pingtai.conf 
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    # include /usr/local/nginx/conf/conf.d/*.conf;
+    server {
+        listen       80;
+        root        /usr/local/nginx/html/pingtai/;
+        server_name   pingtai.oldboyedu.com;
+    }
+}
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# cat config/pinshu.conf 
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    # include /usr/local/nginx/conf/conf.d/*.conf;
+
+    server {
+        listen       80;
+        root        /usr/local/nginx/html/pinshu/;
+        server_name   pinshu.oldboyedu.com;
+    }
+
+}
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# cat config/tanke.conf 
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    # include /usr/local/nginx/conf/conf.d/*.conf;
+
+    server {
+        listen       80;
+        root        /usr/local/nginx/html/tanke/;
+        server_name   tanke.oldboyedu.com;
+    }
+}
+[root@k8s231.oldboyedu.com homework]# 
+
+
+
+	(6)编写dockerfile
+[root@k8s231.oldboyedu.com homework]# cat dockerfile/bird.yaml 
+FROM harbor.oldboyedu.com/linux/alpine:latest
+
+LABEL school=oldboyedu \
+      class=linux85 \
+      auther=JasonYin
+
+EXPOSE  80
+
+ARG apps
+
+RUN  sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#' /etc/apk/repositories && \
+     apk update && apk  add nginx && rm -rf /var/cache
+
+ADD softwares/oldboyedu-${apps}.tar.gz /usr/local/nginx/html
+
+COPY config/${apps}.conf   /etc/nginx/nginx.conf
+
+CMD ["nginx","-g","daemon off;"]
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# cat dockerfile/chengbao.yaml 
+FROM harbor.oldboyedu.com/linux/alpine:latest
+
+LABEL school=oldboyedu \
+      class=linux85 \
+      auther=JasonYin
+
+EXPOSE  80
+
+ARG apps
+
+RUN  sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#' /etc/apk/repositories && \
+     apk update && apk  add nginx && rm -rf /var/cache
+
+ADD softwares/oldboyedu-${apps}.tar.gz /usr/local/nginx/html
+
+COPY config/${apps}.conf   /etc/nginx/nginx.conf
+
+CMD ["nginx","-g","daemon off;"]
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# cat dockerfile/pingtai.yaml 
+FROM harbor.oldboyedu.com/linux/alpine:latest
+
+LABEL school=oldboyedu \
+      class=linux85 \
+      auther=JasonYin
+
+EXPOSE  80
+
+ARG apps
+
+RUN  sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#' /etc/apk/repositories && \
+     apk update && apk  add nginx && rm -rf /var/cache
+
+ADD softwares/oldboyedu-${apps}.tar.gz /usr/local/nginx/html
+
+COPY config/${apps}.conf   /etc/nginx/nginx.conf
+
+CMD ["nginx","-g","daemon off;"]
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# cat dockerfile/pinshu.yaml 
+FROM harbor.oldboyedu.com/linux/alpine:latest
+
+LABEL school=oldboyedu \
+      class=linux85 \
+      auther=JasonYin
+
+EXPOSE  80
+
+ARG apps
+
+RUN  sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#' /etc/apk/repositories && \
+     apk update && apk  add nginx && rm -rf /var/cache
+
+ADD softwares/oldboyedu-${apps}.tar.gz /usr/local/nginx/html
+
+COPY config/${apps}.conf   /etc/nginx/nginx.conf
+
+CMD ["nginx","-g","daemon off;"]
+[root@k8s231.oldboyedu.com homework]# 
+[root@k8s231.oldboyedu.com homework]# cat dockerfile/tanke.yaml 
+FROM harbor.oldboyedu.com/linux/alpine:latest
+
+LABEL school=oldboyedu \
+      class=linux85 \
+      auther=JasonYin
+
+EXPOSE  80
+
+ARG apps
+
+RUN  sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#' /etc/apk/repositories && \
+     apk update && apk  add nginx && rm -rf /var/cache
+
+ADD softwares/oldboyedu-${apps}.tar.gz /usr/local/nginx/html
+
+COPY config/${apps}.conf   /etc/nginx/nginx.conf
+
+CMD ["nginx","-g","daemon off;"]
+[root@k8s231.oldboyedu.com homework]# 
+
+
+
+	(7)编写编译脚本并推送镜像到harbor仓库
+[root@k8s231.oldboyedu.com homework]# cat scripts/build.sh 
+#!/bin/bash
+# school: www.oldboyedu.com
+# class: linux85
+# auther: JasonYin
+
+# docker build  --build-arg apps=bird  -f dockerfile/bird.yaml -t harbor.oldboyedu.com/games/bird:v1  /root/dockerfile/homework
+# docker build  --build-arg apps=chengbao  -f dockerfile/chengbao.yaml -t harbor.oldboyedu.com/games/chengbao:v1  /root/dockerfile/homework
+# docker build  --build-arg apps=pingtai  -f dockerfile/pingtai.yaml -t harbor.oldboyedu.com/games/pingtai:v1  /root/dockerfile/homework
+# docker build  --build-arg apps=pinshu  -f dockerfile/pinshu.yaml -t harbor.oldboyedu.com/games/pinshu:v1  /root/dockerfile/homework
+# docker build  --build-arg apps=tanke  -f dockerfile/tanke.yaml -t harbor.oldboyedu.com/games/tanke:v1  /root/dockerfile/homework
+
+APPS=("bird" "chengbao" "pingtai" "pinshu" "tanke")
+WORKDIR=/root/dockerfile/homework
+PROJECT=harbor.oldboyedu.com/games
+VERSION=v1
+USERNAME=admin
+PASSWORD=1
+SERVER=harbor.oldboyedu.com
+
+docker login -u $USERNAME -p $PASSWORD  $SERVER
+
+for app in ${APPS[@]}
+do
+  docker build  --build-arg apps=${app}  -f dockerfile/${app}.yaml -t ${PROJECT}/${app}:${VERSION}  ${WORKDIR}
+  docker push harbor.oldboyedu.com/games/${app}:v1
+done
+
+docker logout  $SERVER
+[root@k8s231.oldboyedu.com homework]# 
+
+
+
+
+- 将游戏镜像上K8S集群
+见笔记。
+
+
+
+
+
+- Jenkins集成K8S-将代码推送到gitee
+	(1)下载软件包
+[root@k8s231.oldboyedu.com jenkins]# wget http://192.168.15.253/Kubernetes/day10-/softwares/jenkins-k8s.zip
+
+
+	(2)解压软件包
+[root@k8s231.oldboyedu.com jenkins]# unzip jenkins-k8s.zip
+
+
+	(3)解压开发代码
+[root@k8s231.oldboyedu.com jenkins]# cd jenkins-k8s/
+[root@k8s231.oldboyedu.com jenkins-k8s]# unzip yiliaoqixie.zip 
+
+
+	(4)将代码推送到gitee
+[root@k8s231.oldboyedu.com jenkins-k8s]# cd yiliaoqixie/
+[root@k8s231.oldboyedu.com yiliaoqixie]# yum -y install git
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git config --global user.name "jasonyin2020"
+[root@k8s231.oldboyedu.com yiliaoqixie]# git config --global user.email "y1053419035@qq.com"
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git init
+Initialized empty Git repository in /manifests/project/jenkins/jenkins-k8s/yiliaoqixie/.git/
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git add .
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git commit -m 'first commit'
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git tag -a v0.1 -m 'first commit'
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git tag -l
+v0.1
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git remote add origin https://gitee.com/jasonyin2020/oldboyedu-linux85-yiliao.git
+[root@k8s231.oldboyedu.com yiliaoqixie]# git push -u origin "master"
+Username for 'https://gitee.com': jasonyin2020
+Password for 'https://jasonyin2020@gitee.com': 
+Counting objects: 90, done.
+Delta compression using up to 2 threads.
+Compressing objects: 100% (90/90), done.
+Writing objects: 100% (90/90), 1.48 MiB | 546.00 KiB/s, done.
+Total 90 (delta 12), reused 0 (delta 0)
+remote: Powered by GITEE.COM [GNK-6.4]
+To https://gitee.com/jasonyin2020/oldboyedu-linux85-yiliao.git
+ * [new branch]      master -> master
+Branch master set up to track remote branch master from origin.
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git push -u origin "master" --tags
+Username for 'https://gitee.com': jasonyin2020
+Password for 'https://jasonyin2020@gitee.com': 
+Counting objects: 1, done.
+Writing objects: 100% (1/1), 160 bytes | 0 bytes/s, done.
+Total 1 (delta 0), reused 0 (delta 0)
+remote: Powered by GITEE.COM [GNK-6.4]
+To https://gitee.com/jasonyin2020/oldboyedu-linux85-yiliao.git
+ * [new tag]         status -> status
+ * [new tag]         v0.1 -> v0.1
+Branch master set up to track remote branch master from origin.
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+
+
+
+	
+- Jenkins集成K8S-部署Jenkins
+	(1)安装JDK环境，如上图所示
+[root@k8s231.oldboyedu.com jenkins-k8s]# rpm -ivh jdk-8u102-linux-x64.rpm && java -version
+
+
+	(2)解压tomcat软件包
+[root@k8s231.oldboyedu.com jenkins-k8s]# mkdir -pv /oldboyedu/softwares && tar xf apache-tomcat-8.0.27.tar.gz -C /oldboyedu/softwares
+
+	(3)删除tomcat的初始数据
+[root@k8s231.oldboyedu.com jenkins-k8s]# rm -rf /oldboyedu/softwares/apache-tomcat-8.0.27/webapps/*
+
+
+	(4)将Jenkins的war包放入到tomcat的应用目录，注意，复制该名称
+[root@k8s231.oldboyedu.com jenkins-k8s]# cp jenkins.war /oldboyedu/softwares/apache-tomcat-8.0.27/webapps/ROOT.war
+
+
+	(5)解压jenkins数据到"/root"目下，会创建一个隐藏目录(.jenkins)
+[root@k8s231.oldboyedu.com jenkins-k8s]# tar xf jenkins-data.tar.gz -C /root/
+
+	(6)启动tomcat服务
+[root@k8s231.oldboyedu.com jenkins-k8s]# /oldboyedu/softwares/apache-tomcat-8.0.27/bin/startup.sh 
+
+	(7)检查端口是否存在
+[root@k8s231.oldboyedu.com jenkins-k8s]# ss -ntl | grep 8080
+LISTEN     0      100       [::]:8080                  [::]:*                  
+[root@k8s231.oldboyedu.com jenkins-k8s]# 
+
+
+	(9)验证Jenkins的WebUI是否可以正常访问
+http://10.0.0.231:8080/
+
+
+
+- Jenkins集成K8S-编写dockerfile
+	(1)编写dockerfile及编译脚本
+[root@k8s231.oldboyedu.com yiliaoqixie]# cat Dockerfile 
+FROM harbor.oldboyedu.com/web/apps:v1
+
+
+LABEL school=oldboyedu \
+      class=linux85 \
+      auther=JasonYin
+
+ADD . /usr/share/nginx/html
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# cat build.sh 
+#!/bin/bash
+
+
+VERSION=$1
+
+docker login -u admin -p 1 harbor.oldboyedu.com
+docker build -t harbor.oldboyedu.com/project/yiliaoqixie:v0.${VERSION:-1} .
+docker push harbor.oldboyedu.com/project/yiliaoqixie:v0.${VERSION:-1} 
+docker logout harbor.oldboyedu.com
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+
+
+	(2)推送代码
+[root@k8s231.oldboyedu.com yiliaoqixie]# git add .
+[root@k8s231.oldboyedu.com yiliaoqixie]# git commit -m 'update build.sh'
+[root@k8s231.oldboyedu.com yiliaoqixie]# git push -u origin --all
+Username for 'https://gitee.com': jasonyin2020
+Password for 'https://jasonyin2020@gitee.com': 
+Counting objects: 5, done.
+Delta compression using up to 2 threads.
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 329 bytes | 0 bytes/s, done.
+Total 3 (delta 2), reused 0 (delta 0)
+remote: Powered by GITEE.COM [GNK-6.4]
+To https://gitee.com/jasonyin2020/oldboyedu-linux85-yiliao.git
+   4c4fcac..c96d1de  master -> master
+Branch master set up to track remote branch master from origin.
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+[root@k8s231.oldboyedu.com yiliaoqixie]# git push -u origin --tags
+Username for 'https://gitee.com': jasonyin2020
+Password for 'https://jasonyin2020@gitee.com': 
+Counting objects: 1, done.
+Writing objects: 100% (1/1), 165 bytes | 0 bytes/s, done.
+Total 1 (delta 0), reused 0 (delta 0)
+remote: Powered by GITEE.COM [GNK-6.4]
+To https://gitee.com/jasonyin2020/oldboyedu-linux85-yiliao.git
+ * [new tag]         v0.3 -> v0.3
+[root@k8s231.oldboyedu.com yiliaoqixie]# 
+
+
+	
+	(3)手动创建资源清单
+[root@k8s231.oldboyedu.com jenkins]# cat deploy-yiliaoqixie.yaml 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oldboyedu-linux-yiliao
+spec:
+  replicas: 3
+  selector:
+    matchExpressions:
+    - key: apps
+      operator: Exists
+  template:
+    metadata:
+      labels:
+        apps: yiliao
+    spec:
+      containers:
+      - name: yiliao
+        image: harbor.oldboyedu.com/project/yiliaoqixie:v0.4
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: oldboyedu-linux-yiliao-svc
+spec:
+  selector:
+    apps: yiliao
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oldboyedu-linux-yiliao
+  annotations:
+    kubernetes.io/ingress.class: traefik  # 指定Ingress 控制器为"traefik"
+spec:
+  rules:
+  - host: yiliao.oldboyedu.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: oldboyedu-linux-yiliao-svc
+            port:
+              number: 80
+        path: "/"
+        pathType: "Prefix"
+[root@k8s231.oldboyedu.com jenkins]# 
+[root@k8s231.oldboyedu.com jenkins]# kubectl apply -f deploy-yiliaoqixie.yaml 
+
+
+	(4)更新应用
+
+
+- Jenkins集成K8S-部署应用到K8S
+参考资源清单。
+
+
+
+今日作业:
+	- 完成课堂的所有练习并整理思维导图;
+	- 请完善"build.sh"脚本，实现部署和升级;
+	- 使用Jenkins我webhook功能，当gitee有代码变更时，自动部署更新到K8S集群，版本对应的当前构建的编号ID。
+
+
+

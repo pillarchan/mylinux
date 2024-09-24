@@ -1,0 +1,26 @@
+export release=3.2.0
+wget https://github.com/easzlab/kubeasz/releases/download/${release}/ezdown
+chmod +x ./ezdown
+
+
+0.centos.pool.ntp.org
+1.centos.pool.ntp.org
+2.centos.pool.ntp.org
+3.centos.pool.ntp.org
+
+
+gpg -v --keyserver hkps://keyserver.ubuntu.com --verify harbor-offline-installer-2.1.3.tgz.asc
+
+
+
+TASK [harbor : debug] ****************************************************************************************************************************
+ok: [192.168.76.145] => {
+    "harbor_password_gen.stdout": "oPZKlzYkl1uu-WRJ"
+}
+
+TASK [harbor : 生成 DB 随机密码] ***********************************************************************************************************************
+changed: [192.168.76.145]
+
+TASK [harbor : debug] ****************************************************************************************************************************
+ok: [192.168.76.145] => {
+    "db_password_gen.stdout": "Y9v-C2UquhCTJIkt"
