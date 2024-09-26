@@ -376,3 +376,46 @@ DNS劫持就是指用户访问一个被标记的地址时，DNS服务器故意�
 8、在网络外围和DNS服务器上使用防火墙服务。将访问限制在那些DNS功能需要的端口服务上。
 ```
 
+# K8S
+
+## deployment的启动流程
+
+```
+当要启动一个pod时，不管是通过命令式还是声明式的方式
+1. apiServer 对创建请求要进行格式解析，认证、权限验证
+2. 创建请求通过后，就会将数据写入ETCD
+3. controller manager通过WATCH监听到LIST中资源的变换，比如：pod副本数的增减
+4. scheduler 根据用户的请求类型、节点的打分机制进行pod的调度
+5. 完成调度后将数据写入ETCD
+6. kubelet上报各个worker节点状态信息和pod状态信息给apiServer
+7. apiServer接受并更新各节点状态信息存储到ETCD
+8. 并将scheduler调度的pod的结果返回给对应的worker节点
+
+副本数量，污点，节点选择器，亲和性
+kubelet启动的一个容器
+1. kubelet 通过 cri(containerd runtime interface)调用pod去创建容器
+2. 如果使用的是docker 那就要使用docker-shim去创建dockerd的守护进程
+3. docker或者contaninerd 调用runc的机制去创建容器
+4. 启动pause容器提供网络基础
+5. 启动初始化容器提供基础环境
+6. 启动业务容器，这里还会涉及到生命周期和探针，postStart容器启动后做什么，preStop容器启动前做什么，startupProbe检测，readinessProbe检测，livenessProbe检测
+```
+
+## 有几种探针，作用是什么
+
+```
+startupProbe检测
+容器启动时检测，如果失败则容器启动不成功
+readinessProbe检测
+容器加载时检测，如果失败则容器启动不成功
+livenessProbe检测
+容器运行时检测，如果失败则容器重启
+```
+
+## 自动扩缩容
+
+```
+HPA资源，水平 Pod 自动扩缩容，当监控某个值达到了阈值时，就自动增加或减少pod的数量，当然pod的数量也是会设置的，前提会依赖于metrics-server资源
+```
+
+## pod为什么一直重启
