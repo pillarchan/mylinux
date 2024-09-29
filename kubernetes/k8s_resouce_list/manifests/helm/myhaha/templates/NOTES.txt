@@ -1,0 +1,2 @@
+{{ .Values.image.repository }}:{{ .Values.image.tag }}部署成功
+已启动

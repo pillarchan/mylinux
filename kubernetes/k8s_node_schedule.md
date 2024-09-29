@@ -986,6 +986,11 @@ spec:
 
 关键点：
 1.使用 drain方式驱逐的本质就是给某个节点打上SchedulingDisable的污点，但如果做了污点容忍，特别是不指定key - operator: Exists这种全容忍，此时这种驱逐方式的意义就没有了
+
+
+
+
+在某个文件下有定义驱逐的条件
 ```
 
 ## K8S节点上线
@@ -1045,7 +1050,7 @@ kube-system       bootstrap-token-crg7k2
 
 ```
 api server 组件通信基于https协议，所以肯定会用到证书
-当时worker节点要加入一个集群，就需要认证，而一个新的节点是没有相关证书的
+当worker节点要加入一个集群，就需要认证，而一个新的节点是没有相关证书的
 kubeadm 就可以基于api server证书创建为一个token，此时该token就会保存在k8s的secrets中，相当于就得到了k8s的授权
 当使用kubeadm join时，新的节点就会携带该token加入到集群，由于携带的token是已经被K8S授权，这样就加入成功了
 加入成功后 api server 就会给worker节点颁发一个证书，之后节点与master通信就可以不再需要token了，这就是为什么节点成功加入集群后可以删除token

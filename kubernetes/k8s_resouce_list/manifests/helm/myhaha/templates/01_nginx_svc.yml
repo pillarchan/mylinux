@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc-01
+  namespace: {{ .Values.namespace }}
+  labels:
+    item: myhaha
+spec:
+  selector:
+    {{ .Values.labels.key1 }}: {{ .Values.labels.apps }}
+  type: NodePort
+  ports:
+  - port: {{ .Values.net.port }}
+    targetPort: {{ .Values.net.protocol }}
+    nodePort: 30001 

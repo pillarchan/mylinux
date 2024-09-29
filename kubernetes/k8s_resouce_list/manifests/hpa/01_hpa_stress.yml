@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpa-stress
+spec:
+  replicas: 1
+  selector:
+    matchExpressions:
+    - key: apps
+      operator: Exists
+  template:
+    metadata:
+      labels:
+        apps: stress
+    spec:
+      containers:
+      - name: web
+        image: jasonyin2020/oldboyedu-linux-tools:v0.1
+        command:
+        - tail
+        - -f
+        - /etc/hosts
+        resources:
+          requests:
+             cpu: 500m
+             memory: 200M
+          limits:
+             cpu: 1
+             memory: 500M

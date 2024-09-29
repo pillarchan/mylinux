@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myhaha
+  labels:
+    item: myhaha
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicasCount }}
+  selector:
+    matchExpressions:
+    - key: {{ .Values.labels.key1 }}
+      values:
+      - {{ .Values.labels.apps }}
+      operator: In
+  template:
+    metadata:
+      labels:
+        {{ .Values.labels.key1 }}: {{ .Values.labels.apps }}
+    spec:
+      containers:
+      - name: nginx-deploy  
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        #image: harbor.myharbor.com/myharbor/nginx:v2.0-my
+        #image: harbor.myharbor.com/myharbor/nginx:v3.0-my
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 80
+          name: http

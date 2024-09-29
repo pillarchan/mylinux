@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: games-bird
+  labels:
+    item: games-bird
+  namespace: games
+spec:
+  replicas: 2
+  selector:
+    matchExpressions:
+    - key: app
+      values:
+      - bird
+      operator: In
+  template:
+    metadata:
+      labels:
+        app: bird
+    spec:
+      volumes:
+      - name: nginx
+        configMap:
+          name: games-bird-cm
+          items:
+          - key: nginx.conf
+            path: nginx.conf  
+      - name: bird
+        configMap:
+          name: games-bird-cm            
+          items:
+          - key: bird.conf
+            path: bird.conf  
+      - name: code
+        persistentVolumeClaim:
+          claimName: games-bird-pvc
+      containers:
+      - name: games-nginx
+        image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: nginx
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: bird
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: bird.conf
+        - name: code
+          mountPath: /usr/share/nginx/html

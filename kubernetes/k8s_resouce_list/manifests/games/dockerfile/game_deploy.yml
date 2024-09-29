@@ -1,0 +1,8 @@
+FROM harbor.myharbor.com/myharbor/alpine:latest
+LABEL item=games \ 
+      author=pillarchan
+ARG app
+RUN apk add nginx && rm -rf /var/cache
+ADD items/bird.tar.gz /usr/local/nginx/html/
+COPY config/${app}.conf /etc/nginx/nginx.conf
+CMD ["nginx","-g","daemon off;"]

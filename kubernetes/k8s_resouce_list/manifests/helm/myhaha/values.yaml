@@ -1,0 +1,12 @@
+namespace: haha
+replicasCount: 2
+image:
+  repository: harbor.myharbor.com/myharbor/nginx
+  pullPolicy: IfNotPresent
+  tag: v2.0-my
+labels:
+  key1: apps
+  apps: hahaweb1
+net:
+  protocol: http
+  port: 80
