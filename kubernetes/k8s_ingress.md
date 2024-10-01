@@ -26,13 +26,7 @@
 			traefik
 ```
 
-## 工作原理
-
-```
-通过ingress的第三方插件或组件，监听HTTP或HTTPS协议，当不同的域名分别对应不同服务时，就需要将其反向代理到不同的SVC，再由SVC去关联后端pod,由于走的是七层代理，可以识别用户的请求报文，ingress会去拆分请求报文，根据用户配置的ingress规则关联到不同的SVC
-
-ingress规则需要定义域名与svc之间的关系，规则定义好之后，提交给api server并存储在etcd中，当用户访问请求时，要先经过ingress插件，通过api server将存储在etcd中的ingress规则中的解析返回给ingress插件，最后找到对应的svc
-```
+## 
 
 ## traefik
 
@@ -96,11 +90,13 @@ helm pull traefik/traefik --untar
 
 ```
 vim traefik/values.yaml 
-image:
-  ...
-  # repository: traefik
-  repository: harbor.oldboyedu.com/traefik/traefik
-	
+
+image:  # @schema additionalProperties: false
+  # -- Traefik image host registry
+  registry: harbor.myharbor.com/myharbor
+  # -- Traefik image repository
+  repository: traefik
+...
 service:
   ...
   # type: LoadBalancer
@@ -140,6 +136,104 @@ kubectl port-forward `kubectl get pods -l "app.kubernetes.io/name=traefik" -o na
 ```
 http://192.168.76.142:9000/dashboard/#/
 ```
+
+
+
+```
+
+```
+
+
+
+### 查看traefik svc
+
+```
+kubectl describe svc traefik 
+Name:                     traefik
+Namespace:                default
+Labels:                   app.kubernetes.io/instance=traefik-default
+                          app.kubernetes.io/managed-by=Helm
+                          app.kubernetes.io/name=traefik
+                          helm.sh/chart=traefik-31.1.1
+Annotations:              meta.helm.sh/release-name: traefik
+                          meta.helm.sh/release-namespace: default
+Selector:                 app.kubernetes.io/instance=traefik-default,app.kubernetes.io/name=traefik
+Type:                     NodePort
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.200.114.253
+IPs:                      10.200.114.253
+Port:                     web  80/TCP
+TargetPort:               web/TCP
+NodePort:                 web  30587/TCP
+Endpoints:                10.100.5.68:8000
+Port:                     websecure  443/TCP
+TargetPort:               websecure/TCP
+NodePort:                 websecure  3629/TCP
+Endpoints:                10.100.5.68:8443
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+```
+
+
+
+
+
+## ingress控制器
+
+### 工作原理
+
+```
+通过ingress的第三方插件或组件，监听HTTP或HTTPS协议，当不同的域名分别对应不同服务时，就需要将其反向代理到不同的SVC，再由SVC去关联后端pod,由于走的是七层代理，可以识别用户的请求报文，ingress会去拆分请求报文，根据用户配置的ingress规则关联到不同的SVC
+
+ingress规则需要定义域名与svc之间的关系，规则定义好之后，提交给api server并存储在etcd中，当用户访问请求时，要先经过ingress插件，通过api server将存储在etcd中的ingress规则中的解析返回给ingress插件，最后找到对应的svc
+```
+
+### 查看ingress控制器资源属性
+
+```
+# kubectl api-resources | grep ingress
+ingressclasses                                 networking.k8s.io/v1                   false        IngressClass
+ingresses                         ing          networking.k8s.io/v1                   true         Ingress
+ingressroutes                                  traefik.io/v1alpha1                    true         IngressRoute
+ingressroutetcps                               traefik.io/v1alpha1                    true         IngressRouteTCP
+ingressrouteudps                               traefik.io/v1alpha1                    true         IngressRouteUDP
+# kubectl api-resources | head -n1
+NAME                              SHORTNAMES   APIVERSION                             NAMESPACED   KIND
+```
+
+### 资源清单编写
+
+```
+PathType 决定了 Path 匹配的解释。
+PathType 可以是以下值之一：
+* Exact：与 URL 路径完全匹配。
+* Prefix：基于由“/”分隔的 URL 路径前缀进行匹配。匹配是按路径元素逐个元素进行的。路径元素指的是由“/”分隔符分隔的路径中的标签列表。如果每个 p 都是请求路径中 p 的元素前缀，则请求与路径 p 匹配。请注意，如果路径的最后一个元素是请求路径中最后一个元素的子字符串，则它不匹配（例如，/foo/bar 匹配 /foo/bar/baz，但不匹配 /foo/barbaz）。
+* ImplementationSpecific：Path 匹配的解释取决于 IngressClass。实现可以将其视为单独的 PathType，也可以将其视为与 Prefix 或 Exact 路径类型相同。实现必须支持所有路径类型。
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

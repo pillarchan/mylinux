@@ -1,0 +1,178 @@
+#关闭swap
+swapoff -a
+sed -ri "/.*swap.*/d" /etc/fstab
+
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+ip_vs
+ip_vs_lc
+ip_vs_lblc
+ip_vs_lblcr
+ip_vs_rr
+ip_vs_wrr
+ip_vs_sh
+ip_vs_dh
+ip_vs_fo
+ip_vs_nq
+ip_vs_sed
+ip_vs_ftp
+ip_vs_sh
+ip_tables
+ip_set
+ipt_set
+ipt_rpfilter
+ipt_REJECT
+ipip
+xt_set
+nf_conntrack
+EOF
+
+modprobe overlay
+modprobe br_netfilter
+modprobe ip_vs_lc
+modprobe ip_vs_lblc
+modprobe ip_vs_lblcr
+modprobe ip_vs_rr
+modprobe ip_vs_wrr
+modprobe ip_vs_sh
+modprobe ip_vs_dh
+modprobe ip_vs_fo
+modprobe ip_vs_nq
+modprobe ip_vs_sed
+modprobe ip_vs_ftp
+modprobe ip_vs_sh
+
+# 设置所需的 sysctl 参数，参数在重新启动后保持不变
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+# 应用 sysctl 参数而不重新启动
+sudo sysctl --system
+
+
+setenforce 0
+sed -ri 's/^(SELINUX=).+$/\1disabled/' /etc/selinux/config
+
+
+安装containerd
+https://github.com/containerd/containerd/blob/main/docs/getting-started.md
+
+wget https://github.com/containerd/containerd/releases/download/v1.6.36/containerd-1.6.36-linux-amd64.tar.gz
+tar xf containerd-1.6.36-linux-amd64.tar.gz -C /usr/local/
+ls /usr/local/bin
+
+cat > /usr/local/lib/systemd/system/containerd.service << 'EOF'
+# Copyright The containerd Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[Unit]
+Description=containerd container runtime
+Documentation=https://containerd.io
+After=network.target local-fs.target
+
+[Service]
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/local/bin/containerd
+
+Type=notify
+Delegate=yes
+KillMode=process
+Restart=always
+RestartSec=5
+
+# Having non-zero Limit*s causes performance problems due to accounting overhead
+# in the kernel. We recommend using cgroups to do container-local accounting.
+LimitNPROC=infinity
+LimitCORE=infinity
+
+# Comment TasksMax if your systemd version does not supports it.
+# Only systemd 226 and above support this version.
+TasksMax=infinity
+OOMScoreAdjust=-999
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now containerd
+
+
+#修改cgroup配置
+containerd config default > /etc/containerd/config.toml
+[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+  SystemdCgroup = true
+#pause版本
+[plugins."io.containerd.grpc.v1.cri"]
+sandbox_image = "registry.aliyuncs.com/google_containers/pause:3.9"
+
+
+
+配置crictl运⾏时环境 /etc/crictl.yaml
+
+# vim /etc/crictl.yaml
+runtime-endpoint: "unix:///run/containerd/containerd.sock"
+image-endpoint: "unix:///run/containerd/containerd.sock"
+timeout: 10
+debug: false
+
+
+#安装 runc
+wget https://github.com/opencontainers/runc/releases/download/v1.1.13/runc.amd64
+install -m 755 runc.amd64 /usr/local/sbin/runc
+
+#安装 runccni-plugins
+wget https://github.com/containernetworking/plugins/releases/download/v1.5.1/cni-plugins-linux-amd64-v1.5.1.tgz
+mkdir -pv /opt/cni/bin/
+tar xf cni-plugins-linux-amd64-v1.5.1.tgz -C /opt/cni/bin/
+
+
+# 安装 kubelet kubeadm kubectl cri-tools kubernetes-cni
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.28/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.28/rpm/repodata/repomd.xml.key
+exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
+EOF
+
+yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+systemctl enable --now kubelet
+
+kubeadm init --kubernetes-version="$(kubeadm config print init-defaults | egrep -o "^kubernetesVersion.+" | awk '{print $2}')" --pod-network-cidr 10.100.0.0/16
+
+#node节点
+kubeadm join ...
+主节点可使用 kubeadm token create --print-join-command 查看
+
+#网络组件安装 calico
+wget https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/tigera-operator.yaml
+wget https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/custom-resources.yaml
+
+
+tigera-operator.yaml 可以直接应用
+custom-resources.yaml 需要修改 cidr: 和 初始化参数 --pod-network-cidr 相对应后 再应用
+
+
+注意:
+如需要使用代理,配置文件 /etc/environment   containerd.service中[Service] Environment="" 添加
+HTTP_PROXY=http://1.1.1.1:1111
+HTTPS_PROXY=http://1.1.1.1:1111
+NO_PROXY=localhost,127.0.0.1,10.96.0.0/16,10.100.0/16...
