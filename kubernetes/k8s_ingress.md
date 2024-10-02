@@ -137,13 +137,33 @@ kubectl port-forward `kubectl get pods -l "app.kubernetes.io/name=traefik" -o na
 http://192.168.76.142:9000/dashboard/#/
 ```
 
+### traefik values修改
 
+#### 副本数的修改
 
 ```
-
+...
+deployment:
+  # -- Enable deployment
+  enabled: true
+  # -- Deployment or DaemonSet
+  kind: Deployment  #如有多个节点建议使用DaemonSet
+  # -- Number of pods of the deployment (only applies when kind == Deployment)
+  replicas: 1 #如需要使用多个副本，推荐按节点数修改
+  ....
 ```
 
+#### hostNetwork
 
+```
+# grep "traefik.podTemplate" -r ./traefik/
+./traefik/templates/_podtemplate.tpl:{{- define "traefik.podTemplate" }}
+./traefik/templates/daemonset.yaml:  template: {{ template "traefik.podTemplate" . }}
+./traefik/templates/deployment.yaml:  template: {{ template "traefik.podTemplate" . }}
+
+# grep "hostNetwork" ./traefik/templates/_podtemplate.tpl
+      hostNetwork: {{ .Values.hostNetwork }}
+```
 
 ### 查看traefik svc
 
@@ -176,7 +196,11 @@ External Traffic Policy:  Cluster
 Events:                   <none>
 ```
 
+### 工作流程
 
+```
+traefik 请求 api server,通过ETCD调取运维人员所编写的ingress规则,然后应用到所有traefik节点,traefik通过规则再去关联对应的svc,svc最终关联到pod
+```
 
 
 
@@ -213,11 +237,52 @@ PathType 可以是以下值之一：
 * ImplementationSpecific：Path 匹配的解释取决于 IngressClass。实现可以将其视为单独的 PathType，也可以将其视为与 Prefix 或 Exact 路径类型相同。实现必须支持所有路径类型。
 
 
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-bird
+  namespace: games
+spec:
+  rules:
+  - host: bird.myharbor.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service: 
+            name: games-bird-svc
+            port:
+              number: 80
 ```
 
+### 查看应用
 
+```
+kubectl -n games describe ingress ingress-bird 
+Name:             ingress-bird
+Labels:           <none>
+Namespace:        games
+Address:          
+Default backend:  default-http-backend:80 (<error: endpoints "default-http-backend" not found>)
+Rules:
+  Host               Path  Backends
+  ----               ----  --------
+  bird.myharbor.com  
+                     /   games-bird-svc:80 (10.100.1.120:80,10.100.5.69:80)
+Annotations:         <none>
+Events:              <none>
+```
 
+### 绑定访问
 
+![image-20241002085153193](D:\learn\mylinux\kubernetes\image-20241002085153193.png)
+
+![image-20241002085359322](D:\learn\mylinux\kubernetes\image-20241002085359322.png)
+
+```
+
+```
 
 
 
