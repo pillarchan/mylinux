@@ -280,10 +280,6 @@ Events:              <none>
 
 ![image-20241002085359322](D:\learn\mylinux\kubernetes\image-20241002085359322.png)
 
-```
-
-```
-
 
 
 

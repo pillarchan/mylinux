@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-bird
+  namespace: games
+spec:
+  rules:
+  - host: bird.myharbor.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service: 
+            name: games-bird-svc
+            port:
+              number: 80
+      
+  

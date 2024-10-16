@@ -1,0 +1,18 @@
+metadata:
+  name: games-bird
+  namespace: games
+label:
+  key_name: app
+  key_value: bird
+volumes:
+  cm_name: games-bird-cm
+  cm_items:
+    key: bird.conf
+    path: bird.conf
+image:
+  repository: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+pvc:
+  name: games-bird-pvc
+svc:
+  name: games-bird-svc
+  

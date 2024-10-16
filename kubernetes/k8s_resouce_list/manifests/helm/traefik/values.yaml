@@ -19,7 +19,8 @@ deployment:
   # -- Enable deployment
   enabled: true
   # -- Deployment or DaemonSet
-  kind: Deployment
+  #kind: Deployment
+  kind: DaemonSet
   # -- Number of pods of the deployment (only applies when kind == Deployment)
   replicas: 1
   # -- Number of old history to retain to allow rollback (If not set, default Kubernetes value is set to 10)
@@ -805,7 +806,7 @@ certResolvers: {}
 # To prevent unschedulabel pods due to port collisions, if hostNetwork=true
 # and replicas>1, a pod anti-affinity is recommended and will be set if the
 # affinity is left as default.
-hostNetwork: false
+hostNetwork: true 
 
 # -- Whether Role Based Access Control objects like roles and rolebindings should be created
 rbac:  # @schema additionalProperties: false

@@ -1,49 +1,49 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: games-bird
+  name: {{ .Values.metadata.name }}
   labels:
-    item: games-bird
-  namespace: games
+    item: {{ .Values.metadata.name }}
+  namespace: {{ .Values.metadata.namespace }}
 spec:
   replicas: 2
   selector:
     matchExpressions:
-    - key: app
+    - key: {{ .Values.label.key_name }}
       values:
-      - bird
+      - {{ .Values.label.key_value }}
       operator: In
   template:
     metadata:
       labels:
-        app: bird
+        {{ .Values.label.key_name }}: {{ .Values.label.key_value }} 
     spec:
       volumes:
       - name: nginx
         configMap:
-          name: games-bird-cm
+          name: {{ .Values.volumes.cm_name }}
           items:
           - key: nginx.conf
             path: nginx.conf  
-      - name: bird
+      - name: {{ .Values.label.key_value }}
         configMap:
-          name: games-bird-cm            
+          name: {{ .Values.volumes.cm_name }}
           items:
-          - key: bird.conf
-            path: bird.conf  
+          - key: {{ .Values.volumes.cm_items.key }}
+            path: {{ .Values.volumes.cm_items.path }}
       - name: code
         persistentVolumeClaim:
-          claimName: games-bird-pvc
+          claimName: {{ .Values.pvc.name }}
       containers:
       - name: games-nginx
-        image: harbor.myharbor.com/myharbor/nginx:1.24-alpine
+        image: {{ .Values.image.repository }}
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: nginx
           mountPath: /etc/nginx/nginx.conf
           subPath: nginx.conf
-        - name: bird
+        - name: {{ .Values.label.key_value }}
           mountPath: /etc/nginx/conf.d/default.conf
-          subPath: bird.conf
+          subPath: {{ .Values.volumes.cm_items.path }}
         - name: code
           mountPath: /usr/share/nginx/html
