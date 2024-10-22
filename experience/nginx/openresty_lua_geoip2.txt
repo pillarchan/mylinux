@@ -4,7 +4,7 @@ openresty lua geoip2
 github
 https://github.com/maxmind/libmaxminddb/releases
 https://github.com/leev/ngx_http_geoip2_module/tags
-https://www.maxmind.com/en/accounts/310722/geoip/downloads
+https://www.maxmind.com/en/account/login 
 https://github.com/openresty/headers-more-nginx-module/archive/v0.33.tar.gz
 
 apt install build-essential libreadline-dev libncurses5-dev libpcre3 libpcre3-dev libssl-dev zlib1g-dev unzip perl make libxml2-dev openssl iproute2 procps autoconf libexpat1-dev libgeoip-dev libpng-dev rcs libmcrypt-dev libcurl4-openssl-dev libjpeg-dev libpng-dev libwebp-dev pkg-config

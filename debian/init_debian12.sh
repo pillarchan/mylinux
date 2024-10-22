@@ -51,3 +51,22 @@ EOF
 
 localectl set-locale en_US.utf8
 reboot
+
+
+
+
+cat > /etc/apt/sources.list  << 'EOF'
+deb http://deb.debian.org/debian bookworm main non-free-firmware
+deb-src http://deb.debian.org/debian bookworm main non-free-firmware
+
+deb http://security.debian.org/debian-security bookworm-security main non-free-firmware
+deb-src http://security.debian.org/debian-security bookworm-security main non-free-firmware
+
+deb http://deb.debian.org/debian bookworm-updates main non-free-firmware
+deb-src http://deb.debian.org/debian bookworm-updates main non-free-firmware
+EOF
+
+
+hostnamectl hostname debian22model
+sed -ri 's/(address 192.168.76.)[0-9]+/\1126/' /etc/network/interfaces
+systemctl restart networking.service
