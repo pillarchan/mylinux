@@ -61,6 +61,37 @@ ssh-keygen -t rsa -P "" -f /path/name_rsa -q
 EOF
 ```
 
+# 所有节点升级Linux内核
+
+安装
+
+```
+http://elrepo.org/tiki/tiki-index.php
+
+# rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org
+# yum install https://www.elrepo.org/elrepo-release-9.el9.elrepo.noarch.rpm
+
+# 安装 最新版ML 版本
+# yum --enablerepo=elrepo-kernel install  kernel-ml-devel kernel-ml -y
+# 安装 最新版LT 版本
+# yum --enablerepo=elrepo-kernel install kernel-lt-devel kernel-lt -y
+```
+
+更改内核启动顺序
+
+```
+grub2-set-default  0 && grub2-mkconfig -o /etc/grub2.cfg
+grubby --args="user_namespace.enable=1" --update-kernel="$(grubby --default-kernel)"
+grubby --default-kernel
+```
+
+更新软件版本，但不需要更新内核，因为我内核已经更新到了指定的版本
+
+```
+# yum -y update --exclude=kernel* 
+yum -y localinstall 03-Linux-yum-update/*.rpm
+```
+
 # Linux基础环境优化
 
 ## 所有节点关闭firewalld，selinux，NetworkManager
@@ -117,6 +148,19 @@ sed -i 's#SELINUX=enforcing#SELINUX=disabled#g' /etc/selinux/config
 ## Linux内核调优
 
 	cat > /etc/sysctl.d/k8s.conf <<'EOF'
+	net.ipv4.tcp_fin_timeout = 6
+	net.ipv4.tcp_tw_reuse = 1
+	net.ipv4.tcp_tw_recycle = 1
+	net.ipv4.tcp_syncookies = 1
+	net.ipv4.tcp_keepalive_time = 600
+	net.ipv4.tcp_max_syn_backlog = 1024
+	net.ipv4.tcp_max_tw_buckets = 36000
+	net.ipv4.route.gc_timeout = 100
+	net.ipv4.tcp_syn_retries = 2
+	net.ipv4.tcp_synack_retries = 2
+	net.ipv4.tcp_max_orphans = 327680
+	net.core.somaxconn = 1024
+	net.core.netdev_max_backlog = 1024
 	net.ipv4.ip_forward = 1
 	net.bridge.bridge-nf-call-iptables = 1
 	net.bridge.bridge-nf-call-ip6tables = 1
@@ -128,19 +172,11 @@ sed -i 's#SELINUX=enforcing#SELINUX=disabled#g' /etc/selinux/config
 	fs.file-max=52706963
 	fs.nr_open=52706963
 	net.netfilter.nf_conntrack_max=2310720
-	net.ipv4.tcp_keepalive_time = 600
 	net.ipv4.tcp_keepalive_probes = 3
 	net.ipv4.tcp_keepalive_intvl =15
-	net.ipv4.tcp_max_tw_buckets = 36000
-	net.ipv4.tcp_tw_reuse = 1
-	net.ipv4.tcp_max_orphans = 327680
 	net.ipv4.tcp_orphan_retries = 3
-	net.ipv4.tcp_syncookies = 1
-	net.ipv4.tcp_max_syn_backlog = 16384
 	net.ipv4.ip_conntrack_max = 65536
-	net.ipv4.tcp_max_syn_backlog = 16384
 	net.ipv4.tcp_timestamps = 0
-	net.core.somaxconn = 16384
 	EOF
 	sysctl --system
 
