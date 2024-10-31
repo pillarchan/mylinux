@@ -6,7 +6,7 @@ import sys
 import time
 #load_dotenv()
 #API_KEY = os.getenv('API_KEY')
-API_KEY = '5772026263:AAGj76NR6xbOGAao0Yhd92QmjkIj96-HVVw'
+API_KEY = ''
 bot = telebot.TeleBot(API_KEY)
 accList = [
     {'name':'c7','key':'ep2HsNfbSzhM_VhAiXk2Y4RMtDYS7Km6zaw:LkiHKqL4NjK7tkzi5ct1dC'},
