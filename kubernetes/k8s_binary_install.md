@@ -112,16 +112,22 @@ sed -i 's#SELINUX=enforcing#SELINUX=disabled#g' /etc/selinux/config
 	free -h
 ## 所有节点同步时间 
 
-	- 手动同步时区和时间
+### 手动同步时区和时间
 
+```
+ln -svf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+```
 
-	ln -svf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-- 定期任务同步("crontab -e")
+### 定期任务同步("crontab -e")
+
 
 	# centos 7
+	
 	ntpdate ntp.aliyun.com
 	*/5 * * * * /usr/sbin/ntpdate ntp.aliyun.com
+	
 	# centos 9
+	
 	vim /etc/chrony.conf
 	systemctl restart chronyd.service
 ## 所有节点配置limit
@@ -190,4 +196,82 @@ sed -i 's#SELINUX=enforcing#SELINUX=disabled#g' /etc/selinux/config
 	echo "PS1='[\[\e[34;1m\]\u@\[\e[0m\]\[\e[32;1m\]\H\[\e[0m\]\[\e[36;1m\] \W\[\e[0m\]]# '" > /etc/profile.d/mycolor.sh
 	source /etc/profile.d/mycolor.sh
 
+# 所有节点安装ipvsadm以实现kube-proxy的负载均衡
+
+## 安装ipvsadm等相关工具
+
+```
+yum -y install ipvsadm ipset sysstat conntrack libseccomp
+```
+
+## 手动加载模块
+
+```
+modprobe -- ip_vs
+modprobe -- ip_vs_rr
+modprobe -- ip_vs_wrr
+modprobe -- ip_vs_sh
+modprobe -- nf_conntrack #Linux kernel 4.19+版本已经将之前的"nf_conntrack_ipv4"模块更名为"nf_conntrack"模块
+```
+
+## 创建要开机自动加载的模块配置文件
+
+```
+cat > /etc/modules-load.d/ipvs.conf << 'EOF'
+ip_vs
+ip_vs_lc
+ip_vs_wlc
+ip_vs_rr
+ip_vs_wrr
+ip_vs_lblc
+ip_vs_lblcr
+ip_vs_dh
+ip_vs_sh
+ip_vs_fo
+ip_vs_nq
+ip_vs_sed
+ip_vs_ftp
+ip_vs_sh
+nf_conntrack
+ip_tables
+ip_set
+xt_set
+ipt_set
+ipt_rpfilter
+ipt_REJECT
+ipip
+EOF
+```
+
+# 重启所有节点并检查内核和模块是否配置成功
+
+## 查看现有内核版本
+
+```
+uname -r
+```
+
+## 检查默认加载的内核版本
+
+```
+grubby --default-kernel
+```
+
+## 重启所有节点
+
+```
+reboot
+```
+
+## 检查支持ipvs的内核模块是否加载成功
+
+```
+lsmod | grep --color=auto -e ip_vs -e nf_conntrack
+```
+
+## 再次查看内核版本
+
+```
+uname -r
+```
 
